@@ -13,7 +13,7 @@ class Settings:
     speak: bool = False
     auto_approve: bool = False
     wake_phrase: str = "hey numnum"
-    whisper_model: str = str(Path.home() / ".cache" / "nums" / "ggml-tiny.en.bin")
+    whisper_model: str = str(Path.home() / ".cache" / "nums" / "ggml-base.en.bin")
     capture_device: int = -1
 
     @classmethod

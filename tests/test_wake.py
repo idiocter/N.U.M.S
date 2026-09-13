@@ -9,6 +9,14 @@ def test_wake_phrase_with_command() -> None:
     assert event.text == "open Safari"
 
 
+def test_common_phonetic_transcription_wakes() -> None:
+    event = WakePhraseDetector().feed("Hey Newman, open my calendar")
+
+    assert event is not None
+    assert event.kind == "command"
+    assert event.text == "open my calendar"
+
+
 def test_command_can_follow_wake_phrase() -> None:
     detector = WakePhraseDetector()
 
@@ -28,3 +36,13 @@ def test_repeated_transcript_is_ignored() -> None:
 
     assert detector.feed("Hey numnum") is not None
     assert detector.feed("Hey numnum") is None
+
+
+def test_overlapping_windows_do_not_repeat_a_command() -> None:
+    detector = WakePhraseDetector()
+
+    first = detector.feed("Hey Num Num, tell me the current time.")
+    duplicate = detector.feed("Hey Num Num tell me the current time")
+
+    assert first is not None and first.kind == "command"
+    assert duplicate is None

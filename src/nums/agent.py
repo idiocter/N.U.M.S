@@ -37,7 +37,7 @@ class Agent:
             self.messages.append(message)
             calls = message.get("tool_calls") or []
             if not calls:
-                return message.get("content", "I couldn't produce a response.")
+                return message.get("content") or "I couldn't produce a response."
             for call in calls:
                 function = call.get("function", {})
                 name = function.get("name", "")

@@ -24,7 +24,7 @@ uv run nums --speak "tell me the current system information"
 
 NUMS can stay asleep until you say **“hey numnum.”** Voice recognition and the Qwen response both run locally.
 
-Install the microphone runtime and download the small English wake model once:
+Install the microphone runtime and download the English base model once:
 
 ```bash
 brew install whisper-cpp
@@ -37,7 +37,7 @@ Start the listener:
 uv run nums --wake
 ```
 
-Say “hey numnum” and wait for “Yes?”, then speak the command. You can also say both together, such as “hey numnum, open Safari.” The first launch may trigger a macOS Microphone permission prompt for your terminal.
+Say “hey numnum” and wait for the chime, then speak the command. You can also say both together, such as “hey numnum, open Safari.” The first launch may trigger a macOS Microphone permission prompt for your terminal.
 
 If the wrong microphone is selected, list the capture devices shown when the listener starts and set its number:
 

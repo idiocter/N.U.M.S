@@ -11,7 +11,7 @@ from typing import Iterator
 
 
 VOICE_MODEL_URL = (
-    "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en.bin"
+    "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin"
 )
 
 
@@ -26,7 +26,20 @@ class WakePhraseDetector:
         self.phrase = phrase.casefold().strip()
         self.awaiting_command = False
         self.last_transcript = ""
-        variants = {self.phrase, "hey num num", "hey nom nom", "hey numb numb"}
+        self.last_command = ""
+        self.last_command_at = 0.0
+        self.cooldown_seconds = 8.0
+        variants = {
+            self.phrase,
+            "hey num num",
+            "hey nom nom",
+            "hey numb numb",
+            "hey nam nam",
+            "hey noom noom",
+            "hey noon noon",
+            "hey no no",
+            "hey newman",
+        }
         alternatives = "|".join(
             re.escape(item).replace(r"\ ", r"[\s,.-]+")
             for item in sorted(variants, key=len, reverse=True)
@@ -44,7 +57,7 @@ class WakePhraseDetector:
             command = match.group(1).strip()
             if command:
                 self.awaiting_command = False
-                return WakeEvent("command", command)
+                return self._command_event(command)
             if not self.awaiting_command:
                 self.awaiting_command = True
                 return WakeEvent("wake")
@@ -52,8 +65,20 @@ class WakePhraseDetector:
 
         if self.awaiting_command and not cleaned.startswith("["):
             self.awaiting_command = False
-            return WakeEvent("command", cleaned)
+            return self._command_event(cleaned)
         return None
+
+    def _command_event(self, command: str) -> WakeEvent | None:
+        signature = re.sub(r"[^a-z0-9]+", " ", command.casefold()).strip()
+        now = time.monotonic()
+        if now - self.last_command_at < self.cooldown_seconds:
+            return None
+        self.last_command = signature
+        self.last_command_at = now
+        return WakeEvent("command", command)
+
+    def command_completed(self) -> None:
+        self.last_command_at = time.monotonic()
 
 
 def voice_dependencies(model_path: str) -> tuple[bool, bool]:
@@ -109,13 +134,15 @@ class WhisperStream:
                         "--capture",
                         str(self.capture_device),
                         "--step",
-                        "2000",
+                        "1500",
                         "--length",
-                        "6000",
+                        "8000",
                         "--keep",
-                        "200",
+                        "1000",
                         "--max-tokens",
                         "32",
+                        "--beam-size",
+                        "5",
                         "--file",
                         str(output_path),
                     ],

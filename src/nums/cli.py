@@ -47,13 +47,16 @@ def wake_mode(agent: Agent, settings: Settings) -> None:
             if event is None:
                 continue
             if event.kind == "wake":
-                print("NUMS > Yes?")
-                subprocess.run(["say", "Yes?"], check=False)
+                print("NUMS > Listening…")
+                subprocess.run(
+                    ["afplay", "/System/Library/Sounds/Glass.aiff"], check=False
+                )
                 continue
             print(f"You > {event.text}")
             response = agent.run(event.text)
             print(f"NUMS > {response}\n")
             subprocess.run(["say", response], check=False)
+            detector.command_completed()
     except KeyboardInterrupt:
         print("\nNUMS wake listener stopped.")
     finally:
