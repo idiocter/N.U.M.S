@@ -37,7 +37,11 @@ Start the listener:
 uv run nums --wake
 ```
 
-Say “hey numnum” and wait for the chime, then speak the command. You can also say both together, such as “hey numnum, open Safari.” The first launch may trigger a macOS Microphone permission prompt for your terminal.
+Say “hey numnum” and wait for the chime. NUMS stays online after the first command, so you can continue talking to it without repeating the wake phrase. You can also say both together, such as “hey numnum, open Safari.”
+
+When you are finished, say **“aight baby girl, let’s sleep.”** NUMS says good night and returns to wake-only mode. The first launch may trigger a macOS Microphone permission prompt for your terminal.
+
+NUMS uses silence-based voice activity detection so it transcribes complete phrases instead of chopping them at fixed intervals. Each spoken turn uses a fresh microphone stream: NUMS closes it before answering and starts a clean one when the response finishes, so its own voice cannot become the next command.
 
 If the wrong microphone is selected, list the capture devices shown when the listener starts and set its number:
 

@@ -1,4 +1,8 @@
-from nums.wake import WakePhraseDetector
+from pathlib import Path
+
+import pytest
+
+from nums.wake import ListenerLock, WakePhraseDetector
 
 
 def test_wake_phrase_with_command() -> None:
@@ -46,3 +50,68 @@ def test_overlapping_windows_do_not_repeat_a_command() -> None:
 
     assert first is not None and first.kind == "command"
     assert duplicate is None
+
+
+def test_wake_starts_a_continuous_conversation() -> None:
+    detector = WakePhraseDetector()
+    detector.cooldown_seconds = 0
+
+    wake = detector.feed("Hey num num")
+    first = detector.feed("open Safari")
+    second = detector.feed("now open my calendar")
+
+    assert wake is not None and wake.kind == "wake"
+    assert first is not None and first.text == "open Safari"
+    assert second is not None and second.text == "now open my calendar"
+
+
+def test_sleep_phrase_ends_the_conversation() -> None:
+    detector = WakePhraseDetector()
+    detector.cooldown_seconds = 0
+    detector.feed("Hey num num")
+
+    sleep = detector.feed("Aight baby girl, let's sleep")
+    ignored = detector.feed("open Safari")
+
+    assert sleep is not None and sleep.kind == "sleep"
+    assert ignored is None
+
+
+def test_sleep_phrase_requires_an_active_session() -> None:
+    assert WakePhraseDetector().feed("Aight baby girl let's sleep") is None
+
+
+def test_phonetic_sleep_transcription_ends_session() -> None:
+    detector = WakePhraseDetector()
+    detector.cooldown_seconds = 0
+    detector.feed("Hey num num")
+
+    event = detector.feed("8 baby girl, lets sleep")
+
+    assert event is not None and event.kind == "sleep"
+
+
+def test_only_one_listener_can_hold_the_microphone(tmp_path: Path) -> None:
+    lock_path = tmp_path / "listener.lock"
+
+    with ListenerLock(lock_path):
+        with pytest.raises(RuntimeError, match="already listening"):
+            with ListenerLock(lock_path):
+                pass
+
+    with ListenerLock(lock_path):
+        pass
+
+
+def test_timestamped_transcript_is_a_command_during_session() -> None:
+    detector = WakePhraseDetector()
+    detector.cooldown_seconds = 0
+    detector.feed("Hey num num")
+
+    event = detector.feed(
+        "[00:00:00.000 --> 00:00:02.000] >> open my calendar"
+    )
+
+    assert event is not None
+    assert event.kind == "command"
+    assert event.text == "open my calendar"

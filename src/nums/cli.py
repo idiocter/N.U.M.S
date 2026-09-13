@@ -7,7 +7,13 @@ import sys
 
 from .agent import Agent
 from .config import Settings
-from .wake import WakePhraseDetector, WhisperStream, download_voice_model, voice_dependencies
+from .wake import (
+    ListenerLock,
+    WakePhraseDetector,
+    WhisperStream,
+    download_voice_model,
+    voice_dependencies,
+)
 
 
 LOGO = r"""
@@ -37,30 +43,45 @@ def doctor(settings: Settings) -> int:
 
 
 def wake_mode(agent: Agent, settings: Settings) -> None:
-    detector = WakePhraseDetector(settings.wake_phrase)
-    stream = WhisperStream(settings.whisper_model, settings.capture_device)
-    print(LOGO)
-    print(f'Listening locally for "{settings.wake_phrase}". Press Ctrl+C to stop.\n')
     try:
-        for transcript in stream.transcripts():
-            event = detector.feed(transcript)
-            if event is None:
-                continue
-            if event.kind == "wake":
-                print("NUMS > Listening…")
-                subprocess.run(
-                    ["afplay", "/System/Library/Sounds/Glass.aiff"], check=False
-                )
-                continue
-            print(f"You > {event.text}")
-            response = agent.run(event.text)
-            print(f"NUMS > {response}\n")
-            subprocess.run(["say", response], check=False)
-            detector.command_completed()
+        with ListenerLock():
+            detector = WakePhraseDetector(settings.wake_phrase)
+            print(LOGO)
+            print(f'Listening locally for "{settings.wake_phrase}". Press Ctrl+C to stop.\n')
+            while True:
+                stream = WhisperStream(settings.whisper_model, settings.capture_device)
+                transcripts = stream.transcripts()
+                event = None
+                try:
+                    for transcript in transcripts:
+                        event = detector.feed(transcript)
+                        if event is not None:
+                            break
+                finally:
+                    transcripts.close()
+                    stream.stop()
+
+                if event is None:
+                    continue
+                if event.kind == "wake":
+                    print("NUMS > Online. Keep talking until you send me to sleep.")
+                    subprocess.run(
+                        ["afplay", "/System/Library/Sounds/Glass.aiff"], check=False
+                    )
+                    continue
+                if event.kind == "sleep":
+                    print("NUMS > Going to sleep.\n")
+                    subprocess.run(["say", "Good night."], check=False)
+                    continue
+                print(f"You > {event.text}")
+                response = agent.run(event.text)
+                print(f"NUMS > {response}\n")
+                subprocess.run(["say", response], check=False)
+                detector.command_completed()
     except KeyboardInterrupt:
         print("\nNUMS wake listener stopped.")
-    finally:
-        stream.stop()
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
 
 
 def main() -> None:

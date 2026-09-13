@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import fcntl
+import os
 import re
 import shutil
 import subprocess
@@ -21,14 +23,39 @@ class WakeEvent:
     text: str = ""
 
 
+class ListenerLock:
+    def __init__(self, path: Path | None = None) -> None:
+        self.path = path or Path.home() / ".cache" / "nums" / "listener.lock"
+        self.handle = None
+
+    def __enter__(self) -> "ListenerLock":
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.handle = self.path.open("w")
+        try:
+            fcntl.flock(self.handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            self.handle.close()
+            self.handle = None
+            raise RuntimeError("NUMS is already listening in another process") from exc
+        self.handle.write(str(os.getpid()))
+        self.handle.flush()
+        return self
+
+    def __exit__(self, exc_type: object, exc: object, traceback: object) -> None:
+        if self.handle:
+            fcntl.flock(self.handle, fcntl.LOCK_UN)
+            self.handle.close()
+            self.handle = None
+
+
 class WakePhraseDetector:
     def __init__(self, phrase: str = "hey numnum") -> None:
         self.phrase = phrase.casefold().strip()
-        self.awaiting_command = False
+        self.active_session = False
         self.last_transcript = ""
         self.last_command = ""
         self.last_command_at = 0.0
-        self.cooldown_seconds = 8.0
+        self.cooldown_seconds = 0.5
         variants = {
             self.phrase,
             "hey num num",
@@ -44,28 +71,51 @@ class WakePhraseDetector:
             re.escape(item).replace(r"\ ", r"[\s,.-]+")
             for item in sorted(variants, key=len, reverse=True)
         )
-        self.pattern = re.compile(rf"\b(?:{alternatives})\b[\s,.:;!?-]*(.*)", re.I)
+        self.wake_pattern = re.compile(
+            rf"\b(?:{alternatives})\b[\s,.:;!?-]*(.*)", re.I
+        )
+        sleep_variants = {
+            "aight baby girl lets sleep",
+            "eight baby girl lets sleep",
+            "8 baby girl lets sleep",
+            "ight baby girl lets sleep",
+            "alright baby girl lets sleep",
+            "all right baby girl lets sleep",
+            "okay baby girl lets sleep",
+            "aight baby girl go to sleep",
+        }
+        sleep_alternatives = "|".join(
+            re.escape(item).replace(r"\ ", r"[\s,.-]+")
+            for item in sorted(sleep_variants, key=len, reverse=True)
+        )
+        self.sleep_pattern = re.compile(rf"\b(?:{sleep_alternatives})\b", re.I)
 
     def feed(self, transcript: str) -> WakeEvent | None:
         cleaned = " ".join(transcript.strip().split())
+        cleaned = re.sub(
+            r"^\[[0-9:.]+\s*-->\s*[0-9:.]+\]\s*", "", cleaned
+        )
+        cleaned = re.sub(r"^>>\s*", "", cleaned)
         if not cleaned or cleaned == self.last_transcript:
             return None
         self.last_transcript = cleaned
+        normalized = cleaned.replace("'", "").replace("’", "")
 
-        match = self.pattern.search(cleaned)
+        if self.active_session and self.sleep_pattern.search(normalized):
+            self.active_session = False
+            self.last_command_at = 0.0
+            return WakeEvent("sleep")
+
+        match = self.wake_pattern.search(normalized)
         if match:
+            self.active_session = True
             command = match.group(1).strip()
             if command:
-                self.awaiting_command = False
                 return self._command_event(command)
-            if not self.awaiting_command:
-                self.awaiting_command = True
-                return WakeEvent("wake")
-            return None
+            return WakeEvent("wake")
 
-        if self.awaiting_command and not cleaned.startswith("["):
-            self.awaiting_command = False
-            return self._command_event(cleaned)
+        if self.active_session and not normalized.startswith("["):
+            return self._command_event(normalized)
         return None
 
     def _command_event(self, command: str) -> WakeEvent | None:
@@ -134,11 +184,11 @@ class WhisperStream:
                         "--capture",
                         str(self.capture_device),
                         "--step",
-                        "1500",
+                        "0",
                         "--length",
-                        "8000",
-                        "--keep",
-                        "1000",
+                        "12000",
+                        "--vad-thold",
+                        "0.60",
                         "--max-tokens",
                         "32",
                         "--beam-size",
