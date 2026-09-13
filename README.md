@@ -51,7 +51,7 @@ NUMS_AUTO_APPROVE=1 uv run nums
 
 ```bash
 uv run nums --doctor
-python -m unittest discover -s tests
+uv run pytest
 ```
 
 ## Architecture
