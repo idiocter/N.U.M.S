@@ -20,6 +20,31 @@ uv run nums "summarize the files on my Desktop"
 uv run nums --speak "tell me the current system information"
 ```
 
+## Wake phrase
+
+NUMS can stay asleep until you say **“hey numnum.”** Voice recognition and the Qwen response both run locally.
+
+Install the microphone runtime and download the small English wake model once:
+
+```bash
+brew install whisper-cpp
+uv run nums --setup-voice
+```
+
+Start the listener:
+
+```bash
+uv run nums --wake
+```
+
+Say “hey numnum” and wait for “Yes?”, then speak the command. You can also say both together, such as “hey numnum, open Safari.” The first launch may trigger a macOS Microphone permission prompt for your terminal.
+
+If the wrong microphone is selected, list the capture devices shown when the listener starts and set its number:
+
+```bash
+NUMS_CAPTURE_DEVICE=0 uv run nums --wake
+```
+
 The default model is `qwen2.5:1.5b-instruct`, a compact model close to the requested 2B size. Override it with `NUMS_MODEL`, for example:
 
 ```bash
@@ -60,9 +85,10 @@ uv run pytest
 - `Agent` runs the tool-use loop and keeps conversation context in memory.
 - `MacTools` provides files, shell, apps, speech, notifications, and AppleScript.
 - `policy.classify` requires approval for consequential operations.
+- `WhisperStream` listens locally and activates the agent only after the wake phrase.
 
 ## Current limits
 
-- Interaction is text-first; `--speak` enables local voice output.
+- Wake listening requires the `whisper-cpp` Homebrew package and Microphone permission.
 - A 1.5B model is fast and private but may need simple, explicit requests for long workflows.
 - Conversation history is memory-only and disappears when NUMS exits.

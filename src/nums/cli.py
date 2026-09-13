@@ -7,6 +7,7 @@ import sys
 
 from .agent import Agent
 from .config import Settings
+from .wake import WakePhraseDetector, WhisperStream, download_voice_model, voice_dependencies
 
 
 LOGO = r"""
@@ -29,7 +30,34 @@ def doctor(settings: Settings) -> int:
     print(f"Model: {settings.model}")
     client = Agent(settings, confirm).client
     print(f"Model ready: {'yes' if client.has_model() else 'no'}")
+    whisper_ready, wake_model_ready = voice_dependencies(settings.whisper_model)
+    print(f"Whisper stream: {'yes' if whisper_ready else 'no'}")
+    print(f"Wake model: {'yes' if wake_model_ready else 'no'} ({settings.whisper_model})")
     return 0
+
+
+def wake_mode(agent: Agent, settings: Settings) -> None:
+    detector = WakePhraseDetector(settings.wake_phrase)
+    stream = WhisperStream(settings.whisper_model, settings.capture_device)
+    print(LOGO)
+    print(f'Listening locally for "{settings.wake_phrase}". Press Ctrl+C to stop.\n')
+    try:
+        for transcript in stream.transcripts():
+            event = detector.feed(transcript)
+            if event is None:
+                continue
+            if event.kind == "wake":
+                print("NUMS > Yes?")
+                subprocess.run(["say", "Yes?"], check=False)
+                continue
+            print(f"You > {event.text}")
+            response = agent.run(event.text)
+            print(f"NUMS > {response}\n")
+            subprocess.run(["say", response], check=False)
+    except KeyboardInterrupt:
+        print("\nNUMS wake listener stopped.")
+    finally:
+        stream.stop()
 
 
 def main() -> None:
@@ -38,14 +66,26 @@ def main() -> None:
     parser.add_argument("--doctor", action="store_true", help="Check Ollama and model availability")
     parser.add_argument("--pull", action="store_true", help="Download the configured local model")
     parser.add_argument("--speak", action="store_true", help="Read responses aloud")
+    parser.add_argument("--wake", action="store_true", help='Listen for "hey numnum" locally')
+    parser.add_argument(
+        "--setup-voice", action="store_true", help="Download the local Whisper wake model"
+    )
     args = parser.parse_args()
     settings = Settings.from_env()
     if args.pull:
         raise SystemExit(subprocess.call(["ollama", "pull", settings.model]))
+    if args.setup_voice:
+        print(f"Downloading local wake model to {settings.whisper_model}")
+        download_voice_model(settings.whisper_model)
+        print("Wake model ready.")
+        return
     if args.doctor:
         raise SystemExit(doctor(settings))
 
     agent = Agent(settings, confirm)
+    if args.wake:
+        wake_mode(agent, settings)
+        return
     speak = settings.speak or args.speak
     if args.prompt:
         response = agent.run(" ".join(args.prompt))
