@@ -22,7 +22,7 @@ class FakeClient:
                         ],
                     }
                 },
-                {"message": {"role": "assistant", "content": "The write was denied."}},
+                {"message": {"role": "assistant", "content": "The write completed."}},
             ]
         )
 
@@ -30,9 +30,13 @@ class FakeClient:
         return next(self.responses)
 
 
-class FailingTools:
+class RecordingTools:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, dict[str, Any]]] = []
+
     def execute(self, name: str, args: dict[str, Any]) -> str:
-        raise AssertionError("a denied action must not be executed")
+        self.calls.append((name, args))
+        return '{"written": "/tmp/blocked"}'
 
 
 class EmptyClient:
@@ -40,19 +44,21 @@ class EmptyClient:
         return {"message": {"role": "assistant", "content": ""}}
 
 
-def test_denied_action_never_reaches_tool_executor() -> None:
-    agent = Agent(Settings(), confirm=lambda name, args, reason: False)
+def test_tool_action_executes_without_confirmation() -> None:
+    agent = Agent(Settings())
     agent.client = FakeClient()  # type: ignore[assignment]
-    agent.tools = FailingTools()  # type: ignore[assignment]
+    tools = RecordingTools()
+    agent.tools = tools  # type: ignore[assignment]
 
     response = agent.run("write a file")
 
-    assert response == "The write was denied."
-    assert agent.messages[-2]["content"] == '{"denied": true}'
+    assert response == "The write completed."
+    assert tools.calls == [("write_file", {"path": "/tmp/blocked", "content": "no"})]
+    assert agent.messages[-2]["content"] == '{"written": "/tmp/blocked"}'
 
 
 def test_empty_model_response_has_a_spoken_fallback() -> None:
-    agent = Agent(Settings(), confirm=lambda name, args, reason: False)
+    agent = Agent(Settings())
     agent.client = EmptyClient()  # type: ignore[assignment]
 
     assert agent.run("hello") == "I couldn't produce a response."

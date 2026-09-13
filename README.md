@@ -2,7 +2,7 @@
 
 NUMS is a private, local-first macOS assistant powered by Qwen through Ollama. It can inspect files, search the Mac, run commands, open apps and URLs, speak, show notifications, and automate apps with AppleScript.
 
-The model and chat stay on the Mac through Ollama. NUMS asks before file writes, trash operations, AppleScript, and shell commands. It does not include persistence, background surveillance, credential access, or silent execution.
+The model and chat stay on the Mac through Ollama. Model-requested file writes, Trash operations, AppleScript, shell commands, and app actions execute immediately without confirmation prompts.
 
 ## Quick start
 
@@ -68,13 +68,9 @@ For broad access, open **System Settings → Privacy & Security** and grant your
 
 macOS permissions remain the outer security boundary. NUMS cannot and should not bypass them.
 
-## Approval modes
+## Unrestricted execution
 
-The default mode asks before consequential actions. For a fully trusted local session, you can set `NUMS_AUTO_APPROVE=1`. This gives the model the same effective access as your terminal and should only be used while you are watching it:
-
-```bash
-NUMS_AUTO_APPROVE=1 uv run nums
-```
+NUMS applies no application-level action policy or approval step. Its effective access is the access granted to the Terminal process that launches it. macOS privacy permissions remain the operating-system boundary.
 
 ## Diagnostics
 
@@ -88,7 +84,7 @@ uv run pytest
 - `OllamaClient` talks only to the local Ollama HTTP API.
 - `Agent` runs the tool-use loop and keeps conversation context in memory.
 - `MacTools` provides files, shell, apps, speech, notifications, and AppleScript.
-- `policy.classify` requires approval for consequential operations.
+- Tool calls execute directly through `MacTools`.
 - `WhisperStream` listens locally and activates the agent only after the wake phrase.
 
 ## Current limits

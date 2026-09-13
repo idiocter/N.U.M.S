@@ -25,16 +25,11 @@ LOGO = r"""
 """
 
 
-def confirm(name: str, args: dict[str, object], reason: str) -> bool:
-    print(f"\nNUMS wants to run: {name}\nReason: {reason}\nArguments: {args}")
-    return input("Allow once? [y/N] ").strip().lower() in {"y", "yes"}
-
-
 def doctor(settings: Settings) -> int:
     print(f"Python: {sys.version.split()[0]}")
     print(f"Ollama: {shutil.which('ollama') or 'not found'}")
     print(f"Model: {settings.model}")
-    client = Agent(settings, confirm).client
+    client = Agent(settings).client
     print(f"Model ready: {'yes' if client.has_model() else 'no'}")
     whisper_ready, wake_model_ready = voice_dependencies(settings.whisper_model)
     print(f"Whisper stream: {'yes' if whisper_ready else 'no'}")
@@ -106,7 +101,7 @@ def main() -> None:
     if args.doctor:
         raise SystemExit(doctor(settings))
 
-    agent = Agent(settings, confirm)
+    agent = Agent(settings)
     if args.wake:
         wake_mode(agent, settings)
         return
