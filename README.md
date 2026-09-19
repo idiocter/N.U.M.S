@@ -79,6 +79,13 @@ uv run nums --doctor
 uv run pytest
 ```
 
+## Tool-use fine tuning
+
+The [training workflow](training/README.md) validates labeled tool calls, creates
+train/validation/test splits, and compares model tool choices without executing
+the requested actions. The included examples are synthetic pipeline fixtures;
+collect representative reviewed examples before choosing a trained model for NUMS.
+
 ## Architecture
 
 - `OllamaClient` talks only to the local Ollama HTTP API.

@@ -1,0 +1,40 @@
+{"id":"read-01","user":"Read the notes at /tmp/nums-demo/notes.txt","tool":"read_file","arguments":{"path":"/tmp/nums-demo/notes.txt"}}
+{"id":"read-02","user":"What does /tmp/nums-demo/plan.md say?","tool":"read_file","arguments":{"path":"/tmp/nums-demo/plan.md"}}
+{"id":"read-03","user":"Show me the contents of /tmp/nums-demo/todo.txt","tool":"read_file","arguments":{"path":"/tmp/nums-demo/todo.txt"}}
+{"id":"read-04","user":"Please inspect /tmp/nums-demo/config.json","tool":"read_file","arguments":{"path":"/tmp/nums-demo/config.json"}}
+{"id":"list-01","user":"List the files in /tmp/nums-demo","tool":"list_directory","arguments":{"path":"/tmp/nums-demo"}}
+{"id":"list-02","user":"What is inside /tmp/nums-demo/photos?","tool":"list_directory","arguments":{"path":"/tmp/nums-demo/photos"}}
+{"id":"list-03","user":"Show the folders under /tmp/nums-demo/archive","tool":"list_directory","arguments":{"path":"/tmp/nums-demo/archive"}}
+{"id":"list-04","user":"Browse /tmp/nums-demo/projects for me","tool":"list_directory","arguments":{"path":"/tmp/nums-demo/projects"}}
+{"id":"search-01","user":"Find mentions of invoice in /tmp/nums-demo","tool":"search_files","arguments":{"query":"invoice","path":"/tmp/nums-demo"}}
+{"id":"search-02","user":"Search /tmp/nums-demo/notes for the word meeting","tool":"search_files","arguments":{"query":"meeting","path":"/tmp/nums-demo/notes"}}
+{"id":"search-03","user":"Look for TODO in files under /tmp/nums-demo/code","tool":"search_files","arguments":{"query":"TODO","path":"/tmp/nums-demo/code"}}
+{"id":"search-04","user":"Find any file content containing budget in /tmp/nums-demo/work","tool":"search_files","arguments":{"query":"budget","path":"/tmp/nums-demo/work"}}
+{"id":"write-01","user":"Write hello to /tmp/nums-demo/greeting.txt","tool":"write_file","arguments":{"path":"/tmp/nums-demo/greeting.txt","content":"hello"}}
+{"id":"write-02","user":"Create /tmp/nums-demo/reminder.txt containing Call Alex tomorrow","tool":"write_file","arguments":{"path":"/tmp/nums-demo/reminder.txt","content":"Call Alex tomorrow"}}
+{"id":"write-03","user":"Replace /tmp/nums-demo/status.txt with done","tool":"write_file","arguments":{"path":"/tmp/nums-demo/status.txt","content":"done"}}
+{"id":"write-04","user":"Save Milk and bread in /tmp/nums-demo/shopping.txt","tool":"write_file","arguments":{"path":"/tmp/nums-demo/shopping.txt","content":"Milk and bread"}}
+{"id":"open-01","user":"Open Safari","tool":"open_item","arguments":{"target":"Safari"}}
+{"id":"open-02","user":"Launch Calculator","tool":"open_item","arguments":{"target":"Calculator"}}
+{"id":"open-03","user":"Open https://example.com in my browser","tool":"open_item","arguments":{"target":"https://example.com"}}
+{"id":"open-04","user":"Show me /tmp/nums-demo/report.pdf in its default app","tool":"open_item","arguments":{"target":"/tmp/nums-demo/report.pdf"}}
+{"id":"speak-01","user":"Say good morning out loud","tool":"speak","arguments":{"text":"good morning"}}
+{"id":"speak-02","user":"Read aloud: The timer is finished","tool":"speak","arguments":{"text":"The timer is finished"}}
+{"id":"speak-03","user":"Speak the words welcome home","tool":"speak","arguments":{"text":"welcome home"}}
+{"id":"notify-01","user":"Show a notification titled Reminder saying Stretch now","tool":"notify","arguments":{"title":"Reminder","message":"Stretch now"}}
+{"id":"notify-02","user":"Notify me: title Download, message Complete","tool":"notify","arguments":{"title":"Download","message":"Complete"}}
+{"id":"notify-03","user":"Send a Mac notification called Break with message Take five minutes","tool":"notify","arguments":{"title":"Break","message":"Take five minutes"}}
+{"id":"system-01","user":"What are this Mac's basic system details?","tool":"system_info","arguments":{}}
+{"id":"system-02","user":"Check my Mac's hostname and architecture","tool":"system_info","arguments":{}}
+{"id":"system-03","user":"Tell me what operating system this computer is running","tool":"system_info","arguments":{}}
+{"id":"shell-01","user":"Run pwd in /tmp/nums-demo","tool":"shell","arguments":{"command":"pwd","cwd":"/tmp/nums-demo"}}
+{"id":"shell-02","user":"Execute git status --short in /tmp/nums-demo/project","tool":"shell","arguments":{"command":"git status --short","cwd":"/tmp/nums-demo/project"}}
+{"id":"shell-03","user":"Run date on this Mac","tool":"shell","arguments":{"command":"date"}}
+{"id":"apple-01","user":"Use AppleScript to tell Finder to activate","tool":"run_applescript","arguments":{"script":"tell application \"Finder\" to activate"}}
+{"id":"apple-02","user":"Run this AppleScript: display dialog \"Hello\"","tool":"run_applescript","arguments":{"script":"display dialog \"Hello\""}}
+{"id":"trash-01","user":"Move /tmp/nums-demo/old.txt to the Trash","tool":"trash_path","arguments":{"path":"/tmp/nums-demo/old.txt"}}
+{"id":"trash-02","user":"Trash the folder /tmp/nums-demo/obsolete","tool":"trash_path","arguments":{"path":"/tmp/nums-demo/obsolete"}}
+{"id":"none-01","user":"What is two plus two?","tool":"none","arguments":{},"answer":"Four."}
+{"id":"none-02","user":"Say hello in your response, without speaking aloud","tool":"none","arguments":{},"answer":"Hello!"}
+{"id":"none-03","user":"What can you help me do on this Mac?","tool":"none","arguments":{},"answer":"I can inspect files, search, run commands, open apps, speak, show notifications, and automate apps."}
+{"id":"none-04","user":"Explain what a folder is in one sentence","tool":"none","arguments":{},"answer":"A folder organizes files and other folders."}
