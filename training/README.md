@@ -2,6 +2,8 @@
 
 NUMS currently uses `qwen2.5:1.5b-instruct` through Ollama. This folder provides a small, synthetic **starter** dataset, a deterministic train/validation/test split, and a read-only tool-call evaluator. The starter examples are for checking the pipeline; they do not establish that a fine-tuned model is better.
 
+See [BASELINE.md](BASELINE.md) for the current starter-set result.
+
 ## Collect labels
 
 Add reviewed examples to `seed_examples.jsonl` or a separate private JSONL file. Each record needs `id`, `user`, `tool`, and `arguments`. Labels should be the **first** correct tool call for the user's request. Remove personal paths, secrets, and private content before using actual NUMS conversations. Keep evaluation examples separate from training examples, and include cases where a tool should not be called before deploying a trained model.

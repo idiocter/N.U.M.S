@@ -31,10 +31,10 @@ def load_examples(path: Path) -> list[dict]:
                 raise ValueError(f"duplicate id: {identifier}")
             if not isinstance(user, str) or not user.strip():
                 raise ValueError("user must be a nonempty string")
-            if name not in SCHEMAS and name != "none" or not isinstance(arguments, dict):
+            if (name != "none" and name not in SCHEMAS) or not isinstance(arguments, dict):
                 raise ValueError("invalid tool or arguments")
-            if name == "none" and not isinstance(item.get("answer"), str):
-                raise ValueError("a no-tool example needs an answer")
+            if name == "none" and not (isinstance(item.get("answer"), str) and item["answer"].strip()):
+                raise ValueError("a no-tool example needs a nonempty answer")
             required = set(SCHEMAS[name]["parameters"]["required"]) if name != "none" else set()
             allowed = set(SCHEMAS[name]["parameters"]["properties"]) if name != "none" else set()
             if not required <= arguments.keys() or not arguments.keys() <= allowed:
