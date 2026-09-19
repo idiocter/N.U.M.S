@@ -1,8 +1,9 @@
+import os
 from pathlib import Path
 
 import pytest
 
-from nums.wake import ListenerLock, WakePhraseDetector
+from nums.wake import ListenerLock, WakePhraseDetector, WhisperStream
 
 
 def test_wake_phrase_with_command() -> None:
@@ -95,9 +96,11 @@ def test_only_one_listener_can_hold_the_microphone(tmp_path: Path) -> None:
     lock_path = tmp_path / "listener.lock"
 
     with ListenerLock(lock_path):
+        assert lock_path.read_text() == str(os.getpid())
         with pytest.raises(RuntimeError, match="already listening"):
             with ListenerLock(lock_path):
                 pass
+        assert lock_path.read_text() == str(os.getpid())
 
     with ListenerLock(lock_path):
         pass
@@ -115,3 +118,38 @@ def test_timestamped_transcript_is_a_command_during_session() -> None:
     assert event is not None
     assert event.kind == "command"
     assert event.text == "open my calendar"
+
+
+def test_same_command_can_be_repeated_after_response() -> None:
+    detector = WakePhraseDetector()
+    detector.feed("Hey num num")
+    first = detector.feed("what is the time")
+    detector.command_completed()
+    second = detector.feed("what is the time")
+
+    assert first is not None and first.kind == "command"
+    assert second is not None and second.kind == "command"
+
+
+def test_stream_reads_final_transcript_after_process_exit(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    model = tmp_path / "model.bin"
+    model.touch()
+
+    class FinishedProcess:
+        returncode = 0
+
+        def poll(self) -> int:
+            return 0
+
+    def fake_popen(command: list[str], **kwargs: object) -> FinishedProcess:
+        output_path = Path(command[command.index("--file") + 1])
+        output_path.write_text("hey numnum, open Safari\n")
+        return FinishedProcess()
+
+    monkeypatch.setattr("nums.wake.shutil.which", lambda _: "/usr/local/bin/whisper-stream")
+    monkeypatch.setattr("nums.wake.subprocess.Popen", fake_popen)
+    stream = WhisperStream(str(model))
+    transcripts = stream.transcripts()
+
+    assert next(transcripts) == "hey numnum, open Safari"
+    transcripts.close()

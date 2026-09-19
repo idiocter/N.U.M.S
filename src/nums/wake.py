@@ -30,13 +30,15 @@ class ListenerLock:
 
     def __enter__(self) -> "ListenerLock":
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.handle = self.path.open("w")
+        self.handle = self.path.open("a+")
         try:
             fcntl.flock(self.handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
             self.handle.close()
             self.handle = None
             raise RuntimeError("NUMS is already listening in another process") from exc
+        self.handle.seek(0)
+        self.handle.truncate()
         self.handle.write(str(os.getpid()))
         self.handle.flush()
         return self
@@ -128,7 +130,10 @@ class WakePhraseDetector:
         return WakeEvent("command", command)
 
     def command_completed(self) -> None:
-        self.last_command_at = time.monotonic()
+        # The microphone stream is restarted after each response. A new stream
+        # can contain the same spoken command, so clear stream-local duplicates.
+        self.last_transcript = ""
+        self.last_command_at = 0.0
 
 
 def voice_dependencies(model_path: str) -> tuple[bool, bool]:
@@ -202,14 +207,17 @@ class WhisperStream:
                 )
                 position = 0
                 try:
-                    while self.process.poll() is None:
+                    while True:
+                        running = self.process.poll() is None
                         if output_path.exists():
                             with output_path.open(errors="replace") as transcript:
                                 transcript.seek(position)
-                                for line in transcript:
+                                while line := transcript.readline():
+                                    position = transcript.tell()
                                     if line.strip():
                                         yield line.strip()
-                                position = transcript.tell()
+                        if not running:
+                            break
                         time.sleep(0.2)
                 finally:
                     self.stop()
@@ -227,3 +235,4 @@ class WhisperStream:
                 self.process.wait(timeout=3)
             except subprocess.TimeoutExpired:
                 self.process.kill()
+                self.process.wait()

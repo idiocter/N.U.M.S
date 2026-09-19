@@ -7,6 +7,7 @@ import sys
 
 from .agent import Agent
 from .config import Settings
+from .ollama import OllamaError
 from .wake import (
     ListenerLock,
     WakePhraseDetector,
@@ -69,7 +70,13 @@ def wake_mode(agent: Agent, settings: Settings) -> None:
                     subprocess.run(["say", "Good night."], check=False)
                     continue
                 print(f"You > {event.text}")
-                response = agent.run(event.text)
+                try:
+                    response = agent.run(event.text)
+                except OllamaError as exc:
+                    print(f"NUMS error > {exc}\n")
+                    subprocess.run(["say", "I could not reach the local model."], check=False)
+                    detector.command_completed()
+                    continue
                 print(f"NUMS > {response}\n")
                 subprocess.run(["say", response], check=False)
                 detector.command_completed()
@@ -107,7 +114,10 @@ def main() -> None:
         return
     speak = settings.speak or args.speak
     if args.prompt:
-        response = agent.run(" ".join(args.prompt))
+        try:
+            response = agent.run(" ".join(args.prompt))
+        except OllamaError as exc:
+            raise SystemExit(str(exc)) from exc
         print(response)
         if speak:
             subprocess.run(["say", response], check=False)
@@ -125,7 +135,11 @@ def main() -> None:
             continue
         if prompt in {"/quit", "/exit"}:
             break
-        response = agent.run(prompt)
+        try:
+            response = agent.run(prompt)
+        except OllamaError as exc:
+            print(f"NUMS error > {exc}\n")
+            continue
         print(f"NUMS > {response}\n")
         if speak:
             subprocess.run(["say", response], check=False)

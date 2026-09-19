@@ -7,6 +7,7 @@ import shutil
 import subprocess
 from pathlib import Path
 from typing import Any, Callable
+from urllib.parse import urlparse
 
 
 def _schema(name: str, description: str, properties: dict[str, Any], required: list[str]) -> dict[str, Any]:
@@ -25,7 +26,7 @@ TOOL_SCHEMAS = [
     _schema("list_directory", "List files and folders.", {"path": {"type": "string"}}, ["path"]),
     _schema(
         "search_files",
-        "Search file contents with ripgrep.",
+        "Search file contents for a literal string with ripgrep.",
         {"query": {"type": "string"}, "path": {"type": "string"}},
         ["query", "path"],
     ),
@@ -100,7 +101,10 @@ class MacTools:
         return json.dumps(items[:500])
 
     def search_files(self, args: dict[str, Any]) -> str:
-        return _run(["rg", "-n", "--hidden", "--glob", "!.git", args["query"], str(Path(args["path"]).expanduser())])
+        return _run([
+            "rg", "-n", "-F", "--hidden", "--glob", "!.git", "--",
+            args["query"], str(Path(args["path"]).expanduser()),
+        ])
 
     def write_file(self, args: dict[str, Any]) -> str:
         path = Path(args["path"]).expanduser()
@@ -113,7 +117,11 @@ class MacTools:
         return _run(["/bin/zsh", "-lc", args["command"]], cwd=cwd)
 
     def open_item(self, args: dict[str, Any]) -> str:
-        return _run(["open", args["target"]])
+        target = args["target"]
+        path = Path(target).expanduser()
+        if urlparse(target).scheme or path.exists() or path.suffix or "/" in target:
+            return _run(["open", str(path) if target.startswith("~") else target])
+        return _run(["open", "-a", target])
 
     def speak(self, args: dict[str, Any]) -> str:
         return _run(["say", args["text"]])

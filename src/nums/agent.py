@@ -4,7 +4,7 @@ import json
 from typing import Any
 
 from .config import Settings
-from .ollama import OllamaClient
+from .ollama import OllamaClient, OllamaError
 from .tools import MacTools, TOOL_SCHEMAS
 
 
@@ -21,23 +21,29 @@ class Agent:
         self.messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT}]
 
     def run(self, prompt: str) -> str:
+        history_length = len(self.messages)
         self.messages.append({"role": "user", "content": prompt})
-        for _ in range(self.settings.max_steps):
-            response = self.client.chat(self.messages, TOOL_SCHEMAS)
-            message = response.get("message", {})
-            self.messages.append(message)
-            calls = message.get("tool_calls") or []
-            if not calls:
-                return message.get("content") or "I couldn't produce a response."
-            for call in calls:
-                function = call.get("function", {})
-                name = function.get("name", "")
-                args = function.get("arguments", {})
-                if isinstance(args, str):
-                    try:
-                        args = json.loads(args)
-                    except json.JSONDecodeError:
-                        args = {}
-                result = self.tools.execute(name, args)
-                self.messages.append({"role": "tool", "tool_name": name, "content": result})
+        try:
+            for _ in range(self.settings.max_steps):
+                response = self.client.chat(self.messages, TOOL_SCHEMAS)
+                message = response.get("message", {})
+                self.messages.append(message)
+                calls = message.get("tool_calls") or []
+                if not calls:
+                    return message.get("content") or "I couldn't produce a response."
+                for call in calls:
+                    function = call.get("function", {})
+                    name = function.get("name", "")
+                    args = function.get("arguments", {})
+                    if isinstance(args, str):
+                        try:
+                            args = json.loads(args)
+                        except json.JSONDecodeError:
+                            args = {}
+                    result = self.tools.execute(name, args)
+                    self.messages.append({"role": "tool", "tool_name": name, "content": result})
+        except OllamaError:
+            if len(self.messages) == history_length + 1:
+                self.messages.pop()
+            raise
         return "I reached the tool-step limit. Try splitting the task into a smaller request."

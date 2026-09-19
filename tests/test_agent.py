@@ -1,7 +1,10 @@
 from typing import Any
 
+import pytest
+
 from nums.agent import Agent
 from nums.config import Settings
+from nums.ollama import OllamaError
 
 
 class FakeClient:
@@ -62,3 +65,18 @@ def test_empty_model_response_has_a_spoken_fallback() -> None:
     agent.client = EmptyClient()  # type: ignore[assignment]
 
     assert agent.run("hello") == "I couldn't produce a response."
+
+
+def test_failed_model_request_does_not_replay_user_prompt() -> None:
+    class FailingClient:
+        def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
+            raise OllamaError("Ollama disconnected")
+
+    agent = Agent(Settings())
+    agent.client = FailingClient()  # type: ignore[assignment]
+
+    with pytest.raises(OllamaError, match="disconnected"):
+        agent.run("open Safari")
+
+    assert len(agent.messages) == 1
+    assert agent.messages[0]["role"] == "system"

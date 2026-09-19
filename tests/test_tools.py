@@ -1,4 +1,7 @@
+import json
 from pathlib import Path
+
+import pytest
 
 from nums.tools import MacTools
 
@@ -9,3 +12,28 @@ def test_read_and_list(tmp_path: Path) -> None:
     tools = MacTools()
     assert tools.read_file({"path": str(file)}) == "hello NUMS"
     assert "hello.txt" in tools.list_directory({"path": str(tmp_path)})
+
+
+def test_search_treats_dash_prefixed_query_as_text(tmp_path: Path) -> None:
+    (tmp_path / "note.txt").write_text("-TODO follow up\n")
+
+    result = json.loads(MacTools().search_files({"query": "-TODO", "path": str(tmp_path)}))
+
+    assert result["exit_code"] == 0
+    assert "-TODO follow up" in result["output"]
+
+
+@pytest.mark.parametrize(
+    ("target", "expected"),
+    [
+        ("Safari", ["open", "-a", "Safari"]),
+        ("https://example.com", ["open", "https://example.com"]),
+        ("/tmp/report.pdf", ["open", "/tmp/report.pdf"]),
+    ],
+)
+def test_open_item_dispatches_apps_and_urls(monkeypatch: pytest.MonkeyPatch, target: str, expected: list[str]) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command: commands.append(command) or "ok")
+
+    assert MacTools().open_item({"target": target}) == "ok"
+    assert commands == [expected]
