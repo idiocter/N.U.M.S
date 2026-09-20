@@ -28,20 +28,25 @@ class OllamaClient:
         )
         try:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
-                return json.load(response)
+                result = json.load(response)
         except urllib.error.HTTPError as exc:
-            detail = exc.read().decode(errors="replace")
+            detail = exc.read().decode(errors="replace")[:1000]
             raise OllamaError(f"Ollama returned HTTP {exc.code}: {detail}") from exc
-        except urllib.error.URLError as exc:
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
             raise OllamaError(
                 f"Cannot reach Ollama at {self.base_url}. Start it with `ollama serve`."
             ) from exc
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            raise OllamaError("Ollama returned an invalid JSON response") from exc
+        if not isinstance(result, dict) or not isinstance(result.get("message"), dict):
+            raise OllamaError("Ollama returned a response without an assistant message")
+        return result
 
     def has_model(self) -> bool:
         try:
             with urllib.request.urlopen(f"{self.base_url}/api/tags", timeout=5) as response:
                 models = json.load(response).get("models", [])
-        except urllib.error.URLError:
+        except (urllib.error.URLError, TimeoutError, ConnectionError, json.JSONDecodeError):
             return False
         names = {model.get("name") for model in models}
         return self.model in names or f"{self.model}:latest" in names
