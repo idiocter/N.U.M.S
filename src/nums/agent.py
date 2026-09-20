@@ -20,7 +20,15 @@ class Agent:
         self.tools = MacTools()
         self.messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT}]
 
+    def _trim_history(self) -> None:
+        starts = [i for i, message in enumerate(self.messages) if message.get("role") == "user"]
+        previous_turns = self.settings.history_turns - 1
+        if len(starts) > previous_turns:
+            cutoff = starts[-previous_turns] if previous_turns else len(self.messages)
+            self.messages = self.messages[:1] + self.messages[cutoff:]
+
     def run(self, prompt: str) -> str:
+        self._trim_history()
         history_length = len(self.messages)
         self.messages.append({"role": "user", "content": prompt})
         try:

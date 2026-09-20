@@ -22,6 +22,7 @@ class Settings:
     model: str = "qwen2.5:1.5b-instruct"
     ollama_url: str = "http://127.0.0.1:11434"
     max_steps: int = 8
+    history_turns: int = 8
     speak: bool = False
     wake_phrase: str = "hey numnum"
     whisper_model: str = str(Path.home() / ".cache" / "nums" / "ggml-base.en.bin")
@@ -46,6 +47,7 @@ class Settings:
             model=model,
             ollama_url=url,
             max_steps=_integer("NUMS_MAX_STEPS", cls.max_steps, 1),
+            history_turns=_integer("NUMS_HISTORY_TURNS", cls.history_turns, 1),
             speak=speak == "1",
             wake_phrase=phrase,
             whisper_model=os.path.expanduser(

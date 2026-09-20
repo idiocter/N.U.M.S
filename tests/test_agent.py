@@ -80,3 +80,21 @@ def test_failed_model_request_does_not_replay_user_prompt() -> None:
 
     assert len(agent.messages) == 1
     assert agent.messages[0]["role"] == "system"
+
+
+def test_long_session_keeps_only_recent_complete_turns() -> None:
+    class RecordingClient:
+        def __init__(self) -> None:
+            self.seen: list[list[str]] = []
+
+        def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
+            self.seen.append([m["content"] for m in messages if m["role"] == "user"])
+            return {"message": {"role": "assistant", "content": "ok"}}
+
+    agent = Agent(Settings(history_turns=2))
+    client = RecordingClient()
+    agent.client = client  # type: ignore[assignment]
+    for prompt in ("first", "second", "third"):
+        agent.run(prompt)
+
+    assert client.seen == [["first"], ["first", "second"], ["second", "third"]]

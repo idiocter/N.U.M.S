@@ -8,6 +8,7 @@ from nums.config import Settings
     [
         ("NUMS_MAX_STEPS", "0", "at least 1"),
         ("NUMS_MAX_STEPS", "many", "integer"),
+        ("NUMS_HISTORY_TURNS", "0", "at least 1"),
         ("NUMS_CAPTURE_DEVICE", "-2", "at least -1"),
         ("NUMS_MODEL", "  ", "cannot be empty"),
         ("NUMS_OLLAMA_URL", "localhost:11434", "HTTP URL"),
