@@ -25,6 +25,9 @@ def test_opt_in_history_survives_restart_and_is_private(tmp_path: Path) -> None:
     assert json.loads(path.read_text())[0]["content"] == "hi"
     second = Agent(settings)
     assert [item["role"] for item in second.messages] == ["system", "user", "assistant"]
+    second.reset()
+    assert json.loads(path.read_text()) == []
+    assert len(Agent(settings).messages) == 1
 
 
 def test_corrupt_history_has_clear_error(tmp_path: Path) -> None:

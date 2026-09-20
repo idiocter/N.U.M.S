@@ -2,7 +2,7 @@ from contextlib import nullcontext
 
 import pytest
 
-from nums.cli import wake_mode
+from nums.cli import doctor, wake_mode
 from nums.config import Settings
 from nums.ollama import OllamaError
 
@@ -36,3 +36,10 @@ def test_wake_listener_survives_model_disconnect(monkeypatch: pytest.MonkeyPatch
     output = capsys.readouterr().out
     assert "NUMS error > Ollama disconnected" in output
     assert "NUMS wake listener stopped" in output
+
+
+def test_doctor_returns_failure_when_model_is_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("nums.cli.OllamaClient.has_model", lambda self: False)
+    monkeypatch.setattr("nums.cli.voice_dependencies", lambda _: (True, True))
+
+    assert doctor(Settings()) == 1

@@ -7,7 +7,7 @@ import sys
 
 from .agent import Agent
 from .config import Settings
-from .ollama import OllamaError
+from .ollama import OllamaClient, OllamaError
 from .wake import (
     ListenerLock,
     WakePhraseDetector,
@@ -30,12 +30,13 @@ def doctor(settings: Settings) -> int:
     print(f"Python: {sys.version.split()[0]}")
     print(f"Ollama: {shutil.which('ollama') or 'not found'}")
     print(f"Model: {settings.model}")
-    client = Agent(settings).client
-    print(f"Model ready: {'yes' if client.has_model() else 'no'}")
+    client = OllamaClient(settings.ollama_url, settings.model)
+    model_ready = client.has_model()
+    print(f"Model ready: {'yes' if model_ready else 'no'}")
     whisper_ready, wake_model_ready = voice_dependencies(settings.whisper_model)
     print(f"Whisper stream: {'yes' if whisper_ready else 'no'}")
     print(f"Wake model: {'yes' if wake_model_ready else 'no'} ({settings.whisper_model})")
-    return 0
+    return 0 if model_ready else 1
 
 
 def wake_mode(agent: Agent, settings: Settings) -> None:
@@ -97,7 +98,10 @@ def main() -> None:
         "--setup-voice", action="store_true", help="Download the local Whisper wake model"
     )
     args = parser.parse_args()
-    settings = Settings.from_env()
+    try:
+        settings = Settings.from_env()
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
     if args.pull:
         raise SystemExit(subprocess.call(["ollama", "pull", settings.model]))
     if args.setup_voice:
@@ -108,7 +112,10 @@ def main() -> None:
     if args.doctor:
         raise SystemExit(doctor(settings))
 
-    agent = Agent(settings)
+    try:
+        agent = Agent(settings)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
     if args.wake:
         wake_mode(agent, settings)
         return
@@ -124,7 +131,7 @@ def main() -> None:
         return
 
     print(LOGO)
-    print(f"Local model: {settings.model} | Type /quit to exit\n")
+    print(f"Local model: {settings.model} | Type /help for commands\n")
     while True:
         try:
             prompt = input("You > ").strip()
@@ -135,6 +142,17 @@ def main() -> None:
             continue
         if prompt in {"/quit", "/exit"}:
             break
+        if prompt == "/help":
+            print("/help — commands  /status — model and history  /reset — clear conversation  /quit — exit\n")
+            continue
+        if prompt == "/status":
+            storage = settings.history_file or "memory only"
+            print(f"Model: {settings.model} | History: {storage} | Messages: {len(agent.messages) - 1}\n")
+            continue
+        if prompt == "/reset":
+            agent.reset()
+            print("Conversation cleared.\n")
+            continue
         try:
             response = agent.run(prompt)
         except OllamaError as exc:

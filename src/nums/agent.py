@@ -28,6 +28,10 @@ class Agent:
         if self.history_store:
             self.history_store.save(self.messages[1:])
 
+    def reset(self) -> None:
+        self.messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        self._save_history()
+
     def _trim_history(self) -> None:
         starts = [i for i, message in enumerate(self.messages) if message.get("role") == "user"]
         previous_turns = self.settings.history_turns - 1

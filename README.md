@@ -31,6 +31,10 @@ This file includes prompts, model replies, and tool results. NUMS writes it
 atomically with owner-only permissions. `NUMS_HISTORY_TURNS` controls how many
 recent turns reach the model on each request (default: 8).
 
+In the interactive terminal, `/status` shows the current model and history
+location, `/reset` clears the conversation (including the optional history
+file), and `/help` lists the commands.
+
 ## Wake phrase
 
 NUMS can stay asleep until you say **“hey numnum.”** Voice recognition and the Qwen response both run locally.
