@@ -23,6 +23,7 @@ class Settings:
     ollama_url: str = "http://127.0.0.1:11434"
     max_steps: int = 8
     history_turns: int = 8
+    history_file: str | None = None
     speak: bool = False
     wake_phrase: str = "hey numnum"
     whisper_model: str = str(Path.home() / ".cache" / "nums" / "ggml-base.en.bin")
@@ -48,6 +49,8 @@ class Settings:
             ollama_url=url,
             max_steps=_integer("NUMS_MAX_STEPS", cls.max_steps, 1),
             history_turns=_integer("NUMS_HISTORY_TURNS", cls.history_turns, 1),
+            history_file=os.path.expanduser(os.environ["NUMS_HISTORY_FILE"])
+            if os.getenv("NUMS_HISTORY_FILE") else None,
             speak=speak == "1",
             wake_phrase=phrase,
             whisper_model=os.path.expanduser(

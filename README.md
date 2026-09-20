@@ -20,6 +20,17 @@ uv run nums "summarize the files on my Desktop"
 uv run nums --speak "tell me the current system information"
 ```
 
+NUMS normally keeps conversation history in memory for one run. To resume a
+conversation after restarting, opt in to a private local history file:
+
+```bash
+NUMS_HISTORY_FILE=~/.local/share/nums/history.json uv run nums
+```
+
+This file includes prompts, model replies, and tool results. NUMS writes it
+atomically with owner-only permissions. `NUMS_HISTORY_TURNS` controls how many
+recent turns reach the model on each request (default: 8).
+
 ## Wake phrase
 
 NUMS can stay asleep until you say **“hey numnum.”** Voice recognition and the Qwen response both run locally.
@@ -98,4 +109,4 @@ collect representative reviewed examples before choosing a trained model for NUM
 
 - Wake listening requires the `whisper-cpp` Homebrew package and Microphone permission.
 - A 1.5B model is fast and private but may need simple, explicit requests for long workflows.
-- Conversation history is memory-only and disappears when NUMS exits.
+- Conversation history persists only when `NUMS_HISTORY_FILE` is set.

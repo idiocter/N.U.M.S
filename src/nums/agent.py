@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 from .config import Settings
+from .history import HistoryStore
 from .ollama import OllamaClient, OllamaError
 from .tools import MacTools, TOOL_SCHEMAS
 
@@ -18,7 +20,13 @@ class Agent:
         self.settings = settings
         self.client = OllamaClient(settings.ollama_url, settings.model)
         self.tools = MacTools()
-        self.messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT}]
+        self.history_store = HistoryStore(Path(settings.history_file)) if settings.history_file else None
+        saved = self.history_store.load() if self.history_store else []
+        self.messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT}, *saved]
+
+    def _save_history(self) -> None:
+        if self.history_store:
+            self.history_store.save(self.messages[1:])
 
     def _trim_history(self) -> None:
         starts = [i for i, message in enumerate(self.messages) if message.get("role") == "user"]
@@ -38,6 +46,7 @@ class Agent:
                 self.messages.append(message)
                 calls = message.get("tool_calls") or []
                 if not calls:
+                    self._save_history()
                     return message.get("content") or "I couldn't produce a response."
                 for call in calls:
                     function = call.get("function", {})
@@ -53,5 +62,7 @@ class Agent:
         except OllamaError:
             if len(self.messages) == history_length + 1:
                 self.messages.pop()
+            self._save_history()
             raise
+        self._save_history()
         return "I reached the tool-step limit. Try splitting the task into a smaller request."
