@@ -100,6 +100,8 @@ The [training workflow](training/README.md) validates labeled tool calls, create
 train/validation/test splits, and compares model tool choices without executing
 the requested actions. The included examples are synthetic pipeline fixtures;
 collect representative reviewed examples before choosing a trained model for NUMS.
+To collect real tool decisions for review, opt in with
+`NUMS_TRACE_FILE=~/.local/share/nums/usage.nums-trace.jsonl`.
 
 ## Architecture
 

@@ -4,6 +4,7 @@ __pycache__/
 .venv/
 .DS_Store
 .nums-history.jsonl
+*.nums-trace.jsonl
 training/data/
 training/adapters/
 training/fused_model/

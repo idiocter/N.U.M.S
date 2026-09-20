@@ -8,6 +8,8 @@ See [BASELINE.md](BASELINE.md) for the current starter-set result.
 
 Add reviewed examples to `seed_examples.jsonl` or a separate private JSONL file. Each record needs `id`, `user`, `tool`, and `arguments`. Labels should be the **first** correct tool call for the user's request. Remove personal paths, secrets, and private content before using actual NUMS conversations. Keep evaluation examples separate from training examples, and include cases where a tool should not be called before deploying a trained model.
 
+Set `NUMS_TRACE_FILE=~/.local/share/nums/usage.nums-trace.jsonl` when running NUMS to record prompts, proposed tool calls, replies, and model errors locally. The trace intentionally omits tool results and is owner-readable only, but prompts and tool arguments can still contain private information. Review and correct traces before converting them into labeled training examples; model proposals are not ground truth.
+
 ## Prepare and evaluate
 
 From the repository root:
