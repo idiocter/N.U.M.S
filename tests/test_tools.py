@@ -1,4 +1,5 @@
 import json
+import stat
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,32 @@ def test_read_and_list(tmp_path: Path) -> None:
     tools = MacTools()
     assert tools.read_file({"path": str(file)}) == "hello NUMS"
     assert "hello.txt" in tools.list_directory({"path": str(tmp_path)})
+
+
+def test_write_replaces_content_and_preserves_permissions(tmp_path: Path) -> None:
+    path = tmp_path / "note.txt"
+    path.write_text("before")
+    path.chmod(0o640)
+
+    MacTools().write_file({"path": str(path), "content": "after"})
+
+    assert path.read_text() == "after"
+    assert stat.S_IMODE(path.stat().st_mode) == 0o640
+
+
+def test_failed_replace_keeps_previous_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    path = tmp_path / "note.txt"
+    path.write_text("before")
+
+    def fail(*args: object) -> None:
+        raise OSError("replace failed")
+
+    monkeypatch.setattr("nums.tools.os.replace", fail)
+    with pytest.raises(OSError, match="replace failed"):
+        MacTools().write_file({"path": str(path), "content": "after"})
+
+    assert path.read_text() == "before"
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["note.txt"]
 
 
 def test_search_treats_dash_prefixed_query_as_text(tmp_path: Path) -> None:

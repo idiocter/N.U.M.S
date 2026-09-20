@@ -4,7 +4,9 @@ import json
 import os
 import platform
 import shutil
+import stat
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urlparse
@@ -107,10 +109,26 @@ class MacTools:
         ])
 
     def write_file(self, args: dict[str, Any]) -> str:
-        path = Path(args["path"]).expanduser()
+        requested = Path(args["path"]).expanduser()
+        path = requested.resolve() if requested.is_symlink() else requested
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(args["content"])
-        return json.dumps({"written": str(path), "bytes": len(args["content"].encode())})
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=path.parent,
+                prefix=f".{path.name}.", delete=False,
+            ) as handle:
+                temporary = Path(handle.name)
+                handle.write(args["content"])
+                handle.flush()
+                os.fsync(handle.fileno())
+            if path.exists():
+                temporary.chmod(stat.S_IMODE(path.stat().st_mode))
+            os.replace(temporary, path)
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
+        return json.dumps({"written": str(requested), "bytes": len(args["content"].encode())})
 
     def shell(self, args: dict[str, Any]) -> str:
         cwd = str(Path(args.get("cwd") or Path.home()).expanduser())
