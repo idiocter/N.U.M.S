@@ -33,6 +33,8 @@ def doctor(settings: Settings) -> int:
     client = OllamaClient(settings.ollama_url, settings.model)
     model_ready = client.has_model()
     print(f"Model ready: {'yes' if model_ready else 'no'}")
+    if not model_ready:
+        print("Start Ollama with `ollama serve`, then pull the model with `nums --pull` if needed.")
     whisper_ready, wake_model_ready = voice_dependencies(settings.whisper_model)
     print(f"Whisper stream: {'yes' if whisper_ready else 'no'}")
     print(f"Wake model: {'yes' if wake_model_ready else 'no'} ({settings.whisper_model})")

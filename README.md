@@ -8,6 +8,13 @@ The model and chat stay on the Mac through Ollama. Model-requested file writes, 
 
 ```bash
 cd ~/Documents/Projects/NUMS
+ollama serve  # keep this running, or start the Ollama app
+```
+
+In another terminal:
+
+```bash
+cd ~/Documents/Projects/NUMS
 uv sync
 uv run nums --pull
 uv run nums

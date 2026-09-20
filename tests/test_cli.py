@@ -38,8 +38,9 @@ def test_wake_listener_survives_model_disconnect(monkeypatch: pytest.MonkeyPatch
     assert "NUMS wake listener stopped" in output
 
 
-def test_doctor_returns_failure_when_model_is_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_doctor_returns_failure_when_model_is_missing(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     monkeypatch.setattr("nums.cli.OllamaClient.has_model", lambda self: False)
     monkeypatch.setattr("nums.cli.voice_dependencies", lambda _: (True, True))
 
     assert doctor(Settings()) == 1
+    assert "ollama serve" in capsys.readouterr().out
