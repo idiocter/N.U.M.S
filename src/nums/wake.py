@@ -213,6 +213,8 @@ class WhisperStream:
                             with output_path.open(errors="replace") as transcript:
                                 transcript.seek(position)
                                 while line := transcript.readline():
+                                    if running and not line.endswith("\n"):
+                                        break
                                     position = transcript.tell()
                                     if line.strip():
                                         yield line.strip()
