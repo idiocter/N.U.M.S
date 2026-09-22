@@ -50,6 +50,7 @@ class Agent:
         history_length = len(self.messages)
         self.messages.append({"role": "user", "content": prompt})
         trace_calls: list[dict[str, Any]] = []
+        signatures: dict[str, int] = {}
         try:
             for _ in range(self.settings.max_steps):
                 response = self.client.chat(self.messages, TOOL_SCHEMAS)
@@ -71,6 +72,18 @@ class Agent:
                         except json.JSONDecodeError:
                             args = {}
                     trace_calls.append({"tool": name, "arguments": args})
+                    signature = json.dumps([name, args], sort_keys=True, default=str)
+                    signatures[signature] = signatures.get(signature, 0) + 1
+                    if signatures[signature] > self.settings.repeat_tool_limit:
+                        result = json.dumps({
+                            "error": "Repeated tool call stopped because it made no observable progress",
+                            "tool": name,
+                        })
+                        self.messages.append({"role": "tool", "tool_name": name, "content": result})
+                        reply = f"I stopped after repeating the same {name} action without progress."
+                        self._save_history()
+                        self._trace(prompt, trace_calls, reply, "repeated tool call")
+                        return reply
                     result = self.tools.execute(name, args)
                     self.messages.append({"role": "tool", "tool_name": name, "content": result})
         except OllamaError as exc:

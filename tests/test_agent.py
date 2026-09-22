@@ -98,3 +98,21 @@ def test_long_session_keeps_only_recent_complete_turns() -> None:
         agent.run(prompt)
 
     assert client.seen == [["first"], ["first", "second"], ["second", "third"]]
+
+
+def test_repeated_tool_loop_stops_before_another_execution() -> None:
+    class LoopingClient:
+        def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
+            return {"message": {"role": "assistant", "content": "", "tool_calls": [
+                {"function": {"name": "system_info", "arguments": {}}}
+            ]}}
+
+    tools = RecordingTools()
+    agent = Agent(Settings(max_steps=8, repeat_tool_limit=2))
+    agent.client = LoopingClient()  # type: ignore[assignment]
+    agent.tools = tools  # type: ignore[assignment]
+
+    response = agent.run("loop")
+
+    assert "repeating" in response
+    assert len(tools.calls) == 2

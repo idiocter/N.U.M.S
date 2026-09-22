@@ -28,6 +28,7 @@ class Settings:
     history_file: str | None = None
     trace_file: str | None = None
     action_mode: str = "unrestricted"
+    repeat_tool_limit: int = 2
     speak: bool = False
     wake_phrase: str = "hey numnum"
     whisper_model: str = str(Path.home() / ".cache" / "nums" / "ggml-base.en.bin")
@@ -61,6 +62,7 @@ class Settings:
             trace_file=os.path.expanduser(os.environ["NUMS_TRACE_FILE"])
             if os.getenv("NUMS_TRACE_FILE") else None,
             action_mode=action_mode,
+            repeat_tool_limit=_integer("NUMS_REPEAT_TOOL_LIMIT", cls.repeat_tool_limit, 1),
             speak=speak == "1",
             wake_phrase=phrase,
             whisper_model=os.path.expanduser(

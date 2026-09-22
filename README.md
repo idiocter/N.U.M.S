@@ -37,6 +37,8 @@ NUMS_HISTORY_FILE=~/.local/share/nums/history.json uv run nums
 This file includes prompts, model replies, and tool results. NUMS writes it
 atomically with owner-only permissions. `NUMS_HISTORY_TURNS` controls how many
 recent turns reach the model on each request (default: 8).
+`NUMS_REPEAT_TOOL_LIMIT` controls how many identical tool calls a request may
+make before NUMS stops the no-progress loop (default: 2).
 
 In the interactive terminal, `/status` shows the current model and history
 location, `/reset` clears the conversation (including the optional history
