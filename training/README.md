@@ -25,8 +25,13 @@ From the repository root:
 
 ```bash
 PYTHONPATH=src .venv/bin/python training/build_dataset.py training/seed_examples.jsonl training/data
-PYTHONPATH=src .venv/bin/python training/evaluate.py training/data/test.jsonl --model qwen2.5:1.5b-instruct
+PYTHONPATH=src .venv/bin/python training/evaluate.py training/data/test.jsonl \
+  --model qwen2.5:1.5b-instruct --json-out training/runs/baseline.json
 ```
+
+The JSON report includes overall accuracy, a breakdown by expected tool, and
+case-level failures so regressions can be compared before installing an
+adapted model.
 
 The evaluator sends prompts to Ollama and **does not execute** the model's requested tools. Compare the same held-out set against both models. Do not switch NUMS to a trained model unless it improves tool choice and full argument accuracy on representative held-out tasks.
 
