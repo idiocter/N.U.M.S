@@ -120,8 +120,13 @@ compatibility with existing NUMS behavior.
 
 ```bash
 uv run nums --doctor
+uv run nums --self-test
 uv run pytest
 ```
+
+`--self-test` uses a temporary directory and asks the local model for a
+`system_info` tool call. It does not execute the model's proposed action or
+modify user files.
 
 GitHub Actions runs the test suite on macOS with Python 3.11, 3.12, and 3.13
 and verifies that the package builds. Release notes are tracked in

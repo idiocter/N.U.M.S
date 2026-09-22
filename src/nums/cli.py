@@ -7,6 +7,7 @@ import sys
 
 from .agent import Agent
 from .config import Settings
+from .diagnostics import self_test
 from .ollama import OllamaClient, OllamaError
 from .service import install_service, service_plist, uninstall_service
 from .wake import (
@@ -98,6 +99,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="NUMS local macOS assistant")
     parser.add_argument("prompt", nargs="*", help="Run one request and exit")
     parser.add_argument("--doctor", action="store_true", help="Check Ollama and model availability")
+    parser.add_argument("--self-test", action="store_true", help="Run non-destructive tool and model checks")
     parser.add_argument("--pull", action="store_true", help="Download the configured local model")
     parser.add_argument("--speak", action="store_true", help="Read responses aloud")
     parser.add_argument("--wake", action="store_true", help='Listen for "hey numnum" locally')
@@ -121,6 +123,10 @@ def main() -> None:
         return
     if args.doctor:
         raise SystemExit(doctor(settings))
+    if args.self_test:
+        passed, results = self_test(settings)
+        print("\n".join(results))
+        raise SystemExit(0 if passed else 1)
     if args.print_service:
         print(service_plist(settings).decode(), end="")
         return
