@@ -55,6 +55,15 @@ TOOL_SCHEMAS = [
         ["title", "message"],
     ),
     _schema("system_info", "Get basic local Mac system information.", {}, []),
+    _schema("get_clipboard", "Read text from the macOS clipboard.", {}, []),
+    _schema("set_clipboard", "Replace text on the macOS clipboard.", {"text": {"type": "string"}}, ["text"]),
+    _schema(
+        "create_reminder",
+        "Create a reminder in the macOS Reminders app.",
+        {"title": {"type": "string"}, "notes": {"type": "string"}},
+        ["title"],
+    ),
+    _schema("get_calendar_events", "List today's events from macOS Calendar.", {}, []),
     _schema(
         "run_applescript",
         "Run AppleScript for Mac app automation. This may require Automation permissions.",
@@ -86,6 +95,10 @@ class MacTools:
             "speak": self.speak,
             "notify": self.notify,
             "system_info": self.system_info,
+            "get_clipboard": self.get_clipboard,
+            "set_clipboard": self.set_clipboard,
+            "create_reminder": self.create_reminder,
+            "get_calendar_events": self.get_calendar_events,
             "run_applescript": self.run_applescript,
             "trash_path": self.trash_path,
         }
@@ -168,6 +181,40 @@ class MacTools:
                 "home": str(Path.home()),
             }
         )
+
+    def get_clipboard(self, args: dict[str, Any]) -> str:
+        return _run(["pbpaste"])
+
+    def set_clipboard(self, args: dict[str, Any]) -> str:
+        result = subprocess.run(
+            ["pbcopy"], input=args["text"], text=True, capture_output=True, timeout=10
+        )
+        return json.dumps({"exit_code": result.returncode, "characters": len(args["text"])})
+
+    def create_reminder(self, args: dict[str, Any]) -> str:
+        script = """on run argv
+tell application "Reminders"
+  tell default list
+    make new reminder with properties {name:item 1 of argv, body:item 2 of argv}
+  end tell
+end tell
+end run"""
+        return _run(["osascript", "-e", script, args["title"], args.get("notes", "")])
+
+    def get_calendar_events(self, args: dict[str, Any]) -> str:
+        script = """set startOfDay to current date
+set time of startOfDay to 0
+set endOfDay to startOfDay + (1 * days)
+tell application "Calendar"
+  set rows to {}
+  repeat with cal in calendars
+    repeat with eventItem in (every event of cal whose start date is greater than or equal to startOfDay and start date is less than endOfDay)
+      set end of rows to (summary of eventItem) & " | " & ((start date of eventItem) as string)
+    end repeat
+  end repeat
+  return rows as string
+end tell"""
+        return _run(["osascript", "-e", script])
 
     def run_applescript(self, args: dict[str, Any]) -> str:
         return _run(["osascript", "-e", args["script"]])

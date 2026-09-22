@@ -1,6 +1,6 @@
 # NUMS
 
-NUMS is a private, local-first macOS assistant powered by Qwen through Ollama. It can inspect files, search the Mac, run commands, open apps and URLs, speak, show notifications, and automate apps with AppleScript.
+NUMS is a private, local-first macOS assistant powered by Qwen through Ollama. It can inspect files, search the Mac, run commands, open apps and URLs, use the clipboard, read today's calendar, create reminders, speak, show notifications, and automate apps with AppleScript.
 
 The model and chat stay on the Mac through Ollama. Model-requested file writes, Trash operations, AppleScript, shell commands, and app actions execute immediately without confirmation prompts.
 

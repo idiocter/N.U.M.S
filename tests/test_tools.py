@@ -57,6 +57,33 @@ def test_standard_mode_blocks_shell() -> None:
     assert result["action_mode"] == "standard"
 
 
+def test_clipboard_write_uses_stdin(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = []
+
+    class Result:
+        returncode = 0
+
+    def fake_run(command: list[str], **kwargs: object) -> Result:
+        calls.append((command, kwargs))
+        return Result()
+
+    monkeypatch.setattr("nums.tools.subprocess.run", fake_run)
+    result = json.loads(MacTools("standard").set_clipboard({"text": "hello"}))
+
+    assert result == {"exit_code": 0, "characters": 5}
+    assert calls[0][0] == ["pbcopy"]
+    assert calls[0][1]["input"] == "hello"
+
+
+def test_reminder_passes_values_as_arguments(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command: commands.append(command) or "ok")
+
+    MacTools("standard").create_reminder({"title": 'Call "Sam"', "notes": "At 4"})
+
+    assert commands[0][-2:] == ['Call "Sam"', "At 4"]
+
+
 def test_search_treats_dash_prefixed_query_as_text(tmp_path: Path) -> None:
     (tmp_path / "note.txt").write_text("-TODO follow up\n")
 
