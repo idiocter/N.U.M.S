@@ -121,12 +121,16 @@ compatibility with existing NUMS behavior.
 ```bash
 uv run nums --doctor
 uv run nums --self-test
+uv run nums --voice-test
 uv run pytest
 ```
 
 `--self-test` uses a temporary directory and asks the local model for a
 `system_info` tool call. It does not execute the model's proposed action or
 modify user files.
+`--voice-test` listens for one sentence for up to 15 seconds and prints the
+transcript, providing the final manual check for microphone selection and
+recognition quality.
 
 GitHub Actions runs the test suite on macOS with Python 3.11, 3.12, and 3.13
 and verifies that the package builds. Release notes are tracked in

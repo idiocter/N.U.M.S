@@ -183,7 +183,7 @@ class WhisperStream:
         self.capture_device = capture_device
         self.process: subprocess.Popen[str] | None = None
 
-    def transcripts(self) -> Iterator[str]:
+    def transcripts(self, timeout_seconds: float | None = None) -> Iterator[str]:
         if not shutil.which("whisper-stream"):
             raise RuntimeError("whisper-stream is missing; run `brew install whisper-cpp`")
         if not Path(self.model_path).is_file():
@@ -220,8 +220,11 @@ class WhisperStream:
                     text=True,
                 )
                 position = 0
+                deadline = time.monotonic() + timeout_seconds if timeout_seconds else None
                 try:
                     while True:
+                        if deadline is not None and time.monotonic() >= deadline:
+                            return
                         running = self.process.poll() is None
                         if output_path.exists():
                             with output_path.open(errors="replace") as transcript:

@@ -10,6 +10,7 @@ from .config import Settings
 from .ollama import OllamaClient, OllamaError
 from .tools import MacTools, TOOL_SCHEMAS
 from .wake import voice_dependencies
+from .wake import WhisperStream
 
 
 def self_test(settings: Settings) -> tuple[bool, list[str]]:
@@ -42,3 +43,13 @@ def self_test(settings: Settings) -> tuple[bool, list[str]]:
         results.append(f"Model tool call: failed ({exc})")
         ok = False
     return bool(ok), results
+
+
+def voice_test(settings: Settings, timeout_seconds: float = 15) -> str | None:
+    stream = WhisperStream(settings.whisper_model, settings.capture_device)
+    transcripts = stream.transcripts(timeout_seconds=timeout_seconds)
+    try:
+        return next(transcripts, None)
+    finally:
+        transcripts.close()
+        stream.stop()
