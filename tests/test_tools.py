@@ -41,6 +41,22 @@ def test_failed_replace_keeps_previous_file(monkeypatch: pytest.MonkeyPatch, tmp
     assert sorted(p.name for p in tmp_path.iterdir()) == ["note.txt"]
 
 
+def test_read_only_mode_blocks_mutating_tools(tmp_path: Path) -> None:
+    target = tmp_path / "blocked.txt"
+
+    result = json.loads(MacTools("read_only").execute(
+        "write_file", {"path": str(target), "content": "no"}
+    ))
+
+    assert result["action_mode"] == "read_only"
+    assert not target.exists()
+
+
+def test_standard_mode_blocks_shell() -> None:
+    result = json.loads(MacTools("standard").execute("shell", {"command": "echo no"}))
+    assert result["action_mode"] == "standard"
+
+
 def test_search_treats_dash_prefixed_query_as_text(tmp_path: Path) -> None:
     (tmp_path / "note.txt").write_text("-TODO follow up\n")
 

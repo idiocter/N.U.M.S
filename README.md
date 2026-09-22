@@ -94,6 +94,11 @@ macOS permissions remain the outer security boundary. NUMS cannot and should not
 
 NUMS applies no application-level action policy or approval step. Its effective access is the access granted to the Terminal process that launches it. macOS privacy permissions remain the operating-system boundary.
 
+You can reduce that access with `NUMS_ACTION_MODE=standard` (blocks shell,
+AppleScript, and Trash) or `NUMS_ACTION_MODE=read_only` (only file inspection,
+search, and system information). The default remains `unrestricted` for
+compatibility with existing NUMS behavior.
+
 ## Diagnostics
 
 ```bash

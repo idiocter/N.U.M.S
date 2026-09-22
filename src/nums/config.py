@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
 
+from .policy import VALID_MODES
+
 
 def _integer(name: str, default: int, minimum: int) -> int:
     raw = os.getenv(name, str(default))
@@ -25,6 +27,7 @@ class Settings:
     history_turns: int = 8
     history_file: str | None = None
     trace_file: str | None = None
+    action_mode: str = "unrestricted"
     speak: bool = False
     wake_phrase: str = "hey numnum"
     whisper_model: str = str(Path.home() / ".cache" / "nums" / "ggml-base.en.bin")
@@ -45,6 +48,9 @@ class Settings:
         speak = os.getenv("NUMS_SPEAK", "0")
         if speak not in {"0", "1"}:
             raise ValueError("NUMS_SPEAK must be 0 or 1")
+        action_mode = os.getenv("NUMS_ACTION_MODE", cls.action_mode).strip().lower()
+        if action_mode not in VALID_MODES:
+            raise ValueError("NUMS_ACTION_MODE must be read_only, standard, or unrestricted")
         return cls(
             model=model,
             ollama_url=url,
@@ -54,6 +60,7 @@ class Settings:
             if os.getenv("NUMS_HISTORY_FILE") else None,
             trace_file=os.path.expanduser(os.environ["NUMS_TRACE_FILE"])
             if os.getenv("NUMS_TRACE_FILE") else None,
+            action_mode=action_mode,
             speak=speak == "1",
             wake_phrase=phrase,
             whisper_model=os.path.expanduser(

@@ -20,7 +20,7 @@ class Agent:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self.client = OllamaClient(settings.ollama_url, settings.model)
-        self.tools = MacTools()
+        self.tools = MacTools(settings.action_mode)
         self.history_store = HistoryStore(Path(settings.history_file)) if settings.history_file else None
         self.trace_store = TraceStore(Path(settings.trace_file)) if settings.trace_file else None
         saved = self.history_store.load() if self.history_store else []

@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urlparse
 
+from .policy import tool_allowed
+
 
 def _schema(name: str, description: str, properties: dict[str, Any], required: list[str]) -> dict[str, Any]:
     return {
@@ -70,6 +72,9 @@ def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
 
 
 class MacTools:
+    def __init__(self, action_mode: str = "unrestricted") -> None:
+        self.action_mode = action_mode
+
     def execute(self, name: str, args: dict[str, Any]) -> str:
         handlers: dict[str, Callable[[dict[str, Any]], str]] = {
             "read_file": self.read_file,
@@ -86,6 +91,11 @@ class MacTools:
         }
         if name not in handlers:
             return json.dumps({"error": f"Unknown tool: {name}"})
+        if not tool_allowed(self.action_mode, name):
+            return json.dumps({
+                "error": f"Tool {name} is blocked in {self.action_mode} mode",
+                "action_mode": self.action_mode,
+            })
         try:
             return handlers[name](args)
         except Exception as exc:  # tool errors are returned to the model
