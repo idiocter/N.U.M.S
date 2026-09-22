@@ -78,6 +78,24 @@ def test_sleep_phrase_ends_the_conversation() -> None:
     assert ignored is None
 
 
+def test_custom_sleep_phrase_ends_session() -> None:
+    detector = WakePhraseDetector(sleep_phrases=("power down",))
+    detector.cooldown_seconds = 0
+    detector.feed("Hey num num")
+    event = detector.feed("power down")
+    assert event is not None and event.kind == "sleep"
+
+
+def test_idle_session_requires_wake_phrase_again(monkeypatch: pytest.MonkeyPatch) -> None:
+    moments = iter([0.0, 11.0])
+    monkeypatch.setattr("nums.wake.time.monotonic", lambda: next(moments))
+    detector = WakePhraseDetector(session_timeout_seconds=10)
+    detector.cooldown_seconds = 0
+
+    assert detector.feed("Hey num num") is not None
+    assert detector.feed("open Safari") is None
+
+
 def test_sleep_phrase_requires_an_active_session() -> None:
     assert WakePhraseDetector().feed("Aight baby girl let's sleep") is None
 

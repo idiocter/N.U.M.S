@@ -65,6 +65,10 @@ Say “hey numnum” and wait for the chime. NUMS stays online after the first c
 
 When you are finished, say **“aight baby girl, let’s sleep.”** NUMS says good night and returns to wake-only mode. The first launch may trigger a macOS Microphone permission prompt for your terminal.
 
+An active voice session returns to sleep after five idle minutes. Change this
+with `NUMS_SESSION_TIMEOUT`, and provide custom sleep phrases separated by `|`
+through `NUMS_SLEEP_PHRASES`.
+
 NUMS uses silence-based voice activity detection so it transcribes complete phrases instead of chopping them at fixed intervals. Each spoken turn uses a fresh microphone stream: NUMS closes it before answering and starts a clean one when the response finishes, so its own voice cannot become the next command.
 
 If the wrong microphone is selected, list the capture devices shown when the listener starts and set its number:

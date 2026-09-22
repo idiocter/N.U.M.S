@@ -16,6 +16,8 @@ from nums.config import Settings
         ("NUMS_SPEAK", "maybe", "0 or 1"),
         ("NUMS_ACTION_MODE", "danger", "read_only, standard, or unrestricted"),
         ("NUMS_REPEAT_TOOL_LIMIT", "0", "at least 1"),
+        ("NUMS_SESSION_TIMEOUT", "0", "at least 1"),
+        ("NUMS_SLEEP_PHRASES", "|||", "at least one phrase"),
     ],
 )
 def test_bad_environment_has_clear_error(monkeypatch: pytest.MonkeyPatch, name: str, value: str, message: str) -> None:

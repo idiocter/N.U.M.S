@@ -51,13 +51,20 @@ class ListenerLock:
 
 
 class WakePhraseDetector:
-    def __init__(self, phrase: str = "hey numnum") -> None:
+    def __init__(
+        self,
+        phrase: str = "hey numnum",
+        session_timeout_seconds: int = 300,
+        sleep_phrases: tuple[str, ...] | None = None,
+    ) -> None:
         self.phrase = phrase.casefold().strip()
         self.active_session = False
         self.last_transcript = ""
         self.last_command = ""
         self.last_command_at = 0.0
         self.cooldown_seconds = 0.5
+        self.session_timeout_seconds = session_timeout_seconds
+        self.last_activity_at = 0.0
         variants = {
             self.phrase,
             "hey num num",
@@ -76,7 +83,7 @@ class WakePhraseDetector:
         self.wake_pattern = re.compile(
             rf"\b(?:{alternatives})\b[\s,.:;!?-]*(.*)", re.I
         )
-        sleep_variants = {
+        sleep_variants = set(sleep_phrases or ()) | {
             "aight baby girl lets sleep",
             "eight baby girl lets sleep",
             "8 baby girl lets sleep",
@@ -93,6 +100,10 @@ class WakePhraseDetector:
         self.sleep_pattern = re.compile(rf"\b(?:{sleep_alternatives})\b", re.I)
 
     def feed(self, transcript: str) -> WakeEvent | None:
+        now = time.monotonic()
+        if self.active_session and now - self.last_activity_at >= self.session_timeout_seconds:
+            self.active_session = False
+            self.last_command_at = 0.0
         cleaned = " ".join(transcript.strip().split())
         cleaned = re.sub(
             r"^\[[0-9:.]+\s*-->\s*[0-9:.]+\]\s*", "", cleaned
@@ -111,6 +122,7 @@ class WakePhraseDetector:
         match = self.wake_pattern.search(normalized)
         if match:
             self.active_session = True
+            self.last_activity_at = now
             command = match.group(1).strip()
             if command:
                 return self._command_event(command)
@@ -127,6 +139,7 @@ class WakePhraseDetector:
             return None
         self.last_command = signature
         self.last_command_at = now
+        self.last_activity_at = now
         return WakeEvent("command", command)
 
     def command_completed(self) -> None:
@@ -134,6 +147,7 @@ class WakePhraseDetector:
         # can contain the same spoken command, so clear stream-local duplicates.
         self.last_transcript = ""
         self.last_command_at = 0.0
+        self.last_activity_at = time.monotonic()
 
 
 def voice_dependencies(model_path: str) -> tuple[bool, bool]:

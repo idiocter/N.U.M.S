@@ -44,7 +44,11 @@ def doctor(settings: Settings) -> int:
 def wake_mode(agent: Agent, settings: Settings) -> None:
     try:
         with ListenerLock():
-            detector = WakePhraseDetector(settings.wake_phrase)
+            detector = WakePhraseDetector(
+                settings.wake_phrase,
+                settings.session_timeout_seconds,
+                settings.sleep_phrases,
+            )
             print(LOGO)
             print(f'Listening locally for "{settings.wake_phrase}". Press Ctrl+C to stop.\n')
             while True:

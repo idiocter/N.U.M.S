@@ -29,6 +29,8 @@ class Settings:
     trace_file: str | None = None
     action_mode: str = "unrestricted"
     repeat_tool_limit: int = 2
+    session_timeout_seconds: int = 300
+    sleep_phrases: tuple[str, ...] = ("go to sleep", "good night nums", "aight baby girl lets sleep")
     speak: bool = False
     wake_phrase: str = "hey numnum"
     whisper_model: str = str(Path.home() / ".cache" / "nums" / "ggml-base.en.bin")
@@ -52,6 +54,13 @@ class Settings:
         action_mode = os.getenv("NUMS_ACTION_MODE", cls.action_mode).strip().lower()
         if action_mode not in VALID_MODES:
             raise ValueError("NUMS_ACTION_MODE must be read_only, standard, or unrestricted")
+        sleep_phrases = tuple(
+            phrase.strip() for phrase in os.getenv(
+                "NUMS_SLEEP_PHRASES", "|".join(cls.sleep_phrases)
+            ).split("|") if phrase.strip()
+        )
+        if not sleep_phrases:
+            raise ValueError("NUMS_SLEEP_PHRASES must include at least one phrase")
         return cls(
             model=model,
             ollama_url=url,
@@ -63,6 +72,10 @@ class Settings:
             if os.getenv("NUMS_TRACE_FILE") else None,
             action_mode=action_mode,
             repeat_tool_limit=_integer("NUMS_REPEAT_TOOL_LIMIT", cls.repeat_tool_limit, 1),
+            session_timeout_seconds=_integer(
+                "NUMS_SESSION_TIMEOUT", cls.session_timeout_seconds, 1
+            ),
+            sleep_phrases=sleep_phrases,
             speak=speak == "1",
             wake_phrase=phrase,
             whisper_model=os.path.expanduser(
