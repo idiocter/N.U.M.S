@@ -123,6 +123,10 @@ uv run nums --doctor
 uv run pytest
 ```
 
+GitHub Actions runs the test suite on macOS with Python 3.11, 3.12, and 3.13
+and verifies that the package builds. Release notes are tracked in
+[`CHANGELOG.md`](CHANGELOG.md).
+
 ## Tool-use fine tuning
 
 The [training workflow](training/README.md) validates labeled tool calls, creates
