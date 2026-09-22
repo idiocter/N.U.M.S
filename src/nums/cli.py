@@ -8,6 +8,7 @@ import sys
 from .agent import Agent
 from .config import Settings
 from .ollama import OllamaClient, OllamaError
+from .service import install_service, service_plist, uninstall_service
 from .wake import (
     ListenerLock,
     WakePhraseDetector,
@@ -100,6 +101,9 @@ def main() -> None:
     parser.add_argument("--pull", action="store_true", help="Download the configured local model")
     parser.add_argument("--speak", action="store_true", help="Read responses aloud")
     parser.add_argument("--wake", action="store_true", help='Listen for "hey numnum" locally')
+    parser.add_argument("--print-service", action="store_true", help="Print the macOS LaunchAgent plist")
+    parser.add_argument("--install-service", action="store_true", help="Install and start the wake listener LaunchAgent")
+    parser.add_argument("--uninstall-service", action="store_true", help="Stop and remove the wake listener LaunchAgent")
     parser.add_argument(
         "--setup-voice", action="store_true", help="Download the local Whisper wake model"
     )
@@ -117,6 +121,15 @@ def main() -> None:
         return
     if args.doctor:
         raise SystemExit(doctor(settings))
+    if args.print_service:
+        print(service_plist(settings).decode(), end="")
+        return
+    if args.install_service:
+        print(f"Installed and started {install_service(settings)}")
+        return
+    if args.uninstall_service:
+        print(f"Stopped and removed {uninstall_service()}")
+        return
 
     try:
         agent = Agent(settings)

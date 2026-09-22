@@ -61,6 +61,17 @@ Start the listener:
 uv run nums --wake
 ```
 
+To start the listener automatically at login and restart it after failures:
+
+```bash
+uv run nums --print-service       # inspect the LaunchAgent first
+uv run nums --install-service
+uv run nums --uninstall-service   # stop it and remove the plist
+```
+
+The service writes output to `~/Library/Logs/NUMS.log` and uses the Python
+environment from which it was installed.
+
 Say “hey numnum” and wait for the chime. NUMS stays online after the first command, so you can continue talking to it without repeating the wake phrase. You can also say both together, such as “hey numnum, open Safari.”
 
 When you are finished, say **“aight baby girl, let’s sleep.”** NUMS says good night and returns to wake-only mode. The first launch may trigger a macOS Microphone permission prompt for your terminal.
