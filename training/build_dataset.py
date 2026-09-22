@@ -14,7 +14,7 @@ from nums.tools import TOOL_SCHEMAS
 SCHEMAS = {item["function"]["name"]: item["function"] for item in TOOL_SCHEMAS}
 
 
-def load_examples(path: Path) -> list[dict]:
+def load_examples(path: Path, minimum: int = 15) -> list[dict]:
     examples = []
     seen = set()
     for number, line in enumerate(path.read_text().splitlines(), 1):
@@ -45,8 +45,8 @@ def load_examples(path: Path) -> list[dict]:
             raise ValueError(f"{path}:{number}: {exc}") from exc
         seen.add(identifier)
         examples.append(item)
-    if len(examples) < 15:
-        raise ValueError("at least 15 labeled examples are needed for three splits")
+    if len(examples) < minimum:
+        raise ValueError(f"at least {minimum} labeled examples are needed")
     return examples
 
 
@@ -76,7 +76,7 @@ def convert(item: dict) -> dict:
 
 def build(source: Path, destination: Path) -> dict[str, int]:
     examples = sorted(
-        load_examples(source),
+        load_examples(source, minimum=15),
         key=lambda item: hashlib.sha256(item["id"].encode()).hexdigest(),
     )
     groups = {name: [] for name in ("train", "valid", "test")}
