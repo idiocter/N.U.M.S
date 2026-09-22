@@ -168,11 +168,17 @@ def main() -> None:
         if prompt in {"/quit", "/exit"}:
             break
         if prompt == "/help":
-            print("/help — commands  /status — model and history  /reset — clear conversation  /quit — exit\n")
+            print("/help — commands  /status — model, history, and last run  /reset — clear conversation  /quit — exit\n")
             continue
         if prompt == "/status":
             storage = settings.history_file or "memory only"
-            print(f"Model: {settings.model} | History: {storage} | Messages: {len(agent.messages) - 1}\n")
+            run = agent.last_run
+            print(
+                f"Model: {settings.model} | Mode: {settings.action_mode} | History: {storage} | "
+                f"Messages: {len(agent.messages) - 1}\n"
+                f"Last run: {run['status']} | Steps: {run['steps']} | "
+                f"Tools: {run['tool_calls']} | Tool errors: {run['tool_errors']}\n"
+            )
             continue
         if prompt == "/reset":
             agent.reset()

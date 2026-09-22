@@ -116,3 +116,21 @@ def test_repeated_tool_loop_stops_before_another_execution() -> None:
 
     assert "repeating" in response
     assert len(tools.calls) == 2
+    assert agent.last_run == {
+        "status": "no_progress", "steps": 3, "tool_calls": 3, "tool_errors": 1
+    }
+
+
+def test_run_report_counts_tool_errors() -> None:
+    agent = Agent(Settings())
+    agent.client = FakeClient()  # type: ignore[assignment]
+
+    class ErrorTools:
+        def execute(self, name: str, args: dict[str, Any]) -> str:
+            return '{"error": "failed"}'
+
+    agent.tools = ErrorTools()  # type: ignore[assignment]
+    assert agent.run("write") == "The write completed."
+    assert agent.last_run == {
+        "status": "completed", "steps": 2, "tool_calls": 1, "tool_errors": 1
+    }

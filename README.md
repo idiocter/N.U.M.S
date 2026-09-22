@@ -41,8 +41,8 @@ recent turns reach the model on each request (default: 8).
 make before NUMS stops the no-progress loop (default: 2).
 
 In the interactive terminal, `/status` shows the current model and history
-location, `/reset` clears the conversation (including the optional history
-file), and `/help` lists the commands.
+location plus the last run's steps, tool calls, and errors. `/reset` clears the
+conversation (including the optional history file), and `/help` lists the commands.
 
 ## Wake phrase
 

@@ -25,6 +25,9 @@ class Agent:
         self.trace_store = TraceStore(Path(settings.trace_file)) if settings.trace_file else None
         saved = self.history_store.load() if self.history_store else []
         self.messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT}, *saved]
+        self.last_run: dict[str, Any] = {
+            "status": "idle", "steps": 0, "tool_calls": 0, "tool_errors": 0
+        }
 
     def _save_history(self) -> None:
         if self.history_store:
@@ -47,17 +50,20 @@ class Agent:
 
     def run(self, prompt: str) -> str:
         self._trim_history()
+        self.last_run = {"status": "running", "steps": 0, "tool_calls": 0, "tool_errors": 0}
         history_length = len(self.messages)
         self.messages.append({"role": "user", "content": prompt})
         trace_calls: list[dict[str, Any]] = []
         signatures: dict[str, int] = {}
         try:
-            for _ in range(self.settings.max_steps):
+            for step in range(1, self.settings.max_steps + 1):
+                self.last_run["steps"] = step
                 response = self.client.chat(self.messages, TOOL_SCHEMAS)
                 message = response.get("message", {})
                 self.messages.append(message)
                 calls = message.get("tool_calls") or []
                 if not calls:
+                    self.last_run["status"] = "completed"
                     self._save_history()
                     reply = message.get("content") or "I couldn't produce a response."
                     self._trace(prompt, trace_calls, reply)
@@ -72,6 +78,7 @@ class Agent:
                         except json.JSONDecodeError:
                             args = {}
                     trace_calls.append({"tool": name, "arguments": args})
+                    self.last_run["tool_calls"] += 1
                     signature = json.dumps([name, args], sort_keys=True, default=str)
                     signatures[signature] = signatures.get(signature, 0) + 1
                     if signatures[signature] > self.settings.repeat_tool_limit:
@@ -80,19 +87,29 @@ class Agent:
                             "tool": name,
                         })
                         self.messages.append({"role": "tool", "tool_name": name, "content": result})
+                        self.last_run["tool_errors"] += 1
+                        self.last_run["status"] = "no_progress"
                         reply = f"I stopped after repeating the same {name} action without progress."
                         self._save_history()
                         self._trace(prompt, trace_calls, reply, "repeated tool call")
                         return reply
                     result = self.tools.execute(name, args)
+                    try:
+                        parsed_result = json.loads(result)
+                        if isinstance(parsed_result, dict) and "error" in parsed_result:
+                            self.last_run["tool_errors"] += 1
+                    except (json.JSONDecodeError, TypeError):
+                        pass
                     self.messages.append({"role": "tool", "tool_name": name, "content": result})
         except OllamaError as exc:
+            self.last_run["status"] = "model_error"
             if len(self.messages) == history_length + 1:
                 self.messages.pop()
             self._save_history()
             self._trace(prompt, trace_calls, None, str(exc))
             raise
         self._save_history()
+        self.last_run["status"] = "step_limit"
         reply = "I reached the tool-step limit. Try splitting the task into a smaller request."
         self._trace(prompt, trace_calls, reply)
         return reply
