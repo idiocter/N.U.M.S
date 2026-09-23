@@ -21,11 +21,17 @@ def service_path() -> Path:
 def service_plist(settings: Settings) -> bytes:
     log = Path.home() / "Library" / "Logs" / "NUMS.log"
     environment = {
+        "PATH": os.environ.get("PATH", os.defpath),
         "NUMS_MODEL": settings.model,
         "NUMS_OLLAMA_URL": settings.ollama_url,
+        "NUMS_MAX_STEPS": str(settings.max_steps),
+        "NUMS_HISTORY_TURNS": str(settings.history_turns),
         "NUMS_ACTION_MODE": settings.action_mode,
+        "NUMS_REPEAT_TOOL_LIMIT": str(settings.repeat_tool_limit),
         "NUMS_WAKE_PHRASE": settings.wake_phrase,
         "NUMS_SESSION_TIMEOUT": str(settings.session_timeout_seconds),
+        "NUMS_SLEEP_PHRASES": "|".join(settings.sleep_phrases),
+        "NUMS_WHISPER_MODEL": settings.whisper_model,
         "NUMS_CAPTURE_DEVICE": str(settings.capture_device),
     }
     if settings.history_file:

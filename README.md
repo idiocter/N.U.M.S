@@ -70,7 +70,8 @@ uv run nums --uninstall-service   # stop it and remove the plist
 ```
 
 The service writes output to `~/Library/Logs/NUMS.log` and uses the Python
-environment from which it was installed.
+environment and NUMS settings from which it was installed. Reinstall the
+service after changing those settings or the microphone runtime path.
 
 Say “hey numnum” and wait for the chime. NUMS stays online after the first command, so you can continue talking to it without repeating the wake phrase. You can also say both together, such as “hey numnum, open Safari.”
 
