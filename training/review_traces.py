@@ -5,13 +5,38 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import tempfile
 from pathlib import Path
 
 from training.build_dataset import load_examples
 
 
+def _write_private_jsonl(path: Path, rows: list[dict], validate: bool = False) -> None:
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=path.parent,
+            prefix=f".{path.name}.", delete=False,
+        ) as handle:
+            temporary = Path(handle.name)
+            for row in rows:
+                handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        if validate and rows:
+            load_examples(temporary, minimum=1)
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 def prepare(trace_path: Path, review_path: Path) -> int:
-    rows = []
+    rows = [json.loads(line) for line in review_path.read_text().splitlines() if line.strip()] \
+        if review_path.exists() else []
+    existing_ids = {row["id"] for row in rows}
     for number, line in enumerate(trace_path.read_text().splitlines(), 1):
         if not line.strip():
             continue
@@ -21,6 +46,8 @@ def prepare(trace_path: Path, review_path: Path) -> int:
         identifier = hashlib.sha256(
             f"{number}:{trace.get('at')}:{trace.get('prompt')}".encode()
         ).hexdigest()[:16]
+        if f"trace-{identifier}" in existing_ids:
+            continue
         rows.append({
             "id": f"trace-{identifier}",
             "user": trace.get("prompt", ""),
@@ -32,8 +59,8 @@ def prepare(trace_path: Path, review_path: Path) -> int:
             "reviewed": False,
             "review_notes": "",
         })
-    review_path.parent.mkdir(parents=True, exist_ok=True)
-    review_path.write_text("".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows))
+        existing_ids.add(f"trace-{identifier}")
+    _write_private_jsonl(review_path, rows)
     return len(rows)
 
 
@@ -49,10 +76,7 @@ def export(review_path: Path, output_path: Path) -> int:
         if row["tool"] == "none":
             example["answer"] = row.get("answer") or ""
         examples.append(example)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text("".join(json.dumps(row, ensure_ascii=False) + "\n" for row in examples))
-    if examples:
-        load_examples(output_path, minimum=1)
+    _write_private_jsonl(output_path, examples, validate=True)
     return len(examples)
 
 

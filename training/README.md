@@ -19,6 +19,10 @@ PYTHONPATH=src:. .venv/bin/python training/review_traces.py prepare ~/.local/sha
 PYTHONPATH=src:. .venv/bin/python training/review_traces.py export training/private/review.jsonl training/private/examples.jsonl
 ```
 
+You can rerun `prepare` as new traces arrive; existing review decisions are
+preserved. Review and export files are written with owner-only permissions.
+An invalid reviewed label leaves the previous export intact.
+
 ## Prepare and evaluate
 
 From the repository root:
