@@ -129,3 +129,35 @@ def test_open_item_dispatches_apps_and_urls(monkeypatch: pytest.MonkeyPatch, tar
 
     assert MacTools().open_item({"target": target}) == "ok"
     assert commands == [expected]
+
+
+def test_trash_path_preserves_existing_name_and_moves_symlink_itself(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr("nums.tools.Path.home", lambda: tmp_path)
+    trash = tmp_path / ".Trash"
+    trash.mkdir()
+    (trash / "shortcut.txt").write_text("existing")
+    target = tmp_path / "target.txt"
+    target.write_text("keep")
+    link = tmp_path / "shortcut.txt"
+    link.symlink_to(target)
+
+    result = json.loads(MacTools().trash_path({"path": str(link)}))
+
+    assert (trash / "shortcut.txt").read_text() == "existing"
+    assert Path(result["recoverable_at"]).is_symlink()
+    assert result["recoverable_at"] == str(trash / "shortcut-1.txt")
+    assert target.read_text() == "keep"
+    assert not link.is_symlink()
+
+
+def test_trash_path_moves_broken_symlink(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr("nums.tools.Path.home", lambda: tmp_path)
+    link = tmp_path / "broken.txt"
+    link.symlink_to(tmp_path / "missing.txt")
+
+    result = json.loads(MacTools().trash_path({"path": str(link)}))
+
+    assert Path(result["recoverable_at"]).is_symlink()
+    assert not link.is_symlink()

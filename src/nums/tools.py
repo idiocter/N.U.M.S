@@ -253,11 +253,17 @@ end tell"""
         return _run(["osascript", "-e", args["script"]])
 
     def trash_path(self, args: dict[str, Any]) -> str:
-        source = Path(args["path"]).expanduser().resolve()
-        if not source.exists():
+        source = Path(args["path"]).expanduser().absolute()
+        if not source.exists() and not source.is_symlink():
             raise FileNotFoundError(source)
-        trash = Path.home() / ".Trash" / source.name
-        if trash.exists():
-            trash = trash.with_name(f"{trash.stem}-{os.getpid()}{trash.suffix}")
+        trash_directory = (Path.home() / ".Trash").absolute()
+        if trash_directory == source or trash_directory.is_relative_to(source):
+            raise ValueError("Cannot move the Trash or its parent into the Trash")
+        trash_directory.mkdir(mode=0o700, exist_ok=True)
+        trash = trash_directory / source.name
+        suffix = 1
+        while trash.exists() or trash.is_symlink():
+            trash = trash_directory / f"{source.stem}-{suffix}{source.suffix}"
+            suffix += 1
         shutil.move(str(source), str(trash))
         return json.dumps({"trashed": str(source), "recoverable_at": str(trash)})
