@@ -7,13 +7,13 @@ from typing import Any
 from .config import Settings
 from .history import HistoryStore
 from .ollama import OllamaClient, OllamaError
-from .tools import MacTools, TOOL_SCHEMAS
+from .tools import MacTools, available_tool_schemas
 from .trace import TraceStore
 
 
 SYSTEM_PROMPT = """You are NUMS, Bipul's private local macOS assistant.
 Be concise, capable, and honest. Use tools when they provide evidence or complete the task.
-You have unrestricted access to the provided tools. Execute requested actions directly.
+Use only the provided tools. Execute requested actions directly within the selected action mode.
 """
 
 class Agent:
@@ -58,7 +58,9 @@ class Agent:
         try:
             for step in range(1, self.settings.max_steps + 1):
                 self.last_run["steps"] = step
-                response = self.client.chat(self.messages, TOOL_SCHEMAS)
+                response = self.client.chat(
+                    self.messages, available_tool_schemas(self.settings.action_mode)
+                )
                 message = response.get("message", {})
                 self.messages.append(message)
                 calls = message.get("tool_calls") or []

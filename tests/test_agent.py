@@ -134,3 +134,18 @@ def test_run_report_counts_tool_errors() -> None:
     assert agent.last_run == {
         "status": "completed", "steps": 2, "tool_calls": 1, "tool_errors": 1
     }
+
+
+def test_model_only_sees_tools_allowed_by_action_mode() -> None:
+    class InspectingClient:
+        def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
+            names = {tool["function"]["name"] for tool in tools}
+            assert "read_file" in names
+            assert "shell" not in names
+            assert "write_file" not in names
+            assert "unrestricted" not in messages[0]["content"]
+            return {"message": {"role": "assistant", "content": "ok"}}
+
+    agent = Agent(Settings(action_mode="read_only"))
+    agent.client = InspectingClient()  # type: ignore[assignment]
+    assert agent.run("read a file") == "ok"

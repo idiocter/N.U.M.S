@@ -74,6 +74,13 @@ TOOL_SCHEMAS = [
 ]
 
 
+def available_tool_schemas(action_mode: str) -> list[dict[str, Any]]:
+    return [
+        schema for schema in TOOL_SCHEMAS
+        if tool_allowed(action_mode, schema["function"]["name"])
+    ]
+
+
 def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
     result = subprocess.run(command, cwd=cwd, text=True, capture_output=True, timeout=timeout)
     output = (result.stdout + result.stderr).strip()
