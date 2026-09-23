@@ -20,7 +20,10 @@ def _schema(name: str, description: str, properties: dict[str, Any], required: l
         "function": {
             "name": name,
             "description": description,
-            "parameters": {"type": "object", "properties": properties, "required": required},
+            "parameters": {
+                "type": "object", "properties": properties,
+                "required": required, "additionalProperties": False,
+            },
         },
     }
 
@@ -81,6 +84,26 @@ def available_tool_schemas(action_mode: str) -> list[dict[str, Any]]:
     ]
 
 
+def validate_tool_arguments(name: str, args: Any) -> str | None:
+    if not isinstance(args, dict):
+        return f"{name} arguments must be a JSON object"
+    schema = next(item for item in TOOL_SCHEMAS if item["function"]["name"] == name)
+    parameters = schema["function"]["parameters"]
+    missing = set(parameters["required"]) - args.keys()
+    unexpected = args.keys() - parameters["properties"].keys()
+    wrong_type = {
+        key for key, value in args.items()
+        if key in parameters["properties"] and not isinstance(value, str)
+    }
+    if missing:
+        return f"{name} is missing required arguments: {', '.join(sorted(missing))}"
+    if unexpected:
+        return f"{name} has unexpected arguments: {', '.join(sorted(unexpected))}"
+    if wrong_type:
+        return f"{name} arguments must be strings: {', '.join(sorted(wrong_type))}"
+    return None
+
+
 def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
     result = subprocess.run(command, cwd=cwd, text=True, capture_output=True, timeout=timeout)
     output = (result.stdout + result.stderr).strip()
@@ -116,6 +139,9 @@ class MacTools:
                 "error": f"Tool {name} is blocked in {self.action_mode} mode",
                 "action_mode": self.action_mode,
             })
+        validation_error = validate_tool_arguments(name, args)
+        if validation_error:
+            return json.dumps({"error": validation_error})
         try:
             return handlers[name](args)
         except Exception as exc:  # tool errors are returned to the model

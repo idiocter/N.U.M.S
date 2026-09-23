@@ -57,6 +57,28 @@ def test_standard_mode_blocks_shell() -> None:
     assert result["action_mode"] == "standard"
 
 
+@pytest.mark.parametrize(
+    ("arguments", "message"),
+    [
+        ({}, "missing required arguments"),
+        ({"path": "/tmp/x", "content": 123}, "arguments must be strings"),
+        ({"path": "/tmp/x", "content": "a", "surprise": "b"}, "unexpected arguments"),
+        (["/tmp/x", "a"], "must be a JSON object"),
+    ],
+)
+def test_invalid_tool_arguments_are_rejected_without_writing(
+    tmp_path: Path, arguments: object, message: str
+) -> None:
+    target = tmp_path / "untouched.txt"
+    if isinstance(arguments, dict) and arguments.get("path") == "/tmp/x":
+        arguments = {**arguments, "path": str(target)}
+
+    result = json.loads(MacTools().execute("write_file", arguments))  # type: ignore[arg-type]
+
+    assert message in result["error"]
+    assert not target.exists()
+
+
 def test_clipboard_write_uses_stdin(monkeypatch: pytest.MonkeyPatch) -> None:
     calls = []
 

@@ -149,3 +149,24 @@ def test_model_only_sees_tools_allowed_by_action_mode() -> None:
     agent = Agent(Settings(action_mode="read_only"))
     agent.client = InspectingClient()  # type: ignore[assignment]
     assert agent.run("read a file") == "ok"
+
+
+def test_invalid_json_tool_arguments_are_reported_to_model() -> None:
+    class MalformedClient:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
+            self.calls += 1
+            if self.calls == 1:
+                return {"message": {"role": "assistant", "tool_calls": [
+                    {"function": {"name": "read_file", "arguments": "{broken"}}
+                ]}}
+            assert "must be a JSON object" in messages[-1]["content"]
+            return {"message": {"role": "assistant", "content": "I could not read that file."}}
+
+    agent = Agent(Settings())
+    agent.client = MalformedClient()  # type: ignore[assignment]
+
+    assert agent.run("read my file") == "I could not read that file."
+    assert agent.last_run["tool_errors"] == 1

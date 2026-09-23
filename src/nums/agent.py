@@ -78,7 +78,7 @@ class Agent:
                         try:
                             args = json.loads(args)
                         except json.JSONDecodeError:
-                            args = {}
+                            pass
                     trace_calls.append({"tool": name, "arguments": args})
                     self.last_run["tool_calls"] += 1
                     signature = json.dumps([name, args], sort_keys=True, default=str)
