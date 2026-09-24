@@ -27,3 +27,15 @@ def test_unknown_tool_is_rejected(tmp_path: Path) -> None:
     source.write_text('{"id":"bad","user":"hello","tool":"bad_tool","arguments":{}}\n')
     with pytest.raises(ValueError, match="invalid tool"):
         load_examples(source)
+
+
+def test_duplicate_prompts_cannot_leak_across_data_splits(tmp_path: Path) -> None:
+    source = tmp_path / "duplicates.jsonl"
+    rows = [
+        {"id": "one", "user": "Open Safari", "tool": "open_item", "arguments": {"target": "Safari"}},
+        {"id": "two", "user": "  open   SAFARI  ", "tool": "open_item", "arguments": {"target": "Safari"}},
+    ]
+    source.write_text("".join(json.dumps(row) + "\n" for row in rows))
+
+    with pytest.raises(ValueError, match="duplicate user prompt.*one and two"):
+        load_examples(source, minimum=1)

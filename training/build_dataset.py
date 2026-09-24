@@ -17,6 +17,7 @@ SCHEMAS = {item["function"]["name"]: item["function"] for item in TOOL_SCHEMAS}
 def load_examples(path: Path, minimum: int = 15) -> list[dict]:
     examples = []
     seen = set()
+    seen_prompts: dict[str, str] = {}
     for number, line in enumerate(path.read_text().splitlines(), 1):
         if not line.strip():
             continue
@@ -31,6 +32,11 @@ def load_examples(path: Path, minimum: int = 15) -> list[dict]:
                 raise ValueError(f"duplicate id: {identifier}")
             if not isinstance(user, str) or not user.strip():
                 raise ValueError("user must be a nonempty string")
+            normalized_prompt = " ".join(user.split()).casefold()
+            if normalized_prompt in seen_prompts:
+                raise ValueError(
+                    f"duplicate user prompt in {seen_prompts[normalized_prompt]} and {identifier}"
+                )
             if (name != "none" and name not in SCHEMAS) or not isinstance(arguments, dict):
                 raise ValueError("invalid tool or arguments")
             if name == "none" and not (isinstance(item.get("answer"), str) and item["answer"].strip()):
@@ -44,6 +50,7 @@ def load_examples(path: Path, minimum: int = 15) -> list[dict]:
         except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
             raise ValueError(f"{path}:{number}: {exc}") from exc
         seen.add(identifier)
+        seen_prompts[normalized_prompt] = identifier
         examples.append(item)
     if len(examples) < minimum:
         raise ValueError(f"at least {minimum} labeled examples are needed")
