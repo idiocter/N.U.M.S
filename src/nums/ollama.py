@@ -40,13 +40,32 @@ class OllamaClient:
             raise OllamaError("Ollama returned an invalid JSON response") from exc
         if not isinstance(result, dict) or not isinstance(result.get("message"), dict):
             raise OllamaError("Ollama returned a response without an assistant message")
+        message = result["message"]
+        if message.get("content") is not None and not isinstance(message["content"], str):
+            raise OllamaError("Ollama returned invalid assistant content")
+        calls = message.get("tool_calls")
+        if calls is not None:
+            if not isinstance(calls, list) or any(
+                not isinstance(call, dict)
+                or not isinstance(call.get("function"), dict)
+                or not isinstance(call["function"].get("name"), str)
+                or not call["function"]["name"]
+                or not isinstance(call["function"].get("arguments"), (dict, str))
+                for call in calls
+            ):
+                raise OllamaError("Ollama returned malformed tool calls")
         return result
 
     def has_model(self) -> bool:
         try:
             with urllib.request.urlopen(f"{self.base_url}/api/tags", timeout=5) as response:
-                models = json.load(response).get("models", [])
-        except (urllib.error.URLError, TimeoutError, ConnectionError, json.JSONDecodeError):
+                payload = json.load(response)
+        except (urllib.error.URLError, TimeoutError, ConnectionError, json.JSONDecodeError, UnicodeDecodeError):
             return False
-        names = {model.get("name") for model in models}
+        if not isinstance(payload, dict) or not isinstance(payload.get("models"), list):
+            return False
+        names = {
+            model.get("name") for model in payload["models"]
+            if isinstance(model, dict) and isinstance(model.get("name"), str)
+        }
         return self.model in names or f"{self.model}:latest" in names
