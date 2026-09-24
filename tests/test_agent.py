@@ -82,6 +82,34 @@ def test_failed_model_request_does_not_replay_user_prompt() -> None:
     assert agent.messages[0]["role"] == "system"
 
 
+def test_disconnect_after_tool_call_removes_incomplete_turn(tmp_path) -> None:
+    class DisconnectingClient:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
+            self.calls += 1
+            if self.calls == 1:
+                return {"message": {"role": "assistant", "tool_calls": [
+                    {"function": {"name": "system_info", "arguments": {}}}
+                ]}}
+            raise OllamaError("Ollama disconnected")
+
+    history = tmp_path / "history.json"
+    agent = Agent(Settings(history_file=str(history)))
+    agent.client = DisconnectingClient()  # type: ignore[assignment]
+    tools = RecordingTools()
+    agent.tools = tools  # type: ignore[assignment]
+
+    with pytest.raises(OllamaError, match="disconnected"):
+        agent.run("check my Mac")
+
+    assert tools.calls == [("system_info", {})]
+    assert [message["role"] for message in agent.messages] == ["system"]
+    assert history.read_text() == "[]"
+    assert agent.last_run["status"] == "model_error"
+
+
 def test_long_session_keeps_only_recent_complete_turns() -> None:
     class RecordingClient:
         def __init__(self) -> None:

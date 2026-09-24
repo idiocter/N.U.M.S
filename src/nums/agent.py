@@ -105,8 +105,7 @@ class Agent:
                     self.messages.append({"role": "tool", "tool_name": name, "content": result})
         except OllamaError as exc:
             self.last_run["status"] = "model_error"
-            if len(self.messages) == history_length + 1:
-                self.messages.pop()
+            del self.messages[history_length:]
             self._save_history()
             self._trace(prompt, trace_calls, None, str(exc))
             raise
