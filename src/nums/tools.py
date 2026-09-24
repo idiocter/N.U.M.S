@@ -107,7 +107,10 @@ def validate_tool_arguments(name: str, args: Any) -> str | None:
 def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
     result = subprocess.run(command, cwd=cwd, text=True, capture_output=True, timeout=timeout)
     output = (result.stdout + result.stderr).strip()
-    return json.dumps({"exit_code": result.returncode, "output": output[-12000:]})
+    response = {"exit_code": result.returncode, "output": output[-12000:]}
+    if result.returncode != 0:
+        response["error"] = f"Command exited with status {result.returncode}"
+    return json.dumps(response)
 
 
 class MacTools:
@@ -159,10 +162,14 @@ class MacTools:
         return json.dumps(items[:500])
 
     def search_files(self, args: dict[str, Any]) -> str:
-        return _run([
+        result = json.loads(_run([
             "rg", "-n", "-F", "--hidden", "--glob", "!.git", "--",
             args["query"], str(Path(args["path"]).expanduser()),
-        ])
+        ]))
+        if result["exit_code"] == 1:
+            result.pop("error", None)
+            result["matches"] = 0
+        return json.dumps(result)
 
     def write_file(self, args: dict[str, Any]) -> str:
         requested = Path(args["path"]).expanduser()
@@ -222,7 +229,12 @@ class MacTools:
         result = subprocess.run(
             ["pbcopy"], input=args["text"], text=True, capture_output=True, timeout=10
         )
-        return json.dumps({"exit_code": result.returncode, "characters": len(args["text"])})
+        if result.returncode != 0:
+            return json.dumps({
+                "exit_code": result.returncode,
+                "error": f"Clipboard write failed: {result.stderr.strip()[-1000:]}",
+            })
+        return json.dumps({"exit_code": 0, "characters": len(args["text"])})
 
     def create_reminder(self, args: dict[str, Any]) -> str:
         script = """on run argv

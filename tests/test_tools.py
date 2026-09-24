@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from nums.tools import MacTools
+from nums.tools import MacTools, _run
 
 
 def test_read_and_list(tmp_path: Path) -> None:
@@ -97,6 +97,20 @@ def test_clipboard_write_uses_stdin(monkeypatch: pytest.MonkeyPatch) -> None:
     assert calls[0][1]["input"] == "hello"
 
 
+def test_clipboard_failure_does_not_report_a_successful_write(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Result:
+        returncode = 1
+        stderr = "pasteboard unavailable"
+
+    monkeypatch.setattr("nums.tools.subprocess.run", lambda *args, **kwargs: Result())
+
+    result = json.loads(MacTools().set_clipboard({"text": "hello"}))
+
+    assert result["exit_code"] == 1
+    assert "pasteboard unavailable" in result["error"]
+    assert "characters" not in result
+
+
 def test_reminder_passes_values_as_arguments(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command: commands.append(command) or "ok")
@@ -113,6 +127,31 @@ def test_search_treats_dash_prefixed_query_as_text(tmp_path: Path) -> None:
 
     assert result["exit_code"] == 0
     assert "-TODO follow up" in result["output"]
+
+
+def test_search_with_no_matches_is_not_a_tool_error(tmp_path: Path) -> None:
+    (tmp_path / "note.txt").write_text("hello\n")
+
+    result = json.loads(MacTools().search_files({"query": "absent", "path": str(tmp_path)}))
+
+    assert result["exit_code"] == 1
+    assert result["matches"] == 0
+    assert "error" not in result
+
+
+def test_nonzero_process_exit_is_reported_as_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Result:
+        returncode = 7
+        stdout = ""
+        stderr = "permission denied"
+
+    monkeypatch.setattr("nums.tools.subprocess.run", lambda *args, **kwargs: Result())
+
+    result = json.loads(_run(["open", "missing"]))
+
+    assert result["exit_code"] == 7
+    assert "error" in result
+    assert "permission denied" in result["output"]
 
 
 @pytest.mark.parametrize(
