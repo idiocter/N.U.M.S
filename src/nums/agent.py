@@ -54,7 +54,9 @@ class Agent:
         history_length = len(self.messages)
         self.messages.append({"role": "user", "content": prompt})
         trace_calls: list[dict[str, Any]] = []
-        signatures: dict[str, int] = {}
+        last_signature: str | None = None
+        last_result: str | None = None
+        unchanged_count = 0
         try:
             for step in range(1, self.settings.max_steps + 1):
                 self.last_run["steps"] = step
@@ -82,8 +84,7 @@ class Agent:
                     trace_calls.append({"tool": name, "arguments": args})
                     self.last_run["tool_calls"] += 1
                     signature = json.dumps([name, args], sort_keys=True, default=str)
-                    signatures[signature] = signatures.get(signature, 0) + 1
-                    if signatures[signature] > self.settings.repeat_tool_limit:
+                    if signature == last_signature and unchanged_count >= self.settings.repeat_tool_limit:
                         result = json.dumps({
                             "error": "Repeated tool call stopped because it made no observable progress",
                             "tool": name,
@@ -96,6 +97,11 @@ class Agent:
                         self._trace(prompt, trace_calls, reply, "repeated tool call")
                         return reply
                     result = self.tools.execute(name, args)
+                    if signature == last_signature and result == last_result:
+                        unchanged_count += 1
+                    else:
+                        unchanged_count = 1
+                    last_signature, last_result = signature, result
                     try:
                         parsed_result = json.loads(result)
                         if isinstance(parsed_result, dict) and "error" in parsed_result:

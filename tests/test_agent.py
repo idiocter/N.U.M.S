@@ -149,6 +149,37 @@ def test_repeated_tool_loop_stops_before_another_execution() -> None:
     }
 
 
+def test_repeated_tool_call_can_continue_when_results_change() -> None:
+    class ChangingClient:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
+            self.calls += 1
+            if self.calls <= 3:
+                return {"message": {"role": "assistant", "tool_calls": [
+                    {"function": {"name": "read_file", "arguments": {"path": "/tmp/status"}}}
+                ]}}
+            return {"message": {"role": "assistant", "content": "The status changed."}}
+
+    class ChangingTools:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def execute(self, name: str, args: dict[str, Any]) -> str:
+            self.calls += 1
+            return f"status {self.calls}"
+
+    agent = Agent(Settings(max_steps=5, repeat_tool_limit=2))
+    agent.client = ChangingClient()  # type: ignore[assignment]
+    tools = ChangingTools()
+    agent.tools = tools  # type: ignore[assignment]
+
+    assert agent.run("watch status") == "The status changed."
+    assert tools.calls == 3
+    assert agent.last_run["status"] == "completed"
+
+
 def test_run_report_counts_tool_errors() -> None:
     agent = Agent(Settings())
     agent.client = FakeClient()  # type: ignore[assignment]
