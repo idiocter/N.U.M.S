@@ -5,6 +5,7 @@ from __future__ import annotations
 import fcntl
 import json
 import os
+import stat
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -24,8 +25,14 @@ class TraceStore:
             "error": error,
         }
         data = (json.dumps(entry, ensure_ascii=False) + "\n").encode()
-        fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+        fd = os.open(
+            self.path,
+            os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW | os.O_NONBLOCK,
+            0o600,
+        )
         try:
+            if not stat.S_ISREG(os.fstat(fd).st_mode):
+                raise ValueError(f"NUMS trace path is not a regular file: {self.path}")
             fcntl.flock(fd, fcntl.LOCK_EX)
             os.fchmod(fd, 0o600)
             remaining = memoryview(data)

@@ -3,8 +3,11 @@ import stat
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from nums.agent import Agent
 from nums.config import Settings
+from nums.trace import TraceStore
 
 
 def test_opt_in_trace_records_decisions_without_tool_results(tmp_path: Path) -> None:
@@ -35,3 +38,15 @@ def test_opt_in_trace_records_decisions_without_tool_results(tmp_path: Path) -> 
     assert entry["tool_calls"] == [{"tool": "read_file", "arguments": {"path": "/tmp/note.txt"}}]
     assert "private file contents" not in trace.read_text()
     assert stat.S_IMODE(trace.stat().st_mode) == 0o600
+
+
+def test_trace_store_refuses_symlink_target(tmp_path: Path) -> None:
+    target = tmp_path / "other.txt"
+    target.write_text("original")
+    link = tmp_path / "trace.jsonl"
+    link.symlink_to(target)
+
+    with pytest.raises(OSError):
+        TraceStore(link).append("private prompt", [], None)
+
+    assert target.read_text() == "original"
