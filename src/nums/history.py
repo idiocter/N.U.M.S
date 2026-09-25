@@ -25,6 +25,13 @@ class HistoryStore:
             for item in messages
         ):
             raise ValueError(f"Invalid NUMS history at {self.path}")
+        while messages and (
+            messages[-1]["role"] != "assistant" or messages[-1].get("tool_calls")
+        ):
+            starts = [index for index, item in enumerate(messages) if item["role"] == "user"]
+            if not starts:
+                raise ValueError(f"Invalid NUMS history at {self.path}")
+            messages = messages[:starts[-1]]
         return messages
 
     def save(self, messages: list[dict[str, Any]]) -> None:
