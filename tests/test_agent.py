@@ -65,6 +65,7 @@ def test_empty_model_response_has_a_spoken_fallback() -> None:
     agent.client = EmptyClient()  # type: ignore[assignment]
 
     assert agent.run("hello") == "I couldn't produce a response."
+    assert agent.messages[-1]["content"] == "I couldn't produce a response."
 
 
 def test_failed_model_request_does_not_replay_user_prompt() -> None:
@@ -147,6 +148,20 @@ def test_repeated_tool_loop_stops_before_another_execution() -> None:
     assert agent.last_run == {
         "status": "no_progress", "steps": 3, "tool_calls": 3, "tool_errors": 1
     }
+    assert agent.messages[-1] == {"role": "assistant", "content": response}
+
+
+def test_step_limit_saves_a_complete_assistant_turn(tmp_path) -> None:
+    history = tmp_path / "history.json"
+    agent = Agent(Settings(max_steps=1, history_file=str(history)))
+    agent.client = FakeClient()  # type: ignore[assignment]
+    agent.tools = RecordingTools()  # type: ignore[assignment]
+
+    response = agent.run("write a file")
+
+    assert agent.last_run["status"] == "step_limit"
+    assert agent.messages[-1] == {"role": "assistant", "content": response}
+    assert Agent(Settings(history_file=str(history))).messages[-1] == agent.messages[-1]
 
 
 def test_repeated_tool_call_can_continue_when_results_change() -> None:

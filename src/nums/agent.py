@@ -68,8 +68,9 @@ class Agent:
                 calls = message.get("tool_calls") or []
                 if not calls:
                     self.last_run["status"] = "completed"
-                    self._save_history()
                     reply = message.get("content") or "I couldn't produce a response."
+                    message["content"] = reply
+                    self._save_history()
                     self._trace(prompt, trace_calls, reply)
                     return reply
                 for call in calls:
@@ -93,6 +94,7 @@ class Agent:
                         self.last_run["tool_errors"] += 1
                         self.last_run["status"] = "no_progress"
                         reply = f"I stopped after repeating the same {name} action without progress."
+                        self.messages.append({"role": "assistant", "content": reply})
                         self._save_history()
                         self._trace(prompt, trace_calls, reply, "repeated tool call")
                         return reply
@@ -115,8 +117,9 @@ class Agent:
             self._save_history()
             self._trace(prompt, trace_calls, None, str(exc))
             raise
-        self._save_history()
         self.last_run["status"] = "step_limit"
         reply = "I reached the tool-step limit. Try splitting the task into a smaller request."
+        self.messages.append({"role": "assistant", "content": reply})
+        self._save_history()
         self._trace(prompt, trace_calls, reply)
         return reply
