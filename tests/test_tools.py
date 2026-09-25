@@ -12,7 +12,28 @@ def test_read_and_list(tmp_path: Path) -> None:
     file.write_text("hello NUMS")
     tools = MacTools()
     assert tools.read_file({"path": str(file)}) == "hello NUMS"
-    assert "hello.txt" in tools.list_directory({"path": str(tmp_path)})
+    listing = json.loads(tools.list_directory({"path": str(tmp_path)}))
+    assert listing == {
+        "items": [{"name": "hello.txt", "type": "file"}],
+        "total": 1,
+        "truncated": False,
+    }
+
+
+def test_large_file_and_directory_outputs_warn_about_truncation(tmp_path: Path) -> None:
+    file = tmp_path / "large.txt"
+    file.write_text("x" * 12001)
+    for number in range(500):
+        (tmp_path / f"item-{number:03}").touch()
+
+    text = MacTools().read_file({"path": str(file)})
+    listing = json.loads(MacTools().list_directory({"path": str(tmp_path)}))
+
+    assert text.startswith("x" * 12000)
+    assert "file output truncated" in text
+    assert listing["total"] == 501
+    assert len(listing["items"]) == 500
+    assert listing["truncated"] is True
 
 
 def test_write_replaces_content_and_preserves_permissions(tmp_path: Path) -> None:
@@ -152,6 +173,20 @@ def test_nonzero_process_exit_is_reported_as_error(monkeypatch: pytest.MonkeyPat
     assert result["exit_code"] == 7
     assert "error" in result
     assert "permission denied" in result["output"]
+
+
+def test_large_command_output_reports_truncation(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Result:
+        returncode = 0
+        stdout = "x" * 12001
+        stderr = ""
+
+    monkeypatch.setattr("nums.tools.subprocess.run", lambda *args, **kwargs: Result())
+
+    result = json.loads(_run(["say", "hello"]))
+
+    assert len(result["output"]) == 12000
+    assert result["truncated"] is True
 
 
 @pytest.mark.parametrize(

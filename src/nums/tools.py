@@ -107,7 +107,11 @@ def validate_tool_arguments(name: str, args: Any) -> str | None:
 def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
     result = subprocess.run(command, cwd=cwd, text=True, capture_output=True, timeout=timeout)
     output = (result.stdout + result.stderr).strip()
-    response = {"exit_code": result.returncode, "output": output[-12000:]}
+    response = {
+        "exit_code": result.returncode,
+        "output": output[-12000:],
+        "truncated": len(output) > 12000,
+    }
     if result.returncode != 0:
         response["error"] = f"Command exited with status {result.returncode}"
     return json.dumps(response)
@@ -151,7 +155,10 @@ class MacTools:
             return json.dumps({"error": f"{type(exc).__name__}: {exc}"})
 
     def read_file(self, args: dict[str, Any]) -> str:
-        return Path(args["path"]).expanduser().read_text(errors="replace")[:12000]
+        content = Path(args["path"]).expanduser().read_text(errors="replace")
+        if len(content) > 12000:
+            return content[:12000] + "\n[NUMS: file output truncated after 12000 characters]"
+        return content
 
     def list_directory(self, args: dict[str, Any]) -> str:
         path = Path(args["path"]).expanduser()
@@ -159,7 +166,9 @@ class MacTools:
             {"name": child.name, "type": "directory" if child.is_dir() else "file"}
             for child in sorted(path.iterdir(), key=lambda item: (not item.is_dir(), item.name.lower()))
         ]
-        return json.dumps(items[:500])
+        return json.dumps({
+            "items": items[:500], "total": len(items), "truncated": len(items) > 500,
+        })
 
     def search_files(self, args: dict[str, Any]) -> str:
         result = json.loads(_run([

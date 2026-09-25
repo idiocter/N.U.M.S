@@ -102,6 +102,9 @@ NUMS_MODEL=qwen2.5:3b-instruct uv run nums
 
 NUMS runs with the permissions of the Terminal app that launches it. macOS may ask for access when NUMS first touches protected locations or automates another app.
 
+Large file, directory, and command results indicate when NUMS has truncated
+the output. Ask for a narrower path or search when the omitted part matters.
+
 For broad access, open **System Settings → Privacy & Security** and grant your terminal only the permissions you actually want it to have, such as:
 
 - Full Disk Access for protected files
