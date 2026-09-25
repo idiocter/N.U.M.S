@@ -242,6 +242,8 @@ class WhisperStream:
                 finally:
                     self.stop()
 
+                if self.process.returncode == 0:
+                    return
                 log.seek(0)
                 tail = log.read()[-3000:].strip()
                 raise RuntimeError(

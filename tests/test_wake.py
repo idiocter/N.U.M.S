@@ -179,10 +179,29 @@ def test_stream_reads_final_transcript_after_process_exit(monkeypatch: pytest.Mo
     monkeypatch.setattr("nums.wake.shutil.which", lambda _: "/usr/local/bin/whisper-stream")
     monkeypatch.setattr("nums.wake.subprocess.Popen", fake_popen)
     stream = WhisperStream(str(model))
-    transcripts = stream.transcripts()
 
-    assert next(transcripts) == "hey numnum, open Safari"
-    transcripts.close()
+    assert list(stream.transcripts()) == ["hey numnum, open Safari"]
+
+
+def test_stream_reports_failed_process_exit(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    model = tmp_path / "model.bin"
+    model.touch()
+
+    class FailedProcess:
+        returncode = 2
+
+        def poll(self) -> int:
+            return 2
+
+    def fake_popen(command: list[str], **kwargs: object) -> FailedProcess:
+        kwargs["stdout"].write("microphone unavailable\n")  # type: ignore[union-attr]
+        return FailedProcess()
+
+    monkeypatch.setattr("nums.wake.shutil.which", lambda _: "/usr/local/bin/whisper-stream")
+    monkeypatch.setattr("nums.wake.subprocess.Popen", fake_popen)
+
+    with pytest.raises(RuntimeError, match="microphone unavailable"):
+        list(WhisperStream(str(model)).transcripts())
 
 
 def test_stream_waits_for_complete_transcript_line(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
