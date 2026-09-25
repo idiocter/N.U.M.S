@@ -104,6 +104,7 @@ class WakePhraseDetector:
         if self.active_session and now - self.last_activity_at >= self.session_timeout_seconds:
             self.active_session = False
             self.last_command_at = 0.0
+            self.last_transcript = ""
         cleaned = " ".join(transcript.strip().split())
         cleaned = re.sub(
             r"^\[[0-9:.]+\s*-->\s*[0-9:.]+\]\s*", "", cleaned

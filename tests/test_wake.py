@@ -96,6 +96,18 @@ def test_idle_session_requires_wake_phrase_again(monkeypatch: pytest.MonkeyPatch
     assert detector.feed("open Safari") is None
 
 
+def test_same_wake_phrase_works_after_idle_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    moments = iter([0.0, 11.0])
+    monkeypatch.setattr("nums.wake.time.monotonic", lambda: next(moments))
+    detector = WakePhraseDetector(session_timeout_seconds=10)
+
+    first = detector.feed("Hey num num")
+    second = detector.feed("Hey num num")
+
+    assert first is not None and first.kind == "wake"
+    assert second is not None and second.kind == "wake"
+
+
 def test_sleep_phrase_requires_an_active_session() -> None:
     assert WakePhraseDetector().feed("Aight baby girl let's sleep") is None
 
