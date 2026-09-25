@@ -1,3 +1,4 @@
+import io
 import json
 import stat
 from pathlib import Path
@@ -34,6 +35,20 @@ def test_large_file_and_directory_outputs_warn_about_truncation(tmp_path: Path) 
     assert listing["total"] == 501
     assert len(listing["items"]) == 500
     assert listing["truncated"] is True
+
+
+def test_file_read_is_bounded_before_truncation(monkeypatch: pytest.MonkeyPatch) -> None:
+    class GuardedReader(io.StringIO):
+        def read(self, size: int = -1) -> str:
+            assert size == 12001
+            return super().read(size)
+
+    monkeypatch.setattr("nums.tools.Path.open", lambda *args, **kwargs: GuardedReader("x" * 20000))
+
+    result = MacTools().read_file({"path": "/unused/large.txt"})
+
+    assert len(result.split("\n[NUMS:")[0]) == 12000
+    assert "truncated" in result
 
 
 def test_write_replaces_content_and_preserves_permissions(tmp_path: Path) -> None:

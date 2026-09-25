@@ -155,7 +155,8 @@ class MacTools:
             return json.dumps({"error": f"{type(exc).__name__}: {exc}"})
 
     def read_file(self, args: dict[str, Any]) -> str:
-        content = Path(args["path"]).expanduser().read_text(errors="replace")
+        with Path(args["path"]).expanduser().open(encoding="utf-8", errors="replace") as handle:
+            content = handle.read(12001)
         if len(content) > 12000:
             return content[:12000] + "\n[NUMS: file output truncated after 12000 characters]"
         return content
