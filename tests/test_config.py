@@ -7,6 +7,7 @@ from nums.config import Settings
     ("name", "value", "message"),
     [
         ("NUMS_MAX_STEPS", "0", "at least 1"),
+        ("NUMS_OLLAMA_TIMEOUT", "0", "at least 1"),
         ("NUMS_MAX_STEPS", "many", "integer"),
         ("NUMS_HISTORY_TURNS", "0", "at least 1"),
         ("NUMS_CAPTURE_DEVICE", "-2", "at least -1"),
@@ -27,3 +28,11 @@ def test_bad_environment_has_clear_error(monkeypatch: pytest.MonkeyPatch, name: 
     monkeypatch.setenv(name, value)
     with pytest.raises(ValueError, match=message):
         Settings.from_env()
+
+
+def test_model_timeout_can_be_configured(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("NUMS_OLLAMA_TIMEOUT", "45")
+
+    settings = Settings.from_env()
+
+    assert settings.ollama_timeout_seconds == 45

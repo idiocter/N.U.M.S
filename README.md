@@ -98,6 +98,9 @@ NUMS_MODEL=qwen2.5:3b-instruct uv run nums --pull
 NUMS_MODEL=qwen2.5:3b-instruct uv run nums
 ```
 
+Set `NUMS_OLLAMA_TIMEOUT` to change the maximum seconds for one model response
+(default: 180). The login service keeps the value set when it is installed.
+
 ## Mac access
 
 NUMS runs with the permissions of the Terminal app that launches it. macOS may ask for access when NUMS first touches protected locations or automates another app.

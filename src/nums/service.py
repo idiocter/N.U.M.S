@@ -24,6 +24,7 @@ def service_plist(settings: Settings) -> bytes:
         "PATH": os.environ.get("PATH", os.defpath),
         "NUMS_MODEL": settings.model,
         "NUMS_OLLAMA_URL": settings.ollama_url,
+        "NUMS_OLLAMA_TIMEOUT": str(settings.ollama_timeout_seconds),
         "NUMS_MAX_STEPS": str(settings.max_steps),
         "NUMS_HISTORY_TURNS": str(settings.history_turns),
         "NUMS_ACTION_MODE": settings.action_mode,

@@ -32,7 +32,9 @@ def self_test(settings: Settings) -> tuple[bool, list[str]]:
 
     system_schema = [item for item in TOOL_SCHEMAS if item["function"]["name"] == "system_info"]
     try:
-        response = OllamaClient(settings.ollama_url, settings.model).chat(
+        response = OllamaClient(
+            settings.ollama_url, settings.model, timeout=settings.ollama_timeout_seconds
+        ).chat(
             [{"role": "user", "content": "Use the system_info tool now."}], system_schema
         )
         calls = response["message"].get("tool_calls") or []

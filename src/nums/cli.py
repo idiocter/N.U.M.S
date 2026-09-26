@@ -32,7 +32,9 @@ def doctor(settings: Settings) -> int:
     print(f"Python: {sys.version.split()[0]}")
     print(f"Ollama: {shutil.which('ollama') or 'not found'}")
     print(f"Model: {settings.model}")
-    client = OllamaClient(settings.ollama_url, settings.model)
+    client = OllamaClient(
+        settings.ollama_url, settings.model, timeout=settings.ollama_timeout_seconds
+    )
     model_ready = client.has_model()
     print(f"Model ready: {'yes' if model_ready else 'no'}")
     if not model_ready:

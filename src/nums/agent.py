@@ -19,7 +19,9 @@ Use only the provided tools. Execute requested actions directly within the selec
 class Agent:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
-        self.client = OllamaClient(settings.ollama_url, settings.model)
+        self.client = OllamaClient(
+            settings.ollama_url, settings.model, timeout=settings.ollama_timeout_seconds
+        )
         self.tools = MacTools(settings.action_mode)
         self.history_store = HistoryStore(Path(settings.history_file)) if settings.history_file else None
         self.trace_store = TraceStore(Path(settings.trace_file)) if settings.trace_file else None

@@ -23,6 +23,7 @@ def _integer(name: str, default: int, minimum: int) -> int:
 class Settings:
     model: str = "qwen2.5:1.5b-instruct"
     ollama_url: str = "http://127.0.0.1:11434"
+    ollama_timeout_seconds: int = 180
     max_steps: int = 8
     history_turns: int = 8
     history_file: str | None = None
@@ -77,6 +78,9 @@ class Settings:
         return cls(
             model=model,
             ollama_url=url,
+            ollama_timeout_seconds=_integer(
+                "NUMS_OLLAMA_TIMEOUT", cls.ollama_timeout_seconds, 1
+            ),
             max_steps=_integer("NUMS_MAX_STEPS", cls.max_steps, 1),
             history_turns=_integer("NUMS_HISTORY_TURNS", cls.history_turns, 1),
             history_file=os.path.expanduser(os.environ["NUMS_HISTORY_FILE"])
