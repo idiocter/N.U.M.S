@@ -6,6 +6,7 @@ import os
 import plistlib
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from .config import Settings
@@ -52,13 +53,38 @@ def service_plist(settings: Settings) -> bytes:
     })
 
 
+def _write_plist(path: Path, data: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=f".{path.name}.", delete=False) as handle:
+            temporary = Path(handle.name)
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        temporary.chmod(0o600)
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 def install_service(settings: Settings) -> Path:
     path = service_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(service_plist(settings))
-    path.chmod(0o600)
-    subprocess.run(["launchctl", "bootout", f"gui/{os.getuid()}", str(path)], check=False)
-    subprocess.run(["launchctl", "bootstrap", f"gui/{os.getuid()}", str(path)], check=True)
+    previous = path.read_bytes() if path.exists() else None
+    _write_plist(path, service_plist(settings))
+    domain = f"gui/{os.getuid()}"
+    if previous is not None:
+        subprocess.run(["launchctl", "bootout", domain, str(path)], check=False)
+    try:
+        subprocess.run(["launchctl", "bootstrap", domain, str(path)], check=True)
+    except (subprocess.CalledProcessError, OSError):
+        if previous is None:
+            path.unlink(missing_ok=True)
+        else:
+            _write_plist(path, previous)
+            subprocess.run(["launchctl", "bootstrap", domain, str(path)], check=False)
+        raise
     return path
 
 
