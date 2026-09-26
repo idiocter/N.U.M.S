@@ -10,3 +10,4 @@ training/data/
 training/adapters/
 training/fused_model/
 training/private/
+training/runs/

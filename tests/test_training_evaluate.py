@@ -1,7 +1,8 @@
 import json
+import stat
 from contextlib import nullcontext
 
-from training.evaluate import evaluate
+from training.evaluate import evaluate, write_report
 
 
 def test_evaluate_reports_per_tool_results(monkeypatch, tmp_path) -> None:
@@ -47,6 +48,39 @@ def test_evaluate_reports_per_tool_results(monkeypatch, tmp_path) -> None:
         "arguments_correct": 0,
     }
     assert report["cases"][1]["actual_tool"] == "open_app"
+    assert report["cases"][1]["actual_arguments"] == {"name": "Mail"}
+
+
+def test_malformed_model_response_scores_wrong_and_keeps_next_case(monkeypatch, tmp_path) -> None:
+    examples = [
+        {"id": "invalid", "messages": [{"role": "user"}, {"role": "assistant"}],
+         "tools": [], "expected_tool": "none", "expected_arguments": {}},
+        {"id": "valid", "messages": [{"role": "user"}, {"role": "assistant"}],
+         "tools": [], "expected_tool": "none", "expected_arguments": {}},
+    ]
+    data = tmp_path / "test.jsonl"
+    data.write_text("\n".join(json.dumps(item) for item in examples))
+    responses = iter([{}, {"message": {"content": "hello"}}])
+    monkeypatch.setattr(
+        "training.evaluate.urllib.request.urlopen",
+        lambda *args, **kwargs: nullcontext(_JsonResponse(next(responses))),
+    )
+
+    report = evaluate(data, "test-model", "http://ollama.test")
+
+    assert report["total"] == 2
+    assert report["tool_correct"] == 1
+    assert "missing assistant message" in report["cases"][0]["error"]
+    assert report["cases"][1]["tool_correct"] is True
+
+
+def test_evaluation_report_is_private(tmp_path) -> None:
+    output = tmp_path / "runs" / "report.json"
+    write_report(output, {"cases": [{"expected_arguments": {"path": "/private"}}]})
+
+    assert stat.S_IMODE(output.parent.stat().st_mode) == 0o700
+    assert stat.S_IMODE(output.stat().st_mode) == 0o600
+    assert json.loads(output.read_text())["cases"][0]["expected_arguments"]["path"] == "/private"
 
 
 class _JsonResponse:
