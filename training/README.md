@@ -24,7 +24,8 @@ PYTHONPATH=src:. .venv/bin/python training/review_traces.py export training/priv
 ```
 
 You can rerun `prepare` as new traces arrive; existing review decisions are
-preserved. Review and export files are written with owner-only permissions.
+preserved even when a trace log is reordered or rotated. Review and export
+files are written with owner-only permissions.
 An invalid reviewed label leaves the previous export intact.
 
 ## Prepare and evaluate

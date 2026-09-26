@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import tempfile
+from collections import Counter
 from pathlib import Path
 
 from training.build_dataset import load_examples
@@ -37,19 +38,50 @@ def prepare(trace_path: Path, review_path: Path) -> int:
     rows = [json.loads(line) for line in review_path.read_text().splitlines() if line.strip()] \
         if review_path.exists() else []
     existing_ids = {row["id"] for row in rows}
-    for number, line in enumerate(trace_path.read_text().splitlines(), 1):
-        if not line.strip():
-            continue
-        trace = json.loads(line)
+    existing_fingerprints = {
+        row["source_fingerprint"] for row in rows if row.get("source_fingerprint")
+    }
+    traces = [json.loads(line) for line in trace_path.read_text().splitlines() if line.strip()]
+    legacy_by_signature: dict[str, list[dict]] = {}
+    for row in rows:
+        if "source_fingerprint" not in row:
+            signature = json.dumps(
+                [row.get("user"), row.get("proposed_tool"), row.get("proposed_arguments")],
+                sort_keys=True,
+            )
+            legacy_by_signature.setdefault(signature, []).append(row)
+    signatures = []
+    for trace in traces:
         calls = trace.get("tool_calls") or []
         first = calls[0] if calls else {"tool": "none", "arguments": {}}
-        identifier = hashlib.sha256(
-            f"{number}:{trace.get('at')}:{trace.get('prompt')}".encode()
+        signatures.append(json.dumps(
+            [trace.get("prompt"), first.get("tool", "none"), first.get("arguments", {})],
+            sort_keys=True,
+        ))
+    signature_counts = Counter(signatures)
+    for number, trace in enumerate(traces, 1):
+        calls = trace.get("tool_calls") or []
+        first = calls[0] if calls else {"tool": "none", "arguments": {}}
+        source = {
+            "at": trace.get("at"), "prompt": trace.get("prompt"), "tool_calls": calls,
+        }
+        if source["at"] is None:
+            source["line"] = number
+        fingerprint = hashlib.sha256(
+            json.dumps(source, sort_keys=True).encode()
         ).hexdigest()[:16]
-        if f"trace-{identifier}" in existing_ids:
+        identifier = f"trace-{fingerprint}"
+        if fingerprint in existing_fingerprints or identifier in existing_ids:
+            continue
+        signature = signatures[number - 1]
+        legacy = legacy_by_signature.get(signature, [])
+        if signature_counts[signature] == 1 and len(legacy) == 1:
+            legacy[0]["source_fingerprint"] = fingerprint
+            existing_fingerprints.add(fingerprint)
             continue
         rows.append({
-            "id": f"trace-{identifier}",
+            "id": identifier,
+            "source_fingerprint": fingerprint,
             "user": trace.get("prompt", ""),
             "proposed_tool": first.get("tool", "none"),
             "proposed_arguments": first.get("arguments", {}),
@@ -59,7 +91,8 @@ def prepare(trace_path: Path, review_path: Path) -> int:
             "reviewed": False,
             "review_notes": "",
         })
-        existing_ids.add(f"trace-{identifier}")
+        existing_ids.add(identifier)
+        existing_fingerprints.add(fingerprint)
     _write_private_jsonl(review_path, rows)
     return len(rows)
 
