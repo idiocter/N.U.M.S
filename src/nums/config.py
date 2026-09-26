@@ -44,8 +44,21 @@ class Settings:
         if not model:
             raise ValueError("NUMS_MODEL cannot be empty")
         parsed_url = urlparse(url)
-        if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
-            raise ValueError("NUMS_OLLAMA_URL must be an HTTP URL")
+        try:
+            valid_port = parsed_url.port is None or 1 <= parsed_url.port <= 65535
+        except ValueError:
+            valid_port = False
+        if (
+            parsed_url.scheme not in {"http", "https"}
+            or not parsed_url.hostname
+            or not valid_port
+            or parsed_url.username is not None
+            or parsed_url.password is not None
+            or parsed_url.path
+            or parsed_url.query
+            or parsed_url.fragment
+        ):
+            raise ValueError("NUMS_OLLAMA_URL must be an HTTP URL with only a host and optional port")
         if not phrase:
             raise ValueError("NUMS_WAKE_PHRASE cannot be empty")
         speak = os.getenv("NUMS_SPEAK", "0")
