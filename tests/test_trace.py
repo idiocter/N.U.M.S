@@ -50,3 +50,21 @@ def test_trace_store_refuses_symlink_target(tmp_path: Path) -> None:
         TraceStore(link).append("private prompt", [], None)
 
     assert target.read_text() == "original"
+
+
+def test_trace_failure_does_not_hide_completed_response(tmp_path: Path) -> None:
+    class Client:
+        def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
+            return {"message": {"role": "assistant", "content": "done"}}
+
+    target = tmp_path / "other.txt"
+    target.write_text("original")
+    link = tmp_path / "trace.jsonl"
+    link.symlink_to(target)
+    agent = Agent(Settings(trace_file=str(link)))
+    agent.client = Client()  # type: ignore[assignment]
+
+    assert agent.run("hello") == "done"
+    assert agent.last_run["status"] == "completed"
+    assert agent.trace_error
+    assert target.read_text() == "original"

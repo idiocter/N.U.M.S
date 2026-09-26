@@ -47,6 +47,8 @@ make before NUMS stops the no-progress loop (default: 2).
 In the interactive terminal, `/status` shows the current model and history
 location plus the last run's steps, tool calls, and errors. `/reset` clears the
 conversation (including the optional history file), and `/help` lists the commands.
+If optional trace writing fails, `/status` reports the trace error while the
+assistant still returns its response.
 
 ## Wake phrase
 

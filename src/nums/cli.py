@@ -189,6 +189,8 @@ def main() -> None:
                 f"Last run: {run['status']} | Steps: {run['steps']} | "
                 f"Tools: {run['tool_calls']} | Tool errors: {run['tool_errors']}\n"
             )
+            if agent.trace_error:
+                print(f"Trace error: {agent.trace_error}\n")
             continue
         if prompt == "/reset":
             agent.reset()

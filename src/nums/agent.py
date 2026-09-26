@@ -30,6 +30,7 @@ class Agent:
         self.last_run: dict[str, Any] = {
             "status": "idle", "steps": 0, "tool_calls": 0, "tool_errors": 0
         }
+        self.trace_error: str | None = None
 
     def _save_history(self) -> None:
         if self.history_store:
@@ -37,7 +38,10 @@ class Agent:
 
     def _trace(self, prompt: str, calls: list[dict[str, Any]], reply: str | None, error: str | None = None) -> None:
         if self.trace_store:
-            self.trace_store.append(prompt, calls, reply, error)
+            try:
+                self.trace_store.append(prompt, calls, reply, error)
+            except (OSError, ValueError) as exc:
+                self.trace_error = str(exc)
 
     def reset(self) -> None:
         self.messages = [{"role": "system", "content": SYSTEM_PROMPT}]
@@ -52,6 +56,7 @@ class Agent:
 
     def run(self, prompt: str) -> str:
         self._trim_history()
+        self.trace_error = None
         self.last_run = {"status": "running", "steps": 0, "tool_calls": 0, "tool_errors": 0}
         history_length = len(self.messages)
         self.messages.append({"role": "user", "content": prompt})
