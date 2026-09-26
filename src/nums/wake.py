@@ -194,32 +194,26 @@ class WhisperStream:
             output_path = Path(directory) / "transcript.txt"
             log_path = Path(directory) / "whisper.log"
             with log_path.open("w+") as log:
-                self.process = subprocess.Popen(
-                    [
-                        "whisper-stream",
-                        "--model",
-                        self.model_path,
-                        "--language",
-                        "en",
-                        "--capture",
-                        str(self.capture_device),
-                        "--step",
-                        "0",
-                        "--length",
-                        "12000",
-                        "--vad-thold",
-                        "0.60",
-                        "--max-tokens",
-                        "32",
-                        "--beam-size",
-                        "5",
-                        "--file",
-                        str(output_path),
-                    ],
-                    stdout=log,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                )
+                try:
+                    self.process = subprocess.Popen(
+                        [
+                            "whisper-stream",
+                            "--model", self.model_path,
+                            "--language", "en",
+                            "--capture", str(self.capture_device),
+                            "--step", "0",
+                            "--length", "12000",
+                            "--vad-thold", "0.60",
+                            "--max-tokens", "32",
+                            "--beam-size", "5",
+                            "--file", str(output_path),
+                        ],
+                        stdout=log,
+                        stderr=subprocess.STDOUT,
+                        text=True,
+                    )
+                except OSError as exc:
+                    raise RuntimeError(f"Cannot start whisper-stream: {exc}") from exc
                 position = 0
                 deadline = time.monotonic() + timeout_seconds if timeout_seconds else None
                 try:

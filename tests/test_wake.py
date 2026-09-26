@@ -204,6 +204,20 @@ def test_stream_reports_failed_process_exit(monkeypatch: pytest.MonkeyPatch, tmp
         list(WhisperStream(str(model)).transcripts())
 
 
+def test_stream_explains_startup_failure(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    model = tmp_path / "model.bin"
+    model.touch()
+    monkeypatch.setattr("nums.wake.shutil.which", lambda _: "/usr/local/bin/whisper-stream")
+
+    def fail(*args: object, **kwargs: object) -> None:
+        raise PermissionError("microphone access denied")
+
+    monkeypatch.setattr("nums.wake.subprocess.Popen", fail)
+
+    with pytest.raises(RuntimeError, match="Cannot start whisper-stream.*microphone access denied"):
+        list(WhisperStream(str(model)).transcripts())
+
+
 def test_stream_waits_for_complete_transcript_line(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     model = tmp_path / "model.bin"
     model.touch()
