@@ -151,6 +151,34 @@ def test_repeated_tool_loop_stops_before_another_execution() -> None:
     assert agent.messages[-1] == {"role": "assistant", "content": response}
 
 
+def test_no_progress_accounts_for_remaining_calls_in_batch() -> None:
+    class BatchLoopClient:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
+            self.calls += 1
+            repeated = {"function": {"name": "system_info", "arguments": {}}}
+            extra = {"function": {"name": "read_file", "arguments": {"path": "/tmp/unused"}}}
+            return {"message": {"role": "assistant", "tool_calls": [
+                repeated, extra
+            ] if self.calls == 3 else [repeated]}}
+
+    agent = Agent(Settings(repeat_tool_limit=2))
+    agent.client = BatchLoopClient()  # type: ignore[assignment]
+    tools = RecordingTools()
+    agent.tools = tools  # type: ignore[assignment]
+
+    agent.run("loop")
+
+    assert tools.calls == [("system_info", {}), ("system_info", {})]
+    assert [item["role"] for item in agent.messages[-4:]] == [
+        "assistant", "tool", "tool", "assistant"
+    ]
+    assert agent.messages[-2]["tool_name"] == "read_file"
+    assert "Skipped" in agent.messages[-2]["content"]
+
+
 def test_step_limit_saves_a_complete_assistant_turn(tmp_path) -> None:
     history = tmp_path / "history.json"
     agent = Agent(Settings(max_steps=1, history_file=str(history)))

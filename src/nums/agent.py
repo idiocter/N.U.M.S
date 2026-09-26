@@ -83,7 +83,7 @@ class Agent:
                     self._save_history()
                     self._trace(prompt, trace_calls, reply, "tool-call limit")
                     return reply
-                for call in calls:
+                for index, call in enumerate(calls):
                     function = call.get("function", {})
                     name = function.get("name", "")
                     args = function.get("arguments", {})
@@ -102,6 +102,19 @@ class Agent:
                         })
                         self.messages.append({"role": "tool", "tool_name": name, "content": result})
                         self.last_run["tool_errors"] += 1
+                        for skipped in calls[index + 1:]:
+                            skipped_function = skipped["function"]
+                            skipped_name = skipped_function["name"]
+                            trace_calls.append({
+                                "tool": skipped_name,
+                                "arguments": skipped_function["arguments"],
+                            })
+                            self.last_run["tool_calls"] += 1
+                            self.last_run["tool_errors"] += 1
+                            self.messages.append({
+                                "role": "tool", "tool_name": skipped_name,
+                                "content": json.dumps({"error": "Skipped after a repeated tool call"}),
+                            })
                         self.last_run["status"] = "no_progress"
                         reply = f"I stopped after repeating the same {name} action without progress."
                         self.messages.append({"role": "assistant", "content": reply})
