@@ -1,4 +1,5 @@
 import json
+import stat
 from pathlib import Path
 
 import pytest
@@ -10,16 +11,22 @@ SOURCE = Path(__file__).resolve().parents[1] / "training" / "seed_examples.jsonl
 
 
 def test_seed_examples_build_disjoint_splits(tmp_path: Path) -> None:
-    counts = build(SOURCE, tmp_path)
+    destination = tmp_path / "splits"
+    counts = build(SOURCE, destination)
     assert sum(counts.values()) == len(load_examples(SOURCE))
     assert all(counts.values())
     groups = [
-        [json.loads(line) for line in (tmp_path / f"{name}.jsonl").read_text().splitlines()]
+        [json.loads(line) for line in (destination / f"{name}.jsonl").read_text().splitlines()]
         for name in ("train", "valid", "test")
     ]
     ids = [item["id"] for group in groups for item in group]
     assert len(ids) == len(set(ids))
     assert all(item["tools"] for group in groups for item in group)
+    assert stat.S_IMODE(destination.stat().st_mode) == 0o700
+    assert all(
+        stat.S_IMODE((destination / f"{name}.jsonl").stat().st_mode) == 0o600
+        for name in ("train", "valid", "test")
+    )
 
 
 def test_unknown_tool_is_rejected(tmp_path: Path) -> None:

@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import tempfile
 from pathlib import Path
 
 from nums.agent import SYSTEM_PROMPT
@@ -95,11 +97,24 @@ def build(source: Path, destination: Path) -> dict[str, int]:
         groups["valid"].append(convert(item))
     for item in examples[valid_end:]:
         groups["test"].append(convert(item))
-    destination.mkdir(parents=True, exist_ok=True)
+    destination.mkdir(mode=0o700, parents=True, exist_ok=True)
     for name, group in groups.items():
-        (destination / f"{name}.jsonl").write_text(
-            "".join(json.dumps(item, ensure_ascii=False) + "\n" for item in group)
-        )
+        output = destination / f"{name}.jsonl"
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=destination,
+                prefix=f".{name}.", delete=False,
+            ) as handle:
+                temporary = Path(handle.name)
+                for item in group:
+                    handle.write(json.dumps(item, ensure_ascii=False) + "\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, output)
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
     return {name: len(group) for name, group in groups.items()}
 
 

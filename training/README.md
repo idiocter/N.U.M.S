@@ -43,6 +43,9 @@ adapted model.
 
 The evaluator sends prompts to Ollama and **does not execute** the model's requested tools. Compare the same held-out set against both models. Do not switch NUMS to a trained model unless it improves tool choice and full argument accuracy on representative held-out tasks.
 
+Generated split files are replaced atomically with owner-only permissions,
+since real reviewed examples can contain private requests and paths.
+
 ## Train on Apple silicon
 
 Install `mlx-lm[train]` in a separate Python environment. MLX-LM accepts the tool-call JSONL format generated here and supports LoRA for Qwen2 family models. Use the matching, full-precision `Qwen/Qwen2.5-1.5B-Instruct` base for both training and fusion:
