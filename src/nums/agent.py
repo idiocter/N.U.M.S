@@ -75,6 +75,14 @@ class Agent:
                     self._save_history()
                     self._trace(prompt, trace_calls, reply)
                     return reply
+                if len(calls) > self.settings.max_tool_calls - self.last_run["tool_calls"]:
+                    self.messages.pop()
+                    self.last_run["status"] = "tool_limit"
+                    reply = "I stopped because this request exceeded the tool-call limit. Try a smaller request."
+                    self.messages.append({"role": "assistant", "content": reply})
+                    self._save_history()
+                    self._trace(prompt, trace_calls, reply, "tool-call limit")
+                    return reply
                 for call in calls:
                     function = call.get("function", {})
                     name = function.get("name", "")

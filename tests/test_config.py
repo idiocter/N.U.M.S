@@ -7,6 +7,7 @@ from nums.config import Settings
     ("name", "value", "message"),
     [
         ("NUMS_MAX_STEPS", "0", "at least 1"),
+        ("NUMS_MAX_TOOL_CALLS", "0", "at least 1"),
         ("NUMS_OLLAMA_TIMEOUT", "0", "at least 1"),
         ("NUMS_MAX_STEPS", "many", "integer"),
         ("NUMS_HISTORY_TURNS", "0", "at least 1"),

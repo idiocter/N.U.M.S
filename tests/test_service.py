@@ -10,7 +10,7 @@ def test_service_plist_runs_current_environment_and_preserves_settings() -> None
     data = plistlib.loads(service_plist(Settings(
         model="qwen:test", action_mode="standard", history_file="/tmp/history.json",
         ollama_timeout_seconds=45,
-        max_steps=5, history_turns=3, repeat_tool_limit=1,
+        max_steps=5, max_tool_calls=9, history_turns=3, repeat_tool_limit=1,
         sleep_phrases=("sleep nums", "good night"), whisper_model="/tmp/voice.bin",
     )))
 
@@ -21,6 +21,7 @@ def test_service_plist_runs_current_environment_and_preserves_settings() -> None
     assert data["EnvironmentVariables"]["NUMS_ACTION_MODE"] == "standard"
     assert data["EnvironmentVariables"]["NUMS_HISTORY_FILE"] == "/tmp/history.json"
     assert data["EnvironmentVariables"]["NUMS_MAX_STEPS"] == "5"
+    assert data["EnvironmentVariables"]["NUMS_MAX_TOOL_CALLS"] == "9"
     assert data["EnvironmentVariables"]["NUMS_HISTORY_TURNS"] == "3"
     assert data["EnvironmentVariables"]["NUMS_REPEAT_TOOL_LIMIT"] == "1"
     assert data["EnvironmentVariables"]["NUMS_SLEEP_PHRASES"] == "sleep nums|good night"

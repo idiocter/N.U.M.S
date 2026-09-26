@@ -25,6 +25,7 @@ class Settings:
     ollama_url: str = "http://127.0.0.1:11434"
     ollama_timeout_seconds: int = 180
     max_steps: int = 8
+    max_tool_calls: int = 16
     history_turns: int = 8
     history_file: str | None = None
     trace_file: str | None = None
@@ -82,6 +83,7 @@ class Settings:
                 "NUMS_OLLAMA_TIMEOUT", cls.ollama_timeout_seconds, 1
             ),
             max_steps=_integer("NUMS_MAX_STEPS", cls.max_steps, 1),
+            max_tool_calls=_integer("NUMS_MAX_TOOL_CALLS", cls.max_tool_calls, 1),
             history_turns=_integer("NUMS_HISTORY_TURNS", cls.history_turns, 1),
             history_file=os.path.expanduser(os.environ["NUMS_HISTORY_FILE"])
             if os.getenv("NUMS_HISTORY_FILE") else None,

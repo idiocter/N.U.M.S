@@ -41,6 +41,8 @@ When loading an older history file, NUMS skips an unfinished final turn so a
 disconnected tool call does not affect the next request.
 `NUMS_REPEAT_TOOL_LIMIT` controls how many identical tool calls a request may
 make before NUMS stops the no-progress loop (default: 2).
+`NUMS_MAX_TOOL_CALLS` caps the total proposed tool actions in one request
+(default: 16), including batches returned in one model response.
 
 In the interactive terminal, `/status` shows the current model and history
 location plus the last run's steps, tool calls, and errors. `/reset` clears the

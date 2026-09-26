@@ -164,6 +164,27 @@ def test_step_limit_saves_a_complete_assistant_turn(tmp_path) -> None:
     assert Agent(Settings(history_file=str(history))).messages[-1] == agent.messages[-1]
 
 
+def test_oversized_tool_batch_executes_no_actions() -> None:
+    class BatchClient:
+        def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
+            return {"message": {"role": "assistant", "tool_calls": [
+                {"function": {"name": "write_file", "arguments": {"path": "/tmp/a", "content": "x"}}},
+                {"function": {"name": "write_file", "arguments": {"path": "/tmp/b", "content": "y"}}},
+            ]}}
+
+    agent = Agent(Settings(max_tool_calls=1))
+    agent.client = BatchClient()  # type: ignore[assignment]
+    tools = RecordingTools()
+    agent.tools = tools  # type: ignore[assignment]
+
+    reply = agent.run("write two files")
+
+    assert "tool-call limit" in reply
+    assert tools.calls == []
+    assert agent.last_run["status"] == "tool_limit"
+    assert agent.messages[-1] == {"role": "assistant", "content": reply}
+
+
 def test_repeated_tool_call_can_continue_when_results_change() -> None:
     class ChangingClient:
         def __init__(self) -> None:

@@ -26,6 +26,7 @@ def service_plist(settings: Settings) -> bytes:
         "NUMS_OLLAMA_URL": settings.ollama_url,
         "NUMS_OLLAMA_TIMEOUT": str(settings.ollama_timeout_seconds),
         "NUMS_MAX_STEPS": str(settings.max_steps),
+        "NUMS_MAX_TOOL_CALLS": str(settings.max_tool_calls),
         "NUMS_HISTORY_TURNS": str(settings.history_turns),
         "NUMS_ACTION_MODE": settings.action_mode,
         "NUMS_REPEAT_TOOL_LIMIT": str(settings.repeat_tool_limit),
