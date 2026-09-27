@@ -4,7 +4,7 @@ from __future__ import annotations
 
 
 READ_ONLY_TOOLS = {
-    "read_file", "list_directory", "search_files", "system_info",
+    "read_file", "list_directory", "search_files", "git_status", "git_diff", "system_info",
     "get_clipboard", "get_calendar_events",
 }
 STANDARD_TOOLS = READ_ONLY_TOOLS | {

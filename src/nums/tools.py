@@ -44,6 +44,14 @@ TOOL_SCHEMAS = [
         ["query", "path"],
     ),
     _schema(
+        "git_status", "Show the branch and changed or untracked files in a Git repository.",
+        {"repo": {"type": "string"}}, ["repo"],
+    ),
+    _schema(
+        "git_diff", "Show tracked changes against HEAD, optionally limited to one file; untracked files appear in git_status only.",
+        {"repo": {"type": "string"}, "file": {"type": "string"}}, ["repo"],
+    ),
+    _schema(
         "write_file",
         "Write UTF-8 text to a file, creating parent folders.",
         {"path": {"type": "string"}, "content": {"type": "string"}},
@@ -138,6 +146,8 @@ class MacTools:
             "read_file": self.read_file,
             "list_directory": self.list_directory,
             "search_files": self.search_files,
+            "git_status": self.git_status,
+            "git_diff": self.git_diff,
             "write_file": self.write_file,
             "replace_in_file": self.replace_in_file,
             "shell": self.shell,
@@ -220,6 +230,19 @@ class MacTools:
             result.pop("error", None)
             result["matches"] = 0
         return json.dumps(result)
+
+    def git_status(self, args: dict[str, Any]) -> str:
+        repo = str(Path(args["repo"]).expanduser())
+        return _run(["git", "-C", repo, "status", "--short", "--branch"])
+
+    def git_diff(self, args: dict[str, Any]) -> str:
+        repo = str(Path(args["repo"]).expanduser())
+        command = ["git", "-C", repo, "diff", "--no-ext-diff", "--no-color", "HEAD", "--"]
+        if "file" in args:
+            if not args["file"].strip():
+                raise ValueError("file must not be empty")
+            command.append(args["file"])
+        return _run(command)
 
     def _atomic_write(self, requested: Path, content: str) -> None:
         path = requested.resolve() if requested.is_symlink() else requested

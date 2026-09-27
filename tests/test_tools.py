@@ -1,6 +1,7 @@
 import io
 import json
 import stat
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -266,6 +267,40 @@ def test_search_rejects_empty_query(tmp_path: Path) -> None:
     }))
 
     assert "query must not be empty" in result["error"]
+
+
+def test_git_tools_show_changes_in_read_only_mode(tmp_path: Path) -> None:
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    tracked = tmp_path / "module.py"
+    tracked.write_text("value = 1\n")
+    subprocess.run(["git", "-C", str(tmp_path), "add", "module.py"], check=True)
+    subprocess.run([
+        "git", "-C", str(tmp_path), "-c", "user.name=NUMS Test",
+        "-c", "user.email=nums@example.test", "commit", "-qm", "baseline",
+    ], check=True)
+    tracked.write_text("value = 2\n")
+    (tmp_path / "new.py").write_text("new = True\n")
+    tools = MacTools("read_only")
+
+    status = json.loads(tools.execute("git_status", {"repo": str(tmp_path)}))
+    diff = json.loads(tools.execute("git_diff", {
+        "repo": str(tmp_path), "file": "module.py",
+    }))
+
+    assert status["exit_code"] == 0
+    assert "module.py" in status["output"]
+    assert "new.py" in status["output"]
+    assert diff["exit_code"] == 0
+    assert "+value = 2" in diff["output"]
+    assert "new.py" not in diff["output"]
+
+
+def test_git_diff_rejects_empty_file_path(tmp_path: Path) -> None:
+    result = json.loads(MacTools().execute("git_diff", {
+        "repo": str(tmp_path), "file": " ",
+    }))
+
+    assert "file must not be empty" in result["error"]
 
 
 def test_nonzero_process_exit_is_reported_as_error(monkeypatch: pytest.MonkeyPatch) -> None:
