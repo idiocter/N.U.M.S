@@ -45,6 +45,16 @@ under `training/runs/` by default because arguments can contain private paths.
 
 The evaluator sends prompts to Ollama and **does not execute** the model's requested tools. Compare the same held-out set against both models. Do not switch NUMS to a trained model unless it improves tool choice and full argument accuracy on representative held-out tasks.
 
+After evaluating an adapted model on the same held-out data, compare reports:
+
+```bash
+PYTHONPATH=src:. .venv/bin/python training/compare_reports.py \
+  training/runs/baseline.json training/runs/candidate.json
+```
+
+The comparison rejects changed labels, a lower tool choice score, any per-tool
+regression, or a candidate that does not improve full tool and argument accuracy.
+
 Generated split files are replaced atomically with owner-only permissions,
 since real reviewed examples can contain private requests and paths.
 
