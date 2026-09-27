@@ -111,7 +111,8 @@ Set `NUMS_OLLAMA_TIMEOUT` to change the maximum seconds for one model response
 NUMS runs with the permissions of the Terminal app that launches it. macOS may ask for access when NUMS first touches protected locations or automates another app.
 
 Large file, directory, and command results indicate when NUMS has truncated
-the output. Ask for a narrower path or search when the omitted part matters.
+the output. File reads include the next character offset so NUMS can request
+the remaining text. Ask for a narrower path or search when that is easier.
 
 For broad access, open **System Settings → Privacy & Security** and grant your terminal only the permissions you actually want it to have, such as:
 

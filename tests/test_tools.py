@@ -51,6 +51,27 @@ def test_file_read_is_bounded_before_truncation(monkeypatch: pytest.MonkeyPatch)
     assert "truncated" in result
 
 
+def test_read_file_offset_returns_next_unicode_chunk(tmp_path: Path) -> None:
+    path = tmp_path / "long.txt"
+    path.write_text("é" * 12000 + "next", encoding="utf-8")
+
+    first = MacTools().read_file({"path": str(path)})
+    second = MacTools().read_file({"path": str(path), "offset": "12000"})
+
+    assert first.startswith("é" * 12000)
+    assert "continue with offset 12000" in first
+    assert second == "next"
+
+
+def test_read_file_rejects_negative_offset(tmp_path: Path) -> None:
+    path = tmp_path / "note.txt"
+    path.write_text("hello")
+
+    result = json.loads(MacTools().execute("read_file", {"path": str(path), "offset": "-1"}))
+
+    assert "nonnegative" in result["error"]
+
+
 def test_write_replaces_content_and_preserves_permissions(tmp_path: Path) -> None:
     path = tmp_path / "note.txt"
     path.write_text("before")

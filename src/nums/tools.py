@@ -29,7 +29,10 @@ def _schema(name: str, description: str, properties: dict[str, Any], required: l
 
 
 TOOL_SCHEMAS = [
-    _schema("read_file", "Read a UTF-8 text file.", {"path": {"type": "string"}}, ["path"]),
+    _schema(
+        "read_file", "Read up to 12000 characters from a UTF-8 file; use offset for later chunks.",
+        {"path": {"type": "string"}, "offset": {"type": "string"}}, ["path"],
+    ),
     _schema("list_directory", "List files and folders.", {"path": {"type": "string"}}, ["path"]),
     _schema(
         "search_files",
@@ -155,10 +158,23 @@ class MacTools:
             return json.dumps({"error": f"{type(exc).__name__}: {exc}"})
 
     def read_file(self, args: dict[str, Any]) -> str:
+        raw_offset = args.get("offset", "0")
+        if not raw_offset.isdecimal():
+            raise ValueError("offset must be a nonnegative character position")
+        offset = int(raw_offset)
         with Path(args["path"]).expanduser().open(encoding="utf-8", errors="replace") as handle:
+            remaining = offset
+            while remaining:
+                skipped = handle.read(min(remaining, 8192))
+                if not skipped:
+                    return ""
+                remaining -= len(skipped)
             content = handle.read(12001)
         if len(content) > 12000:
-            return content[:12000] + "\n[NUMS: file output truncated after 12000 characters]"
+            return content[:12000] + (
+                f"\n[NUMS: file output truncated after 12000 characters; "
+                f"continue with offset {offset + 12000}]"
+            )
         return content
 
     def list_directory(self, args: dict[str, Any]) -> str:
