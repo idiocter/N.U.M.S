@@ -39,8 +39,8 @@ TOOL_SCHEMAS = [
     ),
     _schema(
         "search_files",
-        "Search file contents for a literal string with ripgrep.",
-        {"query": {"type": "string"}, "path": {"type": "string"}},
+        "Search file contents for a literal string with ripgrep; optionally narrow by glob.",
+        {"query": {"type": "string"}, "path": {"type": "string"}, "glob": {"type": "string"}},
         ["query", "path"],
     ),
     _schema(
@@ -200,10 +200,15 @@ class MacTools:
         return json.dumps(response)
 
     def search_files(self, args: dict[str, Any]) -> str:
-        result = json.loads(_run([
-            "rg", "-n", "-F", "--hidden", "--glob", "!.git", "--",
-            args["query"], str(Path(args["path"]).expanduser()),
-        ]))
+        if not args["query"].strip():
+            raise ValueError("query must not be empty")
+        command = ["rg", "-n", "-F", "--hidden", "--glob", "!.git"]
+        if "glob" in args:
+            if not args["glob"].strip():
+                raise ValueError("glob must not be empty")
+            command.extend(["--glob", args["glob"]])
+        command.extend(["--", args["query"], str(Path(args["path"]).expanduser())])
+        result = json.loads(_run(command))
         if result["exit_code"] == 1:
             result.pop("error", None)
             result["matches"] = 0

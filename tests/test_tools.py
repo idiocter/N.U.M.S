@@ -209,6 +209,26 @@ def test_search_with_no_matches_is_not_a_tool_error(tmp_path: Path) -> None:
     assert "error" not in result
 
 
+def test_search_glob_limits_matches_to_requested_files(tmp_path: Path) -> None:
+    (tmp_path / "note.py").write_text("needle\n")
+    (tmp_path / "note.txt").write_text("needle\n")
+
+    result = json.loads(MacTools().search_files({
+        "query": "needle", "path": str(tmp_path), "glob": "*.py",
+    }))
+
+    assert "note.py" in result["output"]
+    assert "note.txt" not in result["output"]
+
+
+def test_search_rejects_empty_query(tmp_path: Path) -> None:
+    result = json.loads(MacTools().execute("search_files", {
+        "query": "  ", "path": str(tmp_path),
+    }))
+
+    assert "query must not be empty" in result["error"]
+
+
 def test_nonzero_process_exit_is_reported_as_error(monkeypatch: pytest.MonkeyPatch) -> None:
     class Result:
         returncode = 7

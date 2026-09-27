@@ -114,6 +114,7 @@ Large file, directory, and command results indicate when NUMS has truncated
 the output. File reads include the next character offset so NUMS can request
 the remaining text. Directory listings include a next item offset when more
 entries are available. Ask for a narrower path or search when that is easier.
+File searches can use an optional glob, such as `*.py`, to narrow results.
 
 For broad access, open **System Settings → Privacy & Security** and grant your terminal only the permissions you actually want it to have, such as:
 
