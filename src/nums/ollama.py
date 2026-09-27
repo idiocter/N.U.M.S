@@ -41,6 +41,8 @@ class OllamaClient:
         if not isinstance(result, dict) or not isinstance(result.get("message"), dict):
             raise OllamaError("Ollama returned a response without an assistant message")
         message = result["message"]
+        if message.get("role") != "assistant":
+            raise OllamaError("Ollama returned a message with an invalid role")
         if message.get("content") is not None and not isinstance(message["content"], str):
             raise OllamaError("Ollama returned invalid assistant content")
         calls = message.get("tool_calls")

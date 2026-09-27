@@ -14,6 +14,18 @@ def test_chat_rejects_missing_message(monkeypatch: pytest.MonkeyPatch) -> None:
         OllamaClient("http://127.0.0.1:11434", "qwen").chat([], [])
 
 
+@pytest.mark.parametrize("role", ["user", "tool", None])
+def test_chat_rejects_non_assistant_role(monkeypatch: pytest.MonkeyPatch, role: str | None) -> None:
+    payload = {"message": {"role": role, "content": "hello"}}
+    monkeypatch.setattr(
+        "nums.ollama.urllib.request.urlopen",
+        lambda *args, **kwargs: io.BytesIO(json.dumps(payload).encode()),
+    )
+
+    with pytest.raises(OllamaError, match="invalid role"):
+        OllamaClient("http://127.0.0.1:11434", "qwen").chat([], [])
+
+
 def test_chat_explains_connection_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     def fail(*args: object, **kwargs: object) -> None:
         raise urllib.error.URLError("connection refused")
