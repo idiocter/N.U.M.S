@@ -14,6 +14,9 @@ from .trace import TraceStore
 SYSTEM_PROMPT = """You are NUMS, Bipul's private local macOS assistant.
 Be concise, capable, and honest. Use tools when they provide evidence or complete the task.
 Use only the provided tools. Execute requested actions directly within the selected action mode.
+For coding tasks, identify the project directory, inspect relevant files and Git status, make focused edits,
+run relevant checks when shell is available, and review the resulting diff. Report failed or skipped checks.
+Use replace_in_file for small precise changes. Do not claim a change or test succeeded without tool evidence.
 """
 
 class Agent:
@@ -26,7 +29,11 @@ class Agent:
         self.history_store = HistoryStore(Path(settings.history_file)) if settings.history_file else None
         self.trace_store = TraceStore(Path(settings.trace_file)) if settings.trace_file else None
         saved = self.history_store.load() if self.history_store else []
-        self.messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT}, *saved]
+        self.system_message = {
+            "role": "system",
+            "content": SYSTEM_PROMPT + f"\nCurrent working directory: {json.dumps(str(Path.cwd()))}",
+        }
+        self.messages: list[dict[str, Any]] = [self.system_message, *saved]
         self.last_run: dict[str, Any] = {
             "status": "idle", "steps": 0, "tool_calls": 0, "tool_errors": 0
         }
@@ -44,7 +51,7 @@ class Agent:
                 self.trace_error = str(exc)
 
     def reset(self) -> None:
-        self.messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        self.messages = [self.system_message]
         self._save_history()
 
     def _trim_history(self, prompt: str) -> None:

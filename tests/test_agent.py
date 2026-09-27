@@ -69,6 +69,16 @@ def test_empty_model_response_has_a_spoken_fallback() -> None:
     assert agent.messages[-1]["content"] == "I couldn't produce a response."
 
 
+def test_coding_context_includes_working_directory_and_survives_reset(tmp_path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    agent = Agent(Settings())
+
+    assert str(tmp_path) in agent.messages[0]["content"]
+    assert "review the resulting diff" in agent.messages[0]["content"]
+    agent.reset()
+    assert str(tmp_path) in agent.messages[0]["content"]
+
+
 def test_failed_model_request_does_not_replay_user_prompt() -> None:
     class FailingClient:
         def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
@@ -142,7 +152,7 @@ def test_context_budget_discards_old_complete_turns() -> None:
             self.seen.append([item["content"] for item in messages if item["role"] == "user"])
             return {"message": {"role": "assistant", "content": "x" * 250}}
 
-    agent = Agent(Settings(history_turns=8, max_context_chars=750))
+    agent = Agent(Settings(history_turns=8, max_context_chars=1200))
     client = RecordingClient()
     agent.client = client  # type: ignore[assignment]
     for prompt in ("first", "second", "third"):
