@@ -41,6 +41,8 @@ recent turns reach the model on each request (default: 8).
 conversation grows beyond its character budget (default: 60000).
 When loading an older history file, NUMS skips an unfinished final turn so a
 disconnected tool call does not affect the next request.
+If the model disconnects after a tool has run, NUMS records the partial work
+and reports that the final result could not be confirmed.
 `NUMS_REPEAT_TOOL_LIMIT` controls how many identical tool calls a request may
 make before NUMS stops the no-progress loop (default: 2).
 `NUMS_MAX_TOOL_CALLS` caps the total proposed tool actions in one request

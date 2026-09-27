@@ -75,6 +75,7 @@ class Agent:
         last_signature: str | None = None
         last_result: str | None = None
         unchanged_count = 0
+        executed_calls = 0
         try:
             for step in range(1, self.settings.max_steps + 1):
                 self.last_run["steps"] = step
@@ -138,6 +139,7 @@ class Agent:
                         self._trace(prompt, trace_calls, reply, "repeated tool call")
                         return reply
                     result = self.tools.execute(name, args)
+                    executed_calls += 1
                     if signature == last_signature and result == last_result:
                         unchanged_count += 1
                     else:
@@ -152,9 +154,21 @@ class Agent:
                     self.messages.append({"role": "tool", "tool_name": name, "content": result})
         except OllamaError as exc:
             self.last_run["status"] = "model_error"
-            del self.messages[history_length:]
+            if executed_calls:
+                reply = (
+                    f"The local model disconnected after {executed_calls} tool action(s). "
+                    "I could not confirm the final result."
+                )
+                self.messages.append({"role": "assistant", "content": reply})
+                error = OllamaError(f"{exc}. {reply}")
+            else:
+                del self.messages[history_length:]
+                reply = None
+                error = None
             self._save_history()
-            self._trace(prompt, trace_calls, None, str(exc))
+            self._trace(prompt, trace_calls, reply, str(exc))
+            if error is not None:
+                raise error from exc
             raise
         self.last_run["status"] = "step_limit"
         reply = "I reached the tool-step limit. Try splitting the task into a smaller request."

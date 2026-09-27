@@ -1,3 +1,4 @@
+import json
 from typing import Any
 
 import pytest
@@ -83,7 +84,7 @@ def test_failed_model_request_does_not_replay_user_prompt() -> None:
     assert agent.messages[0]["role"] == "system"
 
 
-def test_disconnect_after_tool_call_removes_incomplete_turn(tmp_path) -> None:
+def test_disconnect_after_tool_call_preserves_executed_action(tmp_path) -> None:
     class DisconnectingClient:
         def __init__(self) -> None:
             self.calls = 0
@@ -106,8 +107,11 @@ def test_disconnect_after_tool_call_removes_incomplete_turn(tmp_path) -> None:
         agent.run("check my Mac")
 
     assert tools.calls == [("system_info", {})]
-    assert [message["role"] for message in agent.messages] == ["system"]
-    assert history.read_text() == "[]"
+    assert [message["role"] for message in agent.messages] == [
+        "system", "user", "assistant", "tool", "assistant"
+    ]
+    assert "could not confirm" in agent.messages[-1]["content"]
+    assert len(json.loads(history.read_text())) == 4
     assert agent.last_run["status"] == "model_error"
 
 
