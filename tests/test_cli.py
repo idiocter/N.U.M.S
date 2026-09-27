@@ -44,3 +44,31 @@ def test_doctor_returns_failure_when_model_is_missing(monkeypatch: pytest.Monkey
 
     assert doctor(Settings()) == 1
     assert "ollama serve" in capsys.readouterr().out
+
+
+def test_wake_listener_pauses_after_empty_stream(monkeypatch: pytest.MonkeyPatch) -> None:
+    launches = 0
+    pauses = []
+
+    class EmptyStream:
+        def __init__(self, *args: object) -> None:
+            nonlocal launches
+            launches += 1
+
+        def transcripts(self):
+            if launches > 1:
+                raise KeyboardInterrupt
+            if False:
+                yield "unused"
+
+        def stop(self) -> None:
+            pass
+
+    monkeypatch.setattr("nums.cli.ListenerLock", nullcontext)
+    monkeypatch.setattr("nums.cli.WhisperStream", EmptyStream)
+    monkeypatch.setattr("nums.cli.time.sleep", pauses.append)
+
+    wake_mode(object(), Settings())  # type: ignore[arg-type]
+
+    assert launches == 2
+    assert pauses == [1]

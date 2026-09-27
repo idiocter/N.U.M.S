@@ -4,6 +4,7 @@ import argparse
 import shutil
 import subprocess
 import sys
+import time
 
 from .agent import Agent
 from .config import Settings
@@ -69,6 +70,7 @@ def wake_mode(agent: Agent, settings: Settings) -> None:
                     stream.stop()
 
                 if event is None:
+                    time.sleep(1)
                     continue
                 if event.kind == "wake":
                     print("NUMS > Online. Keep talking until you send me to sleep.")
