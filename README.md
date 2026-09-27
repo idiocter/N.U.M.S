@@ -120,6 +120,28 @@ the remaining text. Directory listings include a next item offset when more
 entries are available. Ask for a narrower path or search when that is easier.
 File searches can use an optional glob, such as `*.py`, to narrow results.
 
+## Coding tasks
+
+NUMS can inspect a project, make small code changes, and review them with Git.
+Give it the project path and a specific request, for example:
+
+```bash
+uv run nums "In /absolute/path/to/project, fix the failing parser test, run that test, and show the Git diff"
+```
+
+For a focused edit, `replace_in_file` replaces one exact text span and refuses
+missing or repeated matches. `git_status` shows changed and untracked files;
+`git_diff` shows tracked changes against `HEAD`. In the default `unrestricted`
+mode NUMS can run project checks through `shell`. In `standard` mode it can
+inspect and edit files but cannot run shell checks; `read_only` can inspect
+the project and Git state without editing. Its coding instructions call for
+reporting which checks ran and which were skipped.
+
+These tools support coding workflows, but the bundled 1.5B model has not been
+validated as a reliable autonomous coding agent. The tool-use training fixtures
+are synthetic; no coding-specific model training or live coding benchmark has
+been completed. Review important changes and their test results before use.
+
 For broad access, open **System Settings → Privacy & Security** and grant your terminal only the permissions you actually want it to have, such as:
 
 - Full Disk Access for protected files
