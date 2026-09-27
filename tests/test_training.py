@@ -46,3 +46,22 @@ def test_duplicate_prompts_cannot_leak_across_data_splits(tmp_path: Path) -> Non
 
     with pytest.raises(ValueError, match="duplicate user prompt.*one and two"):
         load_examples(source, minimum=1)
+
+
+def test_adding_labels_keeps_existing_split_assignments(tmp_path: Path) -> None:
+    source = tmp_path / "examples.jsonl"
+    source.write_text(SOURCE.read_text())
+    destination = tmp_path / "splits"
+    assert build(source, destination) == {"train": 24, "valid": 8, "test": 8}
+    original = json.loads((destination / "split_manifest.json").read_text())
+    source.write_text(SOURCE.read_text() + json.dumps({
+        "id": "new-real-case", "user": "Show local machine architecture",
+        "tool": "system_info", "arguments": {},
+    }) + "\n")
+
+    counts = build(source, destination)
+    updated = json.loads((destination / "split_manifest.json").read_text())
+
+    assert sum(counts.values()) == 41
+    assert {identifier: updated[identifier] for identifier in original} == original
+    assert updated["new-real-case"] in {"train", "valid", "test"}

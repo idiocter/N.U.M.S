@@ -89,14 +89,34 @@ def build(source: Path, destination: Path) -> dict[str, int]:
         key=lambda item: hashlib.sha256(item["id"].encode()).hexdigest(),
     )
     groups = {name: [] for name in ("train", "valid", "test")}
+    manifest_path = destination / "split_manifest.json"
+    if manifest_path.exists():
+        assignments = json.loads(manifest_path.read_text())
+    else:
+        assignments = {}
+        for name in groups:
+            prior = destination / f"{name}.jsonl"
+            if prior.exists():
+                for line in prior.read_text().splitlines():
+                    if line.strip():
+                        assignments[json.loads(line)["id"]] = name
+    if not isinstance(assignments, dict) or any(
+        value not in groups for value in assignments.values()
+    ):
+        raise ValueError(f"Invalid split manifest at {manifest_path}")
+    initial_split = not assignments
     train_end = len(examples) * 6 // 10
     valid_end = len(examples) * 8 // 10
-    for item in examples[:train_end]:
-        groups["train"].append(convert(item))
-    for item in examples[train_end:valid_end]:
-        groups["valid"].append(convert(item))
-    for item in examples[valid_end:]:
-        groups["test"].append(convert(item))
+    for index, item in enumerate(examples):
+        identifier = item["id"]
+        if identifier not in assignments:
+            if initial_split:
+                name = "train" if index < train_end else "valid" if index < valid_end else "test"
+            else:
+                bucket = int(hashlib.sha256(identifier.encode()).hexdigest()[:8], 16) % 100
+                name = "train" if bucket < 60 else "valid" if bucket < 80 else "test"
+            assignments[identifier] = name
+        groups[assignments[identifier]].append(convert(item))
     destination.mkdir(mode=0o700, parents=True, exist_ok=True)
     for name, group in groups.items():
         output = destination / f"{name}.jsonl"
@@ -115,6 +135,21 @@ def build(source: Path, destination: Path) -> dict[str, int]:
         finally:
             if temporary is not None:
                 temporary.unlink(missing_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=destination,
+            prefix=".split_manifest.", delete=False,
+        ) as handle:
+            temporary = Path(handle.name)
+            json.dump(assignments, handle, indent=2, sort_keys=True)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, manifest_path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
     return {name: len(group) for name, group in groups.items()}
 
 

@@ -11,6 +11,8 @@ Add reviewed examples to `seed_examples.jsonl` or a separate private JSONL file.
 Dataset validation rejects repeated user prompts even when their IDs, spacing,
 or capitalization differ. This prevents the same request from appearing in
 multiple train and evaluation splits.
+The generated `split_manifest.json` preserves each case's assignment when more
+reviewed labels are added later, keeping older test cases held out.
 
 Set `NUMS_TRACE_FILE=~/.local/share/nums/usage.nums-trace.jsonl` when running NUMS to record prompts, proposed tool calls, replies, and model errors locally. The trace intentionally omits tool results and is owner-readable only, but prompts and tool arguments can still contain private information. Review and correct traces before converting them into labeled training examples; model proposals are not ground truth.
 
