@@ -50,6 +50,12 @@ TOOL_SCHEMAS = [
         ["path", "content"],
     ),
     _schema(
+        "replace_in_file",
+        "Replace one exact, unique UTF-8 text span in an existing file. Fails if the old text is missing or repeated.",
+        {"path": {"type": "string"}, "old_text": {"type": "string"}, "new_text": {"type": "string"}},
+        ["path", "old_text", "new_text"],
+    ),
+    _schema(
         "shell",
         "Run a zsh command on this Mac. Use for tasks not covered by a narrower tool.",
         {"command": {"type": "string"}, "cwd": {"type": "string"}},
@@ -133,6 +139,7 @@ class MacTools:
             "list_directory": self.list_directory,
             "search_files": self.search_files,
             "write_file": self.write_file,
+            "replace_in_file": self.replace_in_file,
             "shell": self.shell,
             "open_item": self.open_item,
             "speak": self.speak,
@@ -214,8 +221,7 @@ class MacTools:
             result["matches"] = 0
         return json.dumps(result)
 
-    def write_file(self, args: dict[str, Any]) -> str:
-        requested = Path(args["path"]).expanduser()
+    def _atomic_write(self, requested: Path, content: str) -> None:
         path = requested.resolve() if requested.is_symlink() else requested
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary = None
@@ -225,7 +231,7 @@ class MacTools:
                 prefix=f".{path.name}.", delete=False,
             ) as handle:
                 temporary = Path(handle.name)
-                handle.write(args["content"])
+                handle.write(content)
                 handle.flush()
                 os.fsync(handle.fileno())
             if path.exists():
@@ -234,7 +240,26 @@ class MacTools:
         finally:
             if temporary is not None:
                 temporary.unlink(missing_ok=True)
+
+    def write_file(self, args: dict[str, Any]) -> str:
+        requested = Path(args["path"]).expanduser()
+        self._atomic_write(requested, args["content"])
         return json.dumps({"written": str(requested), "bytes": len(args["content"].encode())})
+
+    def replace_in_file(self, args: dict[str, Any]) -> str:
+        requested = Path(args["path"]).expanduser()
+        old = args["old_text"]
+        if not old:
+            raise ValueError("old_text must not be empty")
+        path = requested.resolve() if requested.is_symlink() else requested
+        with path.open("r", encoding="utf-8", newline="") as handle:
+            content = handle.read()
+        occurrences = content.count(old)
+        if occurrences != 1:
+            raise ValueError(f"old_text must occur exactly once; found {occurrences}")
+        replacement = content.replace(old, args["new_text"], 1)
+        self._atomic_write(requested, replacement)
+        return json.dumps({"updated": str(requested), "replacements": 1})
 
     def shell(self, args: dict[str, Any]) -> str:
         cwd = str(Path(args.get("cwd") or Path.home()).expanduser())

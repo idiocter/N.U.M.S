@@ -8,7 +8,7 @@ READ_ONLY_TOOLS = {
     "get_clipboard", "get_calendar_events",
 }
 STANDARD_TOOLS = READ_ONLY_TOOLS | {
-    "write_file", "open_item", "speak", "notify", "set_clipboard", "create_reminder",
+    "write_file", "replace_in_file", "open_item", "speak", "notify", "set_clipboard", "create_reminder",
 }
 VALID_MODES = {"read_only", "standard", "unrestricted"}
 

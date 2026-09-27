@@ -111,6 +111,45 @@ def test_failed_replace_keeps_previous_file(monkeypatch: pytest.MonkeyPatch, tmp
     assert sorted(p.name for p in tmp_path.iterdir()) == ["note.txt"]
 
 
+def test_replace_in_file_preserves_surrounding_text_permissions_and_newlines(tmp_path: Path) -> None:
+    path = tmp_path / "module.py"
+    path.write_bytes(b"before\r\nvalue = 1\r\nafter\r\n")
+    path.chmod(0o640)
+
+    result = json.loads(MacTools("standard").execute("replace_in_file", {
+        "path": str(path), "old_text": "value = 1", "new_text": "value = 2",
+    }))
+
+    assert result == {"updated": str(path), "replacements": 1}
+    assert path.read_bytes() == b"before\r\nvalue = 2\r\nafter\r\n"
+    assert stat.S_IMODE(path.stat().st_mode) == 0o640
+
+
+@pytest.mark.parametrize("old_text", ["", "missing", "same"])
+def test_replace_in_file_rejects_unsafe_matches_without_writing(tmp_path: Path, old_text: str) -> None:
+    path = tmp_path / "module.py"
+    path.write_text("same\nsame\n")
+
+    result = json.loads(MacTools().execute("replace_in_file", {
+        "path": str(path), "old_text": old_text, "new_text": "changed",
+    }))
+
+    assert "error" in result
+    assert path.read_text() == "same\nsame\n"
+
+
+def test_read_only_mode_blocks_precise_edits(tmp_path: Path) -> None:
+    path = tmp_path / "module.py"
+    path.write_text("before")
+
+    result = json.loads(MacTools("read_only").execute("replace_in_file", {
+        "path": str(path), "old_text": "before", "new_text": "after",
+    }))
+
+    assert result["action_mode"] == "read_only"
+    assert path.read_text() == "before"
+
+
 def test_read_only_mode_blocks_mutating_tools(tmp_path: Path) -> None:
     target = tmp_path / "blocked.txt"
 
