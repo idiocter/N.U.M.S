@@ -215,6 +215,8 @@ class WhisperStream:
                 except OSError as exc:
                     raise RuntimeError(f"Cannot start whisper-stream: {exc}") from exc
                 position = 0
+                last_size = 0
+                last_inode = None
                 deadline = time.monotonic() + timeout_seconds if timeout_seconds else None
                 try:
                     while True:
@@ -222,6 +224,13 @@ class WhisperStream:
                             return
                         running = self.process.poll() is None
                         if output_path.exists():
+                            metadata = output_path.stat()
+                            if last_inode is not None and (
+                                metadata.st_ino != last_inode or metadata.st_size < last_size
+                            ):
+                                position = 0
+                            last_inode = metadata.st_ino
+                            last_size = metadata.st_size
                             with output_path.open(errors="replace") as transcript:
                                 transcript.seek(position)
                                 while line := transcript.readline():

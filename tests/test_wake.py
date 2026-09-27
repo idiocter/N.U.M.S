@@ -251,3 +251,40 @@ def test_stream_waits_for_complete_transcript_line(monkeypatch: pytest.MonkeyPat
 
     assert next(transcripts) == "hey numnum, open Safari"
     transcripts.close()
+
+
+def test_stream_reads_again_after_transcript_file_is_rewritten(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    model = tmp_path / "model.bin"
+    model.touch()
+    output_path = None
+
+    class RunningProcess:
+        def poll(self) -> None:
+            return None
+
+        def terminate(self) -> None:
+            pass
+
+        def wait(self, timeout: int = 3) -> int:
+            return 0
+
+    def fake_popen(command: list[str], **kwargs: object) -> RunningProcess:
+        nonlocal output_path
+        output_path = Path(command[command.index("--file") + 1])
+        output_path.write_text("first longer phrase\n")
+        return RunningProcess()
+
+    def rewrite(_: float) -> None:
+        assert output_path is not None
+        output_path.write_text("second\n")
+
+    monkeypatch.setattr("nums.wake.shutil.which", lambda _: "/usr/local/bin/whisper-stream")
+    monkeypatch.setattr("nums.wake.subprocess.Popen", fake_popen)
+    monkeypatch.setattr("nums.wake.time.sleep", rewrite)
+    transcripts = WhisperStream(str(model)).transcripts()
+
+    assert next(transcripts) == "first longer phrase"
+    assert next(transcripts) == "second"
+    transcripts.close()
