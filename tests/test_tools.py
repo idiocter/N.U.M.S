@@ -35,6 +35,19 @@ def test_large_file_and_directory_outputs_warn_about_truncation(tmp_path: Path) 
     assert listing["total"] == 501
     assert len(listing["items"]) == 500
     assert listing["truncated"] is True
+    assert listing["next_offset"] == 500
+
+    final_page = json.loads(MacTools().list_directory({"path": str(tmp_path), "offset": "500"}))
+    assert len(final_page["items"]) == 1
+    assert final_page["truncated"] is False
+
+
+def test_directory_list_rejects_negative_offset(tmp_path: Path) -> None:
+    result = json.loads(MacTools().execute("list_directory", {
+        "path": str(tmp_path), "offset": "-1",
+    }))
+
+    assert "nonnegative" in result["error"]
 
 
 def test_file_read_is_bounded_before_truncation(monkeypatch: pytest.MonkeyPatch) -> None:

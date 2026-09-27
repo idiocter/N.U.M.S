@@ -33,7 +33,10 @@ TOOL_SCHEMAS = [
         "read_file", "Read up to 12000 characters from a UTF-8 file; use offset for later chunks.",
         {"path": {"type": "string"}, "offset": {"type": "string"}}, ["path"],
     ),
-    _schema("list_directory", "List files and folders.", {"path": {"type": "string"}}, ["path"]),
+    _schema(
+        "list_directory", "List up to 500 files and folders; use offset for later pages.",
+        {"path": {"type": "string"}, "offset": {"type": "string"}}, ["path"],
+    ),
     _schema(
         "search_files",
         "Search file contents for a literal string with ripgrep.",
@@ -178,14 +181,23 @@ class MacTools:
         return content
 
     def list_directory(self, args: dict[str, Any]) -> str:
+        raw_offset = args.get("offset", "0")
+        if not raw_offset.isdecimal():
+            raise ValueError("offset must be a nonnegative item position")
+        offset = int(raw_offset)
         path = Path(args["path"]).expanduser()
         items = [
             {"name": child.name, "type": "directory" if child.is_dir() else "file"}
             for child in sorted(path.iterdir(), key=lambda item: (not item.is_dir(), item.name.lower()))
         ]
-        return json.dumps({
-            "items": items[:500], "total": len(items), "truncated": len(items) > 500,
-        })
+        response: dict[str, Any] = {
+            "items": items[offset:offset + 500],
+            "total": len(items),
+            "truncated": len(items) > offset + 500,
+        }
+        if response["truncated"]:
+            response["next_offset"] = offset + 500
+        return json.dumps(response)
 
     def search_files(self, args: dict[str, Any]) -> str:
         result = json.loads(_run([
