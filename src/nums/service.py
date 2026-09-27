@@ -29,6 +29,7 @@ def service_plist(settings: Settings) -> bytes:
         "NUMS_MAX_STEPS": str(settings.max_steps),
         "NUMS_MAX_TOOL_CALLS": str(settings.max_tool_calls),
         "NUMS_HISTORY_TURNS": str(settings.history_turns),
+        "NUMS_MAX_CONTEXT_CHARS": str(settings.max_context_chars),
         "NUMS_ACTION_MODE": settings.action_mode,
         "NUMS_REPEAT_TOOL_LIMIT": str(settings.repeat_tool_limit),
         "NUMS_WAKE_PHRASE": settings.wake_phrase,

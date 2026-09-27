@@ -129,6 +129,25 @@ def test_long_session_keeps_only_recent_complete_turns() -> None:
     assert client.seen == [["first"], ["first", "second"], ["second", "third"]]
 
 
+def test_context_budget_discards_old_complete_turns() -> None:
+    class RecordingClient:
+        def __init__(self) -> None:
+            self.seen: list[list[str]] = []
+
+        def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
+            self.seen.append([item["content"] for item in messages if item["role"] == "user"])
+            return {"message": {"role": "assistant", "content": "x" * 250}}
+
+    agent = Agent(Settings(history_turns=8, max_context_chars=750))
+    client = RecordingClient()
+    agent.client = client  # type: ignore[assignment]
+    for prompt in ("first", "second", "third"):
+        agent.run(prompt)
+
+    assert client.seen[0] == ["first"]
+    assert client.seen[-1] == ["second", "third"]
+
+
 def test_repeated_tool_loop_stops_before_another_execution() -> None:
     class LoopingClient:
         def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:

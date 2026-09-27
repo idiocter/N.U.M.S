@@ -47,15 +47,26 @@ class Agent:
         self.messages = [{"role": "system", "content": SYSTEM_PROMPT}]
         self._save_history()
 
-    def _trim_history(self) -> None:
+    def _trim_history(self, prompt: str) -> None:
         starts = [i for i, message in enumerate(self.messages) if message.get("role") == "user"]
         previous_turns = self.settings.history_turns - 1
         if len(starts) > previous_turns:
             cutoff = starts[-previous_turns] if previous_turns else len(self.messages)
             self.messages = self.messages[:1] + self.messages[cutoff:]
+        upcoming = {"role": "user", "content": prompt}
+        while len(self.messages) > 1 and sum(
+            len(json.dumps(message, ensure_ascii=False))
+            for message in [*self.messages, upcoming]
+        ) > self.settings.max_context_chars:
+            next_turn = next(
+                (index for index in range(2, len(self.messages))
+                 if self.messages[index].get("role") == "user"),
+                len(self.messages),
+            )
+            self.messages = self.messages[:1] + self.messages[next_turn:]
 
     def run(self, prompt: str) -> str:
-        self._trim_history()
+        self._trim_history(prompt)
         self.trace_error = None
         self.last_run = {"status": "running", "steps": 0, "tool_calls": 0, "tool_errors": 0}
         history_length = len(self.messages)

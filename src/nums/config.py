@@ -27,6 +27,7 @@ class Settings:
     max_steps: int = 8
     max_tool_calls: int = 16
     history_turns: int = 8
+    max_context_chars: int = 60000
     history_file: str | None = None
     trace_file: str | None = None
     action_mode: str = "unrestricted"
@@ -85,6 +86,7 @@ class Settings:
             max_steps=_integer("NUMS_MAX_STEPS", cls.max_steps, 1),
             max_tool_calls=_integer("NUMS_MAX_TOOL_CALLS", cls.max_tool_calls, 1),
             history_turns=_integer("NUMS_HISTORY_TURNS", cls.history_turns, 1),
+            max_context_chars=_integer("NUMS_MAX_CONTEXT_CHARS", cls.max_context_chars, 1000),
             history_file=os.path.expanduser(os.environ["NUMS_HISTORY_FILE"])
             if os.getenv("NUMS_HISTORY_FILE") else None,
             trace_file=os.path.expanduser(os.environ["NUMS_TRACE_FILE"])
