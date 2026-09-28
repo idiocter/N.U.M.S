@@ -8,7 +8,7 @@ import time
 
 from .agent import Agent
 from .config import Settings
-from .diagnostics import self_test, voice_test
+from .diagnostics import probe_model_tool_call, self_test, voice_test
 from .ollama import OllamaClient, OllamaError
 from .service import install_service, service_plist, uninstall_service
 from .wake import (
@@ -36,10 +36,14 @@ def doctor(settings: Settings) -> int:
     client = OllamaClient(
         settings.ollama_url, settings.model, timeout=settings.ollama_timeout_seconds
     )
-    model_ready = client.has_model()
-    print(f"Model ready: {'yes' if model_ready else 'no'}")
-    if not model_ready:
+    model_installed = client.has_model()
+    print(f"Model listed by Ollama: {'yes' if model_installed else 'no'}")
+    if not model_installed:
         print("Start Ollama with `ollama serve`, then pull the model with `nums --pull` if needed.")
+    model_ready = False
+    if model_installed:
+        model_ready, model_error = probe_model_tool_call(settings)
+        print(f"Model tool call: {'ok' if model_ready else f'failed ({model_error})'}")
     whisper_ready, wake_model_ready = voice_dependencies(settings.whisper_model)
     print(f"Whisper stream: {'yes' if whisper_ready else 'no'}")
     print(f"Wake model: {'yes' if wake_model_ready else 'no'} ({settings.whisper_model})")

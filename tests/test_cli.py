@@ -46,6 +46,21 @@ def test_doctor_returns_failure_when_model_is_missing(monkeypatch: pytest.Monkey
     assert "ollama serve" in capsys.readouterr().out
 
 
+def test_doctor_reports_installed_model_that_cannot_run(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr("nums.cli.OllamaClient.has_model", lambda self: True)
+    monkeypatch.setattr(
+        "nums.cli.probe_model_tool_call", lambda settings: (False, "model could not load"),
+    )
+    monkeypatch.setattr("nums.cli.voice_dependencies", lambda _: (True, True))
+
+    assert doctor(Settings()) == 1
+    output = capsys.readouterr().out
+    assert "Model listed by Ollama: yes" in output
+    assert "Model tool call: failed (model could not load)" in output
+
+
 def test_wake_listener_pauses_after_empty_stream(monkeypatch: pytest.MonkeyPatch) -> None:
     launches = 0
     pauses = []

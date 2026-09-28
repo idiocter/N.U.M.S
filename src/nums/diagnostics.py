@@ -13,6 +13,22 @@ from .wake import voice_dependencies
 from .wake import WhisperStream
 
 
+def probe_model_tool_call(settings: Settings) -> tuple[bool, str | None]:
+    system_schema = [item for item in TOOL_SCHEMAS if item["function"]["name"] == "system_info"]
+    try:
+        response = OllamaClient(
+            settings.ollama_url, settings.model, timeout=settings.ollama_timeout_seconds
+        ).chat(
+            [{"role": "user", "content": "Use the system_info tool now."}], system_schema
+        )
+    except OllamaError as exc:
+        return False, str(exc)
+    calls = response["message"].get("tool_calls") or []
+    if len(calls) != 1 or calls[0].get("function", {}).get("name") != "system_info":
+        return False, "model did not choose system_info"
+    return True, None
+
+
 def self_test(settings: Settings) -> tuple[bool, list[str]]:
     results = []
     ok = True
@@ -30,20 +46,11 @@ def self_test(settings: Settings) -> tuple[bool, list[str]]:
     voice_ok = whisper and model_file
     results.append(f"Voice dependencies: {'ok' if voice_ok else 'incomplete'}")
 
-    system_schema = [item for item in TOOL_SCHEMAS if item["function"]["name"] == "system_info"]
-    try:
-        response = OllamaClient(
-            settings.ollama_url, settings.model, timeout=settings.ollama_timeout_seconds
-        ).chat(
-            [{"role": "user", "content": "Use the system_info tool now."}], system_schema
-        )
-        calls = response["message"].get("tool_calls") or []
-        model_ok = len(calls) == 1 and calls[0].get("function", {}).get("name") == "system_info"
-        results.append(f"Model tool call: {'ok' if model_ok else 'failed'}")
-        ok &= model_ok
-    except OllamaError as exc:
-        results.append(f"Model tool call: failed ({exc})")
-        ok = False
+    model_ok, model_error = probe_model_tool_call(settings)
+    results.append(
+        "Model tool call: ok" if model_ok else f"Model tool call: failed ({model_error})"
+    )
+    ok &= model_ok
     return bool(ok), results
 
 
