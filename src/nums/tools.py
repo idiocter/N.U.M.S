@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from fnmatch import fnmatchcase
 import os
 import platform
 import shutil
@@ -36,6 +37,11 @@ TOOL_SCHEMAS = [
     _schema(
         "list_directory", "List up to 500 files and folders; use offset for later pages.",
         {"path": {"type": "string"}, "offset": {"type": "string"}}, ["path"],
+    ),
+    _schema(
+        "find_files", "Find project files recursively, respecting Git ignores; use glob and offset to narrow or page results.",
+        {"path": {"type": "string"}, "glob": {"type": "string"}, "offset": {"type": "string"}},
+        ["path"],
     ),
     _schema(
         "search_files",
@@ -145,6 +151,7 @@ class MacTools:
         handlers: dict[str, Callable[[dict[str, Any]], str]] = {
             "read_file": self.read_file,
             "list_directory": self.list_directory,
+            "find_files": self.find_files,
             "search_files": self.search_files,
             "git_status": self.git_status,
             "git_diff": self.git_diff,
@@ -214,6 +221,38 @@ class MacTools:
         }
         if response["truncated"]:
             response["next_offset"] = offset + 500
+        return json.dumps(response)
+
+    def find_files(self, args: dict[str, Any]) -> str:
+        raw_offset = args.get("offset", "0")
+        if not raw_offset.isdecimal():
+            raise ValueError("offset must be a nonnegative file position")
+        offset = int(raw_offset)
+        root = Path(args["path"]).expanduser()
+        command = [
+            "rg", "--files", "--hidden", "--no-require-git", "--sort", "path",
+            "--glob", "!.git",
+        ]
+        if "glob" in args:
+            if not args["glob"].strip():
+                raise ValueError("glob must not be empty")
+        command.extend(["--", str(root)])
+        result = subprocess.run(command, text=True, capture_output=True, timeout=30)
+        if result.returncode not in {0, 1}:
+            return json.dumps({"error": result.stderr.strip()[-1000:], "exit_code": result.returncode})
+        files = result.stdout.splitlines()
+        if "glob" in args:
+            files = [
+                file for file in files
+                if fnmatchcase(os.path.relpath(file, root), args["glob"])
+            ]
+        response: dict[str, Any] = {
+            "files": files[offset:offset + 200],
+            "total": len(files),
+            "truncated": len(files) > offset + 200,
+        }
+        if response["truncated"]:
+            response["next_offset"] = offset + 200
         return json.dumps(response)
 
     def search_files(self, args: dict[str, Any]) -> str:

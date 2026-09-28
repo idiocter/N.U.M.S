@@ -51,6 +51,40 @@ def test_directory_list_rejects_negative_offset(tmp_path: Path) -> None:
     assert "nonnegative" in result["error"]
 
 
+def test_find_files_recurses_respects_ignores_and_globs(tmp_path: Path) -> None:
+    (tmp_path / ".gitignore").write_text("ignored.py\n")
+    nested = tmp_path / "src"
+    nested.mkdir()
+    (nested / "main.py").write_text("pass\n")
+    (nested / "ignored.py").write_text("pass\n")
+    (nested / "notes.txt").write_text("notes\n")
+    tools = MacTools("read_only")
+
+    result = json.loads(tools.execute("find_files", {
+        "path": str(tmp_path), "glob": "*.py",
+    }))
+
+    assert result == {
+        "files": [str(nested / "main.py")], "total": 1, "truncated": False,
+    }
+
+
+def test_find_files_pages_large_results(tmp_path: Path) -> None:
+    for index in range(201):
+        (tmp_path / f"file-{index:03}.py").touch()
+    tools = MacTools()
+
+    first = json.loads(tools.execute("find_files", {"path": str(tmp_path)}))
+    second = json.loads(tools.execute("find_files", {
+        "path": str(tmp_path), "offset": "200",
+    }))
+
+    assert len(first["files"]) == 200
+    assert first["next_offset"] == 200
+    assert second["files"] == [str(tmp_path / "file-200.py")]
+    assert second["truncated"] is False
+
+
 def test_file_read_is_bounded_before_truncation(monkeypatch: pytest.MonkeyPatch) -> None:
     class GuardedReader(io.StringIO):
         def read(self, size: int = -1) -> str:
