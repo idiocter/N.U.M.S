@@ -130,13 +130,33 @@ def validate_tool_arguments(name: str, args: Any) -> str | None:
     return None
 
 
+def _bounded_output(output: str) -> tuple[str, bool]:
+    if len(output) <= 12000:
+        return output, False
+    marker = "\n[NUMS: middle of command output omitted]\n"
+    return output[:6000] + marker + output[-(6000 - len(marker)):], True
+
+
 def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
-    result = subprocess.run(command, cwd=cwd, text=True, capture_output=True, timeout=timeout)
-    output = (result.stdout + result.stderr).strip()
+    try:
+        result = subprocess.run(command, cwd=cwd, text=True, capture_output=True, timeout=timeout)
+    except subprocess.TimeoutExpired as exc:
+        stdout = exc.stdout or b""
+        stderr = exc.stderr or b""
+        if isinstance(stdout, bytes):
+            stdout = stdout.decode(errors="replace")
+        if isinstance(stderr, bytes):
+            stderr = stderr.decode(errors="replace")
+        output, truncated = _bounded_output((stdout + stderr).strip())
+        return json.dumps({
+            "exit_code": None, "output": output, "truncated": truncated,
+            "error": f"Command timed out after {timeout} seconds",
+        })
+    output, truncated = _bounded_output((result.stdout + result.stderr).strip())
     response = {
         "exit_code": result.returncode,
-        "output": output[-12000:],
-        "truncated": len(output) > 12000,
+        "output": output,
+        "truncated": truncated,
     }
     if result.returncode != 0:
         response["error"] = f"Command exited with status {result.returncode}"

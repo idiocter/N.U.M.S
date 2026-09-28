@@ -366,6 +366,36 @@ def test_large_command_output_reports_truncation(monkeypatch: pytest.MonkeyPatch
     assert result["truncated"] is True
 
 
+def test_large_command_output_keeps_failure_context_at_both_ends(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Result:
+        returncode = 1
+        stdout = "first failure\n" + "x" * 20000
+        stderr = "\nlast failure"
+
+    monkeypatch.setattr("nums.tools.subprocess.run", lambda *args, **kwargs: Result())
+
+    result = json.loads(_run(["pytest"]))
+
+    assert result["output"].startswith("first failure")
+    assert result["output"].endswith("last failure")
+    assert "middle of command output omitted" in result["output"]
+
+
+def test_command_timeout_returns_partial_output(monkeypatch: pytest.MonkeyPatch) -> None:
+    def timeout(*args: object, **kwargs: object) -> None:
+        raise subprocess.TimeoutExpired("pytest", 5, output=b"test started\n")
+
+    monkeypatch.setattr("nums.tools.subprocess.run", timeout)
+
+    result = json.loads(_run(["pytest"], timeout=5))
+
+    assert result["exit_code"] is None
+    assert result["output"] == "test started"
+    assert "timed out after 5 seconds" in result["error"]
+
+
 @pytest.mark.parametrize(
     ("target", "expected"),
     [
