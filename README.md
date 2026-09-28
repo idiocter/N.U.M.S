@@ -137,6 +137,12 @@ inspect and edit files but cannot run shell checks; `read_only` can inspect
 the project and Git state without editing. Its coding instructions call for
 reporting which checks ran and which were skipped.
 
+`find_files` discovers project files recursively, honors Git ignore rules, and
+supports a glob and result pages. `read_lines` returns numbered code lines and
+a next line for longer files. Long individual lines are clipped; use
+`read_file` with an offset when their full contents matter. Long command
+results retain both the start and end, where failure details often appear.
+
 These tools support coding workflows, but the bundled 1.5B model has not been
 validated as a reliable autonomous coding agent. The tool-use training fixtures
 are synthetic; no coding-specific model training or live coding benchmark has
@@ -171,6 +177,8 @@ uv run pytest
 `--self-test` uses a temporary directory and asks the local model for a
 `system_info` tool call. It does not execute the model's proposed action or
 modify user files.
+`--doctor` also checks whether Ollama can actually produce that tool call,
+so a model listed by Ollama but unable to load is reported as a failure.
 `--voice-test` listens for one sentence for up to 15 seconds and prints the
 transcript, providing the final manual check for microphone selection and
 recognition quality.

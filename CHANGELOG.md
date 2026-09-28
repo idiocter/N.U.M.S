@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Added recursive project file discovery and numbered code reads.
+- Kept both ends of long command output and partial output from timed-out commands.
+- Made `--doctor` probe a real model tool call before reporting the model operational.
+
 ## 0.2.0 - 2026-09-22
 
 - Added configurable execution modes and repeated-tool loop detection.
