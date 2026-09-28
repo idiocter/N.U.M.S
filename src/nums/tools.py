@@ -35,6 +35,11 @@ TOOL_SCHEMAS = [
         {"path": {"type": "string"}, "offset": {"type": "string"}}, ["path"],
     ),
     _schema(
+        "read_lines", "Read numbered lines from a UTF-8 file; use start_line and count to inspect code sections.",
+        {"path": {"type": "string"}, "start_line": {"type": "string"}, "count": {"type": "string"}},
+        ["path"],
+    ),
+    _schema(
         "list_directory", "List up to 500 files and folders; use offset for later pages.",
         {"path": {"type": "string"}, "offset": {"type": "string"}}, ["path"],
     ),
@@ -170,6 +175,7 @@ class MacTools:
     def execute(self, name: str, args: dict[str, Any]) -> str:
         handlers: dict[str, Callable[[dict[str, Any]], str]] = {
             "read_file": self.read_file,
+            "read_lines": self.read_lines,
             "list_directory": self.list_directory,
             "find_files": self.find_files,
             "search_files": self.search_files,
@@ -223,6 +229,38 @@ class MacTools:
                 f"continue with offset {offset + 12000}]"
             )
         return content
+
+    def read_lines(self, args: dict[str, Any]) -> str:
+        raw_start = args.get("start_line", "1")
+        raw_count = args.get("count", "80")
+        if not raw_start.isdecimal() or int(raw_start) < 1:
+            raise ValueError("start_line must be a positive line number")
+        if not raw_count.isdecimal() or not 1 <= int(raw_count) <= 100:
+            raise ValueError("count must be between 1 and 100")
+        start, count = int(raw_start), int(raw_count)
+        lines: list[dict[str, Any]] = []
+        characters = 0
+        next_line = None
+        with Path(args["path"]).expanduser().open(encoding="utf-8", errors="replace") as handle:
+            for number, raw_line in enumerate(handle, start=1):
+                if number < start:
+                    continue
+                if len(lines) >= count or characters >= 12000:
+                    next_line = number
+                    break
+                line = raw_line.rstrip("\r\n")
+                clipped = len(line) > 2000
+                if clipped:
+                    line = line[:2000]
+                if characters + len(line) > 12000:
+                    next_line = number
+                    break
+                lines.append({"number": number, "text": line, "truncated": clipped})
+                characters += len(line)
+        response: dict[str, Any] = {"lines": lines}
+        if next_line is not None:
+            response["next_line"] = next_line
+        return json.dumps(response)
 
     def list_directory(self, args: dict[str, Any]) -> str:
         raw_offset = args.get("offset", "0")

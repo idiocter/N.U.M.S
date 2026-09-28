@@ -120,6 +120,46 @@ def test_read_file_rejects_negative_offset(tmp_path: Path) -> None:
     assert "nonnegative" in result["error"]
 
 
+def test_read_lines_returns_numbered_code_and_next_page(tmp_path: Path) -> None:
+    path = tmp_path / "module.py"
+    path.write_text("first\nsecond\nthird\n")
+    tools = MacTools("read_only")
+
+    first = json.loads(tools.execute("read_lines", {
+        "path": str(path), "start_line": "2", "count": "1",
+    }))
+    second = json.loads(tools.execute("read_lines", {
+        "path": str(path), "start_line": "3",
+    }))
+
+    assert first == {
+        "lines": [{"number": 2, "text": "second", "truncated": False}],
+        "next_line": 3,
+    }
+    assert second == {"lines": [{"number": 3, "text": "third", "truncated": False}]}
+
+
+def test_read_lines_clips_very_long_line(tmp_path: Path) -> None:
+    path = tmp_path / "long.py"
+    path.write_text("x" * 3000 + "\n")
+
+    result = json.loads(MacTools().execute("read_lines", {"path": str(path)}))
+
+    assert len(result["lines"][0]["text"]) == 2000
+    assert result["lines"][0]["truncated"] is True
+
+
+def test_read_lines_rejects_invalid_ranges(tmp_path: Path) -> None:
+    path = tmp_path / "module.py"
+    path.write_text("hello\n")
+
+    for arguments in ({"start_line": "0"}, {"count": "101"}, {"count": "-1"}):
+        result = json.loads(MacTools().execute("read_lines", {
+            "path": str(path), **arguments,
+        }))
+        assert "error" in result
+
+
 def test_write_replaces_content_and_preserves_permissions(tmp_path: Path) -> None:
     path = tmp_path / "note.txt"
     path.write_text("before")
