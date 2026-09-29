@@ -12,6 +12,10 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urlparse
 
+from .mac_ui import (
+    CLICK_ELEMENT_SCRIPT, INSPECT_APP_SCRIPT, LIST_APPS_SCRIPT, TYPE_TEXT_SCRIPT,
+    key_script,
+)
 from .policy import tool_allowed
 
 
@@ -81,6 +85,26 @@ TOOL_SCHEMAS = [
         ["command"],
     ),
     _schema("open_item", "Open an app, file, folder, or URL.", {"target": {"type": "string"}}, ["target"]),
+    _schema("list_running_apps", "List running foreground Mac apps by process name.", {}, []),
+    _schema(
+        "inspect_app_ui", "Inspect up to 120 accessibility elements in an app's front window, including roles and labels.",
+        {"app": {"type": "string"}}, ["app"],
+    ),
+    _schema(
+        "click_app_element", "Click exactly one front-window element matching its AX role and name or accessibility description. Inspect the app first.",
+        {"app": {"type": "string"}, "window": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}},
+        ["app", "window", "role", "label"],
+    ),
+    _schema(
+        "type_in_app", "Type into the focused control of the named app and front window. Click the field first.",
+        {"app": {"type": "string"}, "window": {"type": "string"}, "text": {"type": "string"}},
+        ["app", "window", "text"],
+    ),
+    _schema(
+        "press_app_key", "Press one key or a shortcut in the named app and front window. Modifiers: command, option, control, shift, comma-separated.",
+        {"app": {"type": "string"}, "window": {"type": "string"}, "key": {"type": "string"}, "modifiers": {"type": "string"}},
+        ["app", "window", "key"],
+    ),
     _schema("speak", "Speak text using the macOS voice.", {"text": {"type": "string"}}, ["text"]),
     _schema(
         "notify",
@@ -185,6 +209,11 @@ class MacTools:
             "replace_in_file": self.replace_in_file,
             "shell": self.shell,
             "open_item": self.open_item,
+            "list_running_apps": self.list_running_apps,
+            "inspect_app_ui": self.inspect_app_ui,
+            "click_app_element": self.click_app_element,
+            "type_in_app": self.type_in_app,
+            "press_app_key": self.press_app_key,
             "speak": self.speak,
             "notify": self.notify,
             "system_info": self.system_info,
@@ -391,6 +420,36 @@ class MacTools:
         if urlparse(target).scheme or path.exists() or path.suffix or "/" in target:
             return _run(["open", str(path) if target.startswith("~") else target])
         return _run(["open", "-a", target])
+
+    def list_running_apps(self, args: dict[str, Any]) -> str:
+        return _run(["osascript", "-e", LIST_APPS_SCRIPT], timeout=20)
+
+    def inspect_app_ui(self, args: dict[str, Any]) -> str:
+        return _run(["osascript", "-e", INSPECT_APP_SCRIPT, args["app"]], timeout=20)
+
+    def click_app_element(self, args: dict[str, Any]) -> str:
+        if not all(args[key].strip() for key in ("app", "window", "role", "label")):
+            raise ValueError("app, window, role, and label must not be empty")
+        return _run([
+            "osascript", "-e", CLICK_ELEMENT_SCRIPT,
+            args["app"], args["window"], args["role"], args["label"],
+        ], timeout=20)
+
+    def type_in_app(self, args: dict[str, Any]) -> str:
+        if not args["app"].strip() or not args["window"].strip() or not args["text"]:
+            raise ValueError("app, window, and text must not be empty")
+        return _run([
+            "osascript", "-e", TYPE_TEXT_SCRIPT,
+            args["app"], args["window"], args["text"],
+        ], timeout=20)
+
+    def press_app_key(self, args: dict[str, Any]) -> str:
+        if not args["app"].strip() or not args["window"].strip():
+            raise ValueError("app and window must not be empty")
+        script = key_script(args["key"], args.get("modifiers", ""))
+        return _run([
+            "osascript", "-e", script, args["app"], args["window"], args["key"],
+        ], timeout=20)
 
     def speak(self, args: dict[str, Any]) -> str:
         return _run(["say", args["text"]])

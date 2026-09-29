@@ -1,5 +1,6 @@
 import io
 import json
+import platform
 import stat
 import subprocess
 from pathlib import Path
@@ -7,6 +8,10 @@ from pathlib import Path
 import pytest
 
 from nums.tools import MacTools, _run
+from nums.mac_ui import (
+    CLICK_ELEMENT_SCRIPT, INSPECT_APP_SCRIPT, LIST_APPS_SCRIPT, TYPE_TEXT_SCRIPT,
+    key_script,
+)
 
 
 def test_read_and_list(tmp_path: Path) -> None:
@@ -239,6 +244,62 @@ def test_read_only_mode_blocks_mutating_tools(tmp_path: Path) -> None:
 def test_standard_mode_blocks_shell() -> None:
     result = json.loads(MacTools("standard").execute("shell", {"command": "echo no"}))
     assert result["action_mode"] == "standard"
+
+
+def test_app_inspection_is_read_only_but_ui_actions_require_unrestricted() -> None:
+    tools = MacTools("standard")
+    click = json.loads(tools.execute("click_app_element", {
+        "app": "Finder", "window": "Documents", "role": "AXButton", "label": "Back",
+    }))
+    typed = json.loads(tools.execute("type_in_app", {
+        "app": "Finder", "window": "Documents", "text": "hello",
+    }))
+
+    assert click["action_mode"] == "standard"
+    assert typed["action_mode"] == "standard"
+
+
+def test_ui_actions_pass_app_text_as_arguments(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr(
+        "nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok",
+    )
+    app = 'Finder" & do shell script "false'
+    tools = MacTools()
+
+    tools.click_app_element({
+        "app": app, "window": "Documents", "role": "AXButton", "label": "Back",
+    })
+    tools.type_in_app({"app": app, "window": "Documents", "text": "hello"})
+    tools.press_app_key({
+        "app": app, "window": "Documents", "key": "s", "modifiers": "command,shift",
+    })
+
+    assert all(command[0:2] == ["osascript", "-e"] for command in commands)
+    assert all(command[3] == app and app not in command[2] for command in commands)
+    assert commands[0][-3:] == ["Documents", "AXButton", "Back"]
+    assert "command down, shift down" in commands[2][2]
+
+
+def test_press_app_key_rejects_unknown_modifier() -> None:
+    result = json.loads(MacTools().execute("press_app_key", {
+        "app": "Finder", "window": "Documents", "key": "s", "modifiers": "super",
+    }))
+
+    assert "modifiers must be" in result["error"]
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="AppleScript compiler requires macOS")
+def test_accessibility_scripts_compile_on_mac(tmp_path: Path) -> None:
+    scripts = [
+        LIST_APPS_SCRIPT, INSPECT_APP_SCRIPT, CLICK_ELEMENT_SCRIPT,
+        TYPE_TEXT_SCRIPT, key_script("s", "command"), key_script("return"),
+    ]
+    for index, script in enumerate(scripts):
+        source = tmp_path / f"ui-{index}.applescript"
+        output = tmp_path / f"ui-{index}.scpt"
+        source.write_text(script)
+        subprocess.run(["osacompile", "-o", str(output), str(source)], check=True)
 
 
 @pytest.mark.parametrize(
