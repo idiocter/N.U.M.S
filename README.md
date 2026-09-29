@@ -152,6 +152,22 @@ validated as a reliable autonomous coding agent. The tool-use training fixtures
 are synthetic; no coding-specific model training or live coding benchmark has
 been completed. Review important changes and their test results before use.
 
+## App control
+
+Text and voice requests use the same Mac tools. NUMS can list running apps,
+inspect the front window's accessibility roles and labels, click one exact
+matching control, type into the focused control, and press keys or shortcuts.
+For example, ask `uv run nums "Inspect the front window of Safari"` before
+asking it to use a named control. Clicks fail when the front window changes or
+more than one element has the requested role and label.
+
+`list_running_apps` and `inspect_app_ui` are available in read-only mode.
+Clicking, typing, and key presses require the default `unrestricted` mode.
+macOS must allow the process running NUMS to control System Events and use
+Accessibility. These tools use the app's accessibility information; apps that
+do not expose a control's label may need app-specific AppleScript instead.
+NUMS does not interpret screenshots or click arbitrary screen coordinates.
+
 For broad access, open **System Settings → Privacy & Security** and grant your terminal only the permissions you actually want it to have, such as:
 
 - Full Disk Access for protected files
@@ -165,8 +181,8 @@ macOS permissions remain the outer security boundary. NUMS cannot and should not
 NUMS applies no application-level action policy or approval step. Its effective access is the access granted to the Terminal process that launches it. macOS privacy permissions remain the operating-system boundary.
 
 You can reduce that access with `NUMS_ACTION_MODE=standard` (blocks shell,
-AppleScript, and Trash) or `NUMS_ACTION_MODE=read_only` (only file inspection,
-search, and system information). The default remains `unrestricted` for
+AppleScript, UI actions, and Trash) or `NUMS_ACTION_MODE=read_only` (inspection
+and information tools only). The default remains `unrestricted` for
 compatibility with existing NUMS behavior.
 
 ## Diagnostics

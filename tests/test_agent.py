@@ -152,7 +152,8 @@ def test_context_budget_discards_old_complete_turns() -> None:
             self.seen.append([item["content"] for item in messages if item["role"] == "user"])
             return {"message": {"role": "assistant", "content": "x" * 250}}
 
-    agent = Agent(Settings(history_turns=8, max_context_chars=1200))
+    system_size = len(json.dumps(Agent(Settings()).messages[0], ensure_ascii=False))
+    agent = Agent(Settings(history_turns=8, max_context_chars=system_size + 500))
     client = RecordingClient()
     agent.client = client  # type: ignore[assignment]
     for prompt in ("first", "second", "third"):

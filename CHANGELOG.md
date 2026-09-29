@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added general Mac app controls through Accessibility: inspect labeled UI elements, click exact matches, type text, and press keys or shortcuts.
 - Added `nums --voice` for wake mode, with automatic Whisper model setup and an Ollama model check; plain `nums` remains text mode.
 - NUMS starts a local Ollama server when needed for either mode.
 - Added recursive project file discovery and numbered code reads.
