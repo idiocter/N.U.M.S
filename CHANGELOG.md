@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added `nums --voice` for wake mode, with automatic Whisper model setup and an Ollama model check; plain `nums` remains text mode.
+- NUMS starts a local Ollama server when needed for either mode.
 - Added recursive project file discovery and numbered code reads.
 - Kept both ends of long command output and partial output from timed-out commands.
 - Made `--doctor` probe a real model tool call before reporting the model operational.

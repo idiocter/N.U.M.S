@@ -6,19 +6,18 @@ The model and chat stay on the Mac through Ollama. Model-requested file writes, 
 
 ## Quick start
 
-```bash
-cd ~/Documents/Projects/NUMS
-ollama serve  # keep this running, or start the Ollama app
-```
-
-In another terminal:
+Install Ollama once, then run NUMS from the project directory:
 
 ```bash
 cd ~/Documents/Projects/NUMS
-uv sync
-uv run nums --pull
-uv run nums
+uv run nums --pull       # download Qwen once
+uv run nums              # interactive text mode
+uv run nums --voice      # wake phrase voice mode
 ```
+
+`uv run` syncs the Python environment automatically. NUMS starts the local
+Ollama server if it is not running and leaves it available after NUMS exits.
+Ollama startup errors are written to `~/Library/Logs/NUMS-Ollama.log`.
 
 One-shot requests work too:
 
@@ -58,18 +57,23 @@ assistant still returns its response.
 
 NUMS can stay asleep until you say **“hey numnum.”** Voice recognition and the Qwen response both run locally.
 
-Install the microphone runtime and download the English base model once:
+Install the microphone runtime once:
 
 ```bash
 brew install whisper-cpp
-uv run nums --setup-voice
 ```
 
-Start the listener:
+Start voice mode:
 
 ```bash
-uv run nums --wake
+uv run nums --voice
 ```
+
+The first voice launch downloads the English Whisper model automatically if it
+is missing. `uv run nums --setup-voice` can download it ahead of time.
+`--wake` remains an alias for `--voice`. Plain `uv run nums` starts text mode.
+Voice mode checks that Qwen can load before it opens the microphone; a model
+load failure appears immediately in the terminal.
 
 To start the listener automatically at login and restart it after failures:
 
@@ -97,7 +101,7 @@ NUMS uses silence-based voice activity detection so it transcribes complete phra
 If the wrong microphone is selected, list the capture devices shown when the listener starts and set its number:
 
 ```bash
-NUMS_CAPTURE_DEVICE=0 uv run nums --wake
+NUMS_CAPTURE_DEVICE=0 uv run nums --voice
 ```
 
 The default model is `qwen2.5:1.5b-instruct`, a compact model close to the requested 2B size. Override it with `NUMS_MODEL`, for example:

@@ -5,6 +5,10 @@ import shutil
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+from urllib.parse import urlparse
 
 from .agent import Agent
 from .config import Settings
@@ -48,6 +52,66 @@ def doctor(settings: Settings) -> int:
     print(f"Whisper stream: {'yes' if whisper_ready else 'no'}")
     print(f"Wake model: {'yes' if wake_model_ready else 'no'} ({settings.whisper_model})")
     return 0 if model_ready else 1
+
+
+def prepare_voice(settings: Settings) -> None:
+    whisper_ready, model_ready = voice_dependencies(settings.whisper_model)
+    if not whisper_ready:
+        raise SystemExit("whisper-stream is missing; install it with `brew install whisper-cpp`.")
+    if not model_ready:
+        print(f"Downloading the Whisper voice model to {settings.whisper_model}...")
+        try:
+            download_voice_model(settings.whisper_model)
+        except (OSError, RuntimeError, subprocess.CalledProcessError) as exc:
+            raise SystemExit(f"Could not set up the Whisper voice model: {exc}") from exc
+        print("Whisper voice model ready.")
+
+
+def _ollama_reachable(url: str) -> bool:
+    try:
+        with urllib.request.urlopen(f"{url}/api/version", timeout=1):
+            return True
+    except (urllib.error.URLError, TimeoutError, ConnectionError):
+        return False
+
+
+def ensure_ollama_running(settings: Settings) -> None:
+    if _ollama_reachable(settings.ollama_url):
+        return
+    parsed = urlparse(settings.ollama_url)
+    if parsed.scheme != "http" or parsed.hostname not in {"127.0.0.1", "localhost", "::1"} or parsed.port not in {None, 11434}:
+        raise SystemExit(f"Cannot reach Ollama at {settings.ollama_url}.")
+    executable = shutil.which("ollama")
+    if executable is None:
+        raise SystemExit("Ollama is missing; install the Ollama app or command line tool.")
+    log_path = Path.home() / "Library" / "Logs" / "NUMS-Ollama.log"
+    try:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        with log_path.open("a") as log:
+            process = subprocess.Popen(
+                [executable, "serve"], stdin=subprocess.DEVNULL,
+                stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
+            )
+    except OSError as exc:
+        raise SystemExit(f"Could not start Ollama: {exc}") from exc
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        if _ollama_reachable(settings.ollama_url):
+            print("Started local Ollama.")
+            return
+        if process.poll() is not None:
+            break
+        time.sleep(0.2)
+    raise SystemExit(f"Ollama did not start. Check {log_path}.")
+
+
+def verify_voice_model(settings: Settings) -> None:
+    try:
+        OllamaClient(
+            settings.ollama_url, settings.model, timeout=settings.ollama_timeout_seconds
+        ).chat([{"role": "user", "content": "Reply with ready."}], [])
+    except OllamaError as exc:
+        raise SystemExit(f"The local model is not ready for voice mode: {exc}") from exc
 
 
 def wake_mode(agent: Agent, settings: Settings) -> None:
@@ -111,7 +175,10 @@ def main() -> None:
     parser.add_argument("--voice-test", action="store_true", help="Listen for and print one test transcript")
     parser.add_argument("--pull", action="store_true", help="Download the configured local model")
     parser.add_argument("--speak", action="store_true", help="Read responses aloud")
-    parser.add_argument("--wake", action="store_true", help='Listen for "hey numnum" locally')
+    parser.add_argument(
+        "--voice", "--wake", dest="voice", action="store_true",
+        help='Listen for "hey numnum" locally (--wake is an alias)',
+    )
     parser.add_argument("--print-service", action="store_true", help="Print the macOS LaunchAgent plist")
     parser.add_argument("--install-service", action="store_true", help="Install and start the wake listener LaunchAgent")
     parser.add_argument("--uninstall-service", action="store_true", help="Stop and remove the wake listener LaunchAgent")
@@ -124,6 +191,7 @@ def main() -> None:
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
     if args.pull:
+        ensure_ollama_running(settings)
         raise SystemExit(subprocess.call(["ollama", "pull", settings.model]))
     if args.setup_voice:
         print(f"Downloading local wake model to {settings.whisper_model}")
@@ -153,11 +221,16 @@ def main() -> None:
         print(f"Stopped and removed {uninstall_service()}")
         return
 
+    if args.voice:
+        prepare_voice(settings)
+    ensure_ollama_running(settings)
+    if args.voice:
+        verify_voice_model(settings)
     try:
         agent = Agent(settings)
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
-    if args.wake:
+    if args.voice:
         wake_mode(agent, settings)
         return
     speak = settings.speak or args.speak
