@@ -87,8 +87,8 @@ TOOL_SCHEMAS = [
     _schema("open_item", "Open an app, file, folder, or URL.", {"target": {"type": "string"}}, ["target"]),
     _schema("list_running_apps", "List running foreground Mac apps by process name.", {}, []),
     _schema(
-        "inspect_app_ui", "Inspect up to 120 accessibility elements in an app's front window, including roles and labels.",
-        {"app": {"type": "string"}}, ["app"],
+        "inspect_app_ui", "Inspect 120 accessibility elements in an app's front window; use offset for later pages.",
+        {"app": {"type": "string"}, "offset": {"type": "string"}}, ["app"],
     ),
     _schema(
         "click_app_element", "Click exactly one front-window element matching its AX role and name or accessibility description. Inspect the app first.",
@@ -425,7 +425,10 @@ class MacTools:
         return _run(["osascript", "-e", LIST_APPS_SCRIPT], timeout=20)
 
     def inspect_app_ui(self, args: dict[str, Any]) -> str:
-        return _run(["osascript", "-e", INSPECT_APP_SCRIPT, args["app"]], timeout=20)
+        offset = args.get("offset", "0")
+        if not args["app"].strip() or not offset.isdecimal():
+            raise ValueError("app must not be empty and offset must be nonnegative")
+        return _run(["osascript", "-e", INSPECT_APP_SCRIPT, args["app"], offset], timeout=20)
 
     def click_app_element(self, args: dict[str, Any]) -> str:
         if not all(args[key].strip() for key in ("app", "window", "role", "label")):

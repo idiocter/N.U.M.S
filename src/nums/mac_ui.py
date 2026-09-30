@@ -10,6 +10,7 @@ end tell"""
 
 INSPECT_APP_SCRIPT = """on run argv
     set appName to item 1 of argv
+    set offsetCount to item 2 of argv as integer
     tell application "System Events"
         if not (exists process appName) then error "App is not running: " & appName
         tell process appName
@@ -19,27 +20,31 @@ INSPECT_APP_SCRIPT = """on run argv
             set entries to {"Window: " & windowName}
             set elements to entire contents of targetWindow
             set totalCount to count of elements
-            set limitCount to totalCount
-            if limitCount > 120 then set limitCount to 120
-            repeat with elementIndex from 1 to limitCount
-                set elementRef to item elementIndex of elements
-                set roleText to ""
-                set nameText to ""
-                set descriptionText to ""
-                try
-                    set roleText to role of elementRef as text
-                end try
-                try
-                    set nameText to name of elementRef as text
-                end try
-                try
-                    set descriptionText to accessibility description of elementRef as text
-                end try
-                if roleText is not "" or nameText is not "" or descriptionText is not "" then
-                    set end of entries to (elementIndex as text) & tab & roleText & tab & nameText & tab & descriptionText
-                end if
-            end repeat
-            if totalCount > limitCount then set end of entries to "More elements exist; inspect a narrower window or use app-specific scripting."
+            set end of entries to "Total elements: " & totalCount
+            set startIndex to offsetCount + 1
+            set lastIndex to totalCount
+            if lastIndex > offsetCount + 120 then set lastIndex to offsetCount + 120
+            if startIndex <= lastIndex then
+                repeat with elementIndex from startIndex to lastIndex
+                    set elementRef to item elementIndex of elements
+                    set roleText to ""
+                    set nameText to ""
+                    set descriptionText to ""
+                    try
+                        set roleText to role of elementRef as text
+                    end try
+                    try
+                        set nameText to name of elementRef as text
+                    end try
+                    try
+                        set descriptionText to accessibility description of elementRef as text
+                    end try
+                    if roleText is not "" or nameText is not "" or descriptionText is not "" then
+                        set end of entries to (elementIndex as text) & tab & roleText & tab & nameText & tab & descriptionText
+                    end if
+                end repeat
+            end if
+            if totalCount > lastIndex then set end of entries to "Next offset: " & lastIndex
         end tell
     end tell
     set AppleScript's text item delimiters to linefeed

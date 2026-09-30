@@ -259,6 +259,20 @@ def test_app_inspection_is_read_only_but_ui_actions_require_unrestricted() -> No
     assert typed["action_mode"] == "standard"
 
 
+def test_app_inspection_passes_page_offset(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
+
+    assert MacTools("read_only").execute("inspect_app_ui", {
+        "app": "Finder", "offset": "120",
+    }) == "ok"
+    assert commands[0][-2:] == ["Finder", "120"]
+    invalid = json.loads(MacTools().execute("inspect_app_ui", {
+        "app": "Finder", "offset": "-1",
+    }))
+    assert "nonnegative" in invalid["error"]
+
+
 def test_ui_actions_pass_app_text_as_arguments(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr(
