@@ -91,8 +91,8 @@ TOOL_SCHEMAS = [
         {"app": {"type": "string"}, "offset": {"type": "string"}}, ["app"],
     ),
     _schema(
-        "click_app_element", "Click exactly one front-window element matching its AX role and name or accessibility description. Inspect the app first.",
-        {"app": {"type": "string"}, "window": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}},
+        "click_app_element", "Click a front-window element matching its AX role and label; use an inspected index when labels repeat.",
+        {"app": {"type": "string"}, "window": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "index": {"type": "string"}},
         ["app", "window", "role", "label"],
     ),
     _schema(
@@ -433,9 +433,12 @@ class MacTools:
     def click_app_element(self, args: dict[str, Any]) -> str:
         if not all(args[key].strip() for key in ("app", "window", "role", "label")):
             raise ValueError("app, window, role, and label must not be empty")
+        index = args.get("index", "")
+        if index and (not index.isdecimal() or int(index) < 1):
+            raise ValueError("index must be a positive element number")
         return _run([
             "osascript", "-e", CLICK_ELEMENT_SCRIPT,
-            args["app"], args["window"], args["role"], args["label"],
+            args["app"], args["window"], args["role"], args["label"], index,
         ], timeout=20)
 
     def type_in_app(self, args: dict[str, Any]) -> str:

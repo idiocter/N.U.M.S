@@ -291,8 +291,22 @@ def test_ui_actions_pass_app_text_as_arguments(monkeypatch: pytest.MonkeyPatch) 
 
     assert all(command[0:2] == ["osascript", "-e"] for command in commands)
     assert all(command[3] == app and app not in command[2] for command in commands)
-    assert commands[0][-3:] == ["Documents", "AXButton", "Back"]
+    assert commands[0][-4:] == ["Documents", "AXButton", "Back", ""]
     assert "command down, shift down" in commands[2][2]
+
+
+def test_indexed_click_passes_inspected_index_and_rejects_bad_values(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
+    args = {"app": "Finder", "window": "Documents", "role": "AXButton", "label": "Back"}
+
+    assert MacTools().execute("click_app_element", {**args, "index": "7"}) == "ok"
+    assert commands[0][-1] == "7"
+    for bad in ("0", "-1", "abc"):
+        result = json.loads(MacTools().execute("click_app_element", {**args, "index": bad}))
+        assert "positive" in result["error"]
 
 
 def test_press_app_key_rejects_unknown_modifier() -> None:
