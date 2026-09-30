@@ -13,7 +13,8 @@ from typing import Any, Callable
 from urllib.parse import urlparse
 
 from .mac_ui import (
-    CLICK_ELEMENT_SCRIPT, INSPECT_APP_SCRIPT, LIST_APPS_SCRIPT, TYPE_TEXT_SCRIPT,
+    CLICK_ELEMENT_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT,
+    TYPE_TEXT_SCRIPT,
     key_script,
 )
 from .policy import tool_allowed
@@ -89,6 +90,10 @@ TOOL_SCHEMAS = [
     _schema(
         "inspect_app_ui", "Inspect 120 accessibility elements in an app's front window; use offset for later pages.",
         {"app": {"type": "string"}, "offset": {"type": "string"}}, ["app"],
+    ),
+    _schema(
+        "inspect_app_menu", "List top-level app menus, or the items in one named menu.",
+        {"app": {"type": "string"}, "menu": {"type": "string"}}, ["app"],
     ),
     _schema(
         "click_app_element", "Click a front-window element matching its AX role and label; use an inspected index when labels repeat.",
@@ -211,6 +216,7 @@ class MacTools:
             "open_item": self.open_item,
             "list_running_apps": self.list_running_apps,
             "inspect_app_ui": self.inspect_app_ui,
+            "inspect_app_menu": self.inspect_app_menu,
             "click_app_element": self.click_app_element,
             "type_in_app": self.type_in_app,
             "press_app_key": self.press_app_key,
@@ -429,6 +435,14 @@ class MacTools:
         if not args["app"].strip() or not offset.isdecimal():
             raise ValueError("app must not be empty and offset must be nonnegative")
         return _run(["osascript", "-e", INSPECT_APP_SCRIPT, args["app"], offset], timeout=20)
+
+    def inspect_app_menu(self, args: dict[str, Any]) -> str:
+        if not args["app"].strip():
+            raise ValueError("app must not be empty")
+        return _run([
+            "osascript", "-e", INSPECT_MENU_SCRIPT,
+            args["app"], args.get("menu", ""),
+        ], timeout=20)
 
     def click_app_element(self, args: dict[str, Any]) -> str:
         if not all(args[key].strip() for key in ("app", "window", "role", "label")):

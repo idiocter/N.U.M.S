@@ -8,6 +8,36 @@ LIST_APPS_SCRIPT = """tell application "System Events"
 end tell"""
 
 
+INSPECT_MENU_SCRIPT = """on run argv
+    set appName to item 1 of argv
+    set menuName to item 2 of argv
+    tell application "System Events"
+        if not (exists process appName) then error "App is not running: " & appName
+        tell process appName
+            if menuName is "" then
+                set entries to {"Menus:"}
+                repeat with menuRef in menu bar items of menu bar 1
+                    try
+                        set end of entries to name of menuRef as text
+                    end try
+                end repeat
+            else
+                if not (exists menu bar item menuName of menu bar 1) then error "Menu not found: " & menuName
+                set entries to {"Menu: " & menuName}
+                repeat with itemRef in menu items of menu menuName of menu bar item menuName of menu bar 1
+                    try
+                        set itemName to name of itemRef as text
+                        if itemName is not "" then set end of entries to itemName
+                    end try
+                end repeat
+            end if
+        end tell
+    end tell
+    set AppleScript's text item delimiters to linefeed
+    return entries as text
+end run"""
+
+
 INSPECT_APP_SCRIPT = """on run argv
     set appName to item 1 of argv
     set offsetCount to item 2 of argv as integer
