@@ -155,12 +155,43 @@ TYPE_TEXT_SCRIPT = """on run argv
     set appName to item 1 of argv
     set targetWindow to item 2 of argv
     set textValue to item 3 of argv
+    set targetRole to item 4 of argv
+    set targetLabel to item 5 of argv
+    set selectedIndexText to item 6 of argv
+    set selectedIndex to 0
+    if selectedIndexText is not "" then set selectedIndex to selectedIndexText as integer
     tell application "System Events"
         if not (exists process appName) then error "App is not running: " & appName
         tell process appName
             if not (exists window 1) then error "App has no open window: " & appName
             if (name of window 1) is not targetWindow then error "Front window changed; inspect the app again"
             set frontmost to true
+            if targetRole is not "" then
+                set matches to {}
+                set elements to entire contents of window 1
+                repeat with elementIndex from 1 to count of elements
+                    if selectedIndex is 0 or elementIndex is selectedIndex then
+                        set elementRef to item elementIndex of elements
+                        set roleText to ""
+                        set nameText to ""
+                        set descriptionText to ""
+                        try
+                            set roleText to role of elementRef as text
+                        end try
+                        try
+                            set nameText to name of elementRef as text
+                        end try
+                        try
+                            set descriptionText to accessibility description of elementRef as text
+                        end try
+                        if roleText is targetRole and (nameText is targetLabel or descriptionText is targetLabel) then
+                            set end of matches to contents of elementRef
+                        end if
+                    end if
+                end repeat
+                if (count of matches) is not 1 then error "Expected one matching text field; found " & (count of matches)
+                click item 1 of matches
+            end if
             keystroke textValue
         end tell
     end tell

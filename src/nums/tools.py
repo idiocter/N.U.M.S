@@ -106,8 +106,8 @@ TOOL_SCHEMAS = [
         ["app", "window", "role", "label"],
     ),
     _schema(
-        "type_in_app", "Type into the focused control of the named app and front window. Click the field first.",
-        {"app": {"type": "string"}, "window": {"type": "string"}, "text": {"type": "string"}},
+        "type_in_app", "Type into an exact inspected text field, or the currently focused control when no role and label are supplied.",
+        {"app": {"type": "string"}, "window": {"type": "string"}, "text": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "index": {"type": "string"}},
         ["app", "window", "text"],
     ),
     _schema(
@@ -472,9 +472,16 @@ class MacTools:
     def type_in_app(self, args: dict[str, Any]) -> str:
         if not args["app"].strip() or not args["window"].strip() or not args["text"]:
             raise ValueError("app, window, and text must not be empty")
+        role, label, index = (args.get(key, "") for key in ("role", "label", "index"))
+        if bool(role) != bool(label):
+            raise ValueError("role and label must be supplied together")
+        if role and role not in {"AXTextField", "AXTextArea", "AXComboBox"}:
+            raise ValueError("role must be AXTextField, AXTextArea, or AXComboBox")
+        if index and (not role or not index.isdecimal() or int(index) < 1):
+            raise ValueError("index requires a text field and a positive element number")
         return _run([
             "osascript", "-e", TYPE_TEXT_SCRIPT,
-            args["app"], args["window"], args["text"],
+            args["app"], args["window"], args["text"], role, label, index,
         ], timeout=20)
 
     def press_app_key(self, args: dict[str, Any]) -> str:

@@ -321,6 +321,20 @@ def test_ui_actions_pass_app_text_as_arguments(monkeypatch: pytest.MonkeyPatch) 
     assert "command down, shift down" in commands[2][2]
 
 
+def test_type_in_exact_text_field(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
+    args = {"app": "Notes", "window": "Notes", "text": "hello", "role": "AXTextArea", "label": "Body"}
+    assert MacTools().execute("type_in_app", {**args, "index": "12"}) == "ok"
+    assert commands[0][-6:] == ["Notes", "Notes", "hello", "AXTextArea", "Body", "12"]
+    for bad in ({"role": "AXButton"}, {"index": "0"}):
+        result = json.loads(MacTools().execute("type_in_app", {**args, **bad}))
+        assert "error" in result
+    assert "error" in json.loads(MacTools().execute("type_in_app", {
+        "app": "Notes", "window": "Notes", "text": "hello", "index": "2",
+    }))
+
+
 def test_indexed_click_passes_inspected_index_and_rejects_bad_values(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
