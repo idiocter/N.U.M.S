@@ -11,6 +11,7 @@ end tell"""
 INSPECT_MENU_SCRIPT = """on run argv
     set appName to item 1 of argv
     set menuName to item 2 of argv
+    set submenuName to item 3 of argv
     tell application "System Events"
         if not (exists process appName) then error "App is not running: " & appName
         tell process appName
@@ -23,8 +24,16 @@ INSPECT_MENU_SCRIPT = """on run argv
                 end repeat
             else
                 if not (exists menu bar item menuName of menu bar 1) then error "Menu not found: " & menuName
-                set entries to {"Menu: " & menuName}
-                repeat with itemRef in menu items of menu menuName of menu bar item menuName of menu bar 1
+                if submenuName is "" then
+                    set entries to {"Menu: " & menuName}
+                    set itemsToInspect to menu items of menu menuName of menu bar item menuName of menu bar 1
+                else
+                    set parentItem to menu item submenuName of menu menuName of menu bar item menuName of menu bar 1
+                    if not (exists parentItem) then error "Submenu not found: " & submenuName
+                    set entries to {"Submenu: " & menuName & " > " & submenuName}
+                    set itemsToInspect to menu items of menu of parentItem
+                end if
+                repeat with itemRef in itemsToInspect
                     try
                         set itemName to name of itemRef as text
                         if itemName is not "" then set end of entries to itemName

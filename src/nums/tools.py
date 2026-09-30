@@ -92,8 +92,8 @@ TOOL_SCHEMAS = [
         {"app": {"type": "string"}, "offset": {"type": "string"}}, ["app"],
     ),
     _schema(
-        "inspect_app_menu", "List top-level app menus, or the items in one named menu.",
-        {"app": {"type": "string"}, "menu": {"type": "string"}}, ["app"],
+        "inspect_app_menu", "List top-level app menus, items in a menu, or items in its named submenu.",
+        {"app": {"type": "string"}, "menu": {"type": "string"}, "submenu": {"type": "string"}}, ["app"],
     ),
     _schema(
         "click_app_menu_item", "Click an exact menu item in a running app; optionally name its parent submenu.",
@@ -467,9 +467,11 @@ class MacTools:
     def inspect_app_menu(self, args: dict[str, Any]) -> str:
         if not args["app"].strip():
             raise ValueError("app must not be empty")
+        if args.get("submenu") and not args.get("menu"):
+            raise ValueError("submenu requires a menu")
         return _run([
             "osascript", "-e", INSPECT_MENU_SCRIPT,
-            args["app"], args.get("menu", ""),
+            args["app"], args.get("menu", ""), args.get("submenu", ""),
         ], timeout=20)
 
     def click_app_menu_item(self, args: dict[str, Any]) -> str:

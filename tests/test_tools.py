@@ -281,8 +281,11 @@ def test_menu_inspection_lists_menus_or_named_items(monkeypatch: pytest.MonkeyPa
 
     assert tools.execute("inspect_app_menu", {"app": "Safari"}) == "ok"
     assert tools.execute("inspect_app_menu", {"app": "Safari", "menu": "File"}) == "ok"
-    assert commands[0][-2:] == ["Safari", ""]
-    assert commands[1][-2:] == ["Safari", "File"]
+    assert tools.execute("inspect_app_menu", {"app": "Safari", "menu": "File", "submenu": "Share"}) == "ok"
+    assert commands[0][-3:] == ["Safari", "", ""]
+    assert commands[1][-3:] == ["Safari", "File", ""]
+    assert commands[2][-3:] == ["Safari", "File", "Share"]
+    assert "error" in json.loads(tools.execute("inspect_app_menu", {"app": "Safari", "submenu": "Share"}))
 
 
 def test_menu_click_passes_exact_names_as_arguments(monkeypatch: pytest.MonkeyPatch) -> None:
