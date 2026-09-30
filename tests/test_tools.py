@@ -299,6 +299,19 @@ def test_menu_click_passes_exact_names_as_arguments(monkeypatch: pytest.MonkeyPa
     assert blocked["action_mode"] == "standard"
 
 
+def test_ui_permission_failure_names_required_setting(monkeypatch: pytest.MonkeyPatch) -> None:
+    for diagnostic, setting in (
+        ("Not authorized to send Apple events to System Events. (-1743)", "Automation"),
+        ("osascript is not allowed assistive access. (-1719)", "Accessibility"),
+    ):
+        monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: json.dumps({
+            "exit_code": 1, "error": "Command exited with status 1", "output": diagnostic,
+        }))
+        result = json.loads(MacTools().execute("inspect_app_ui", {"app": "Finder"}))
+        assert setting in result["hint"]
+        assert diagnostic == result["output"]
+
+
 def test_ui_actions_pass_app_text_as_arguments(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr(

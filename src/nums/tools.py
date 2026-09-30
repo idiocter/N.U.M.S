@@ -202,6 +202,27 @@ def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
     return json.dumps(response)
 
 
+UI_TOOLS = {
+    "list_running_apps", "inspect_app_ui", "inspect_app_menu", "click_app_menu_item",
+    "click_app_element", "type_in_app", "press_app_key",
+}
+
+
+def _with_ui_permission_hint(result: str) -> str:
+    try:
+        response = json.loads(result)
+    except json.JSONDecodeError:
+        return result
+    if not isinstance(response, dict) or not response.get("error"):
+        return result
+    output = str(response.get("output", "")).lower()
+    if "-1743" in output or "not authorized to send apple events" in output:
+        response["hint"] = "Allow your terminal to control System Events in System Settings > Privacy & Security > Automation."
+    elif any(marker in output for marker in ("-25211", "-1719", "not allowed assistive access")):
+        response["hint"] = "Allow your terminal in System Settings > Privacy & Security > Accessibility."
+    return json.dumps(response)
+
+
 class MacTools:
     def __init__(self, action_mode: str = "unrestricted") -> None:
         self.action_mode = action_mode
@@ -247,7 +268,8 @@ class MacTools:
         if validation_error:
             return json.dumps({"error": validation_error})
         try:
-            return handlers[name](args)
+            result = handlers[name](args)
+            return _with_ui_permission_hint(result) if name in UI_TOOLS else result
         except Exception as exc:  # tool errors are returned to the model
             return json.dumps({"error": f"{type(exc).__name__}: {exc}"})
 
