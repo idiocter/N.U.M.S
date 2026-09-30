@@ -13,7 +13,7 @@ from typing import Any, Callable
 from urllib.parse import urlparse
 
 from .mac_ui import (
-    CLICK_ELEMENT_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT,
+    CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT,
     TYPE_TEXT_SCRIPT,
     key_script,
 )
@@ -94,6 +94,11 @@ TOOL_SCHEMAS = [
     _schema(
         "inspect_app_menu", "List top-level app menus, or the items in one named menu.",
         {"app": {"type": "string"}, "menu": {"type": "string"}}, ["app"],
+    ),
+    _schema(
+        "click_app_menu_item", "Click an exact menu item in a running app; optionally name its parent submenu.",
+        {"app": {"type": "string"}, "menu": {"type": "string"}, "item": {"type": "string"}, "submenu": {"type": "string"}},
+        ["app", "menu", "item"],
     ),
     _schema(
         "click_app_element", "Click a front-window element matching its AX role and label; use an inspected index when labels repeat.",
@@ -217,6 +222,7 @@ class MacTools:
             "list_running_apps": self.list_running_apps,
             "inspect_app_ui": self.inspect_app_ui,
             "inspect_app_menu": self.inspect_app_menu,
+            "click_app_menu_item": self.click_app_menu_item,
             "click_app_element": self.click_app_element,
             "type_in_app": self.type_in_app,
             "press_app_key": self.press_app_key,
@@ -442,6 +448,14 @@ class MacTools:
         return _run([
             "osascript", "-e", INSPECT_MENU_SCRIPT,
             args["app"], args.get("menu", ""),
+        ], timeout=20)
+
+    def click_app_menu_item(self, args: dict[str, Any]) -> str:
+        if not all(args[key].strip() for key in ("app", "menu", "item")):
+            raise ValueError("app, menu, and item must not be empty")
+        return _run([
+            "osascript", "-e", CLICK_MENU_ITEM_SCRIPT,
+            args["app"], args["menu"], args["item"], args.get("submenu", ""),
         ], timeout=20)
 
     def click_app_element(self, args: dict[str, Any]) -> str:

@@ -38,6 +38,31 @@ INSPECT_MENU_SCRIPT = """on run argv
 end run"""
 
 
+CLICK_MENU_ITEM_SCRIPT = """on run argv
+    set appName to item 1 of argv
+    set menuName to item 2 of argv
+    set itemName to item 3 of argv
+    set submenuName to item 4 of argv
+    tell application "System Events"
+        if not (exists process appName) then error "App is not running: " & appName
+        tell process appName
+            set frontmost to true
+            if not (exists menu bar item menuName of menu bar 1) then error "Menu not found: " & menuName
+            if submenuName is "" then
+                set targetItem to menu item itemName of menu menuName of menu bar item menuName of menu bar 1
+            else
+                set parentItem to menu item submenuName of menu menuName of menu bar item menuName of menu bar 1
+                if not (exists parentItem) then error "Submenu not found: " & submenuName
+                set targetItem to menu item itemName of menu of parentItem
+            end if
+            if not (exists targetItem) then error "Menu item not found: " & itemName
+            click targetItem
+        end tell
+    end tell
+    return "Clicked menu item " & itemName
+end run"""
+
+
 INSPECT_APP_SCRIPT = """on run argv
     set appName to item 1 of argv
     set offsetCount to item 2 of argv as integer
