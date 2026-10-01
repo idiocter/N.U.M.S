@@ -36,7 +36,11 @@ INSPECT_MENU_SCRIPT = """on run argv
                 repeat with itemRef in itemsToInspect
                     try
                         set itemName to name of itemRef as text
-                        if itemName is not "" then set end of entries to itemName
+                        if itemName is not "" then
+                            set availability to "disabled"
+                            if enabled of itemRef then set availability to "enabled"
+                            set end of entries to itemName & tab & availability
+                        end if
                     end try
                 end repeat
             end if

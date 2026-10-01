@@ -92,7 +92,7 @@ TOOL_SCHEMAS = [
         {"app": {"type": "string"}, "offset": {"type": "string"}}, ["app"],
     ),
     _schema(
-        "inspect_app_menu", "List top-level app menus, items in a menu, or items in its named submenu.",
+        "inspect_app_menu", "List app menus or named menu/submenu items with enabled status.",
         {"app": {"type": "string"}, "menu": {"type": "string"}, "submenu": {"type": "string"}}, ["app"],
     ),
     _schema(
