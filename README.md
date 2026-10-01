@@ -158,9 +158,12 @@ Text and voice requests use the same Mac tools. NUMS can list running apps,
 inspect pages of the front window's accessibility roles and labels, inspect
 menus and submenus, click an exact control or menu item, type into an inspected
 text field or the focused control, and press keys or shortcuts.
+Inspection shows disabled controls and menu items, plus checkbox and radio state
+when the app exposes it.
 For example, ask `uv run nums "Inspect the front window of Safari"` before
 asking it to use a named control. Use the inspected element index when labels
 repeat. Clicks fail when the front window changes or a target is ambiguous.
+Targeted typing also stops if the selected field does not receive focus.
 
 `list_running_apps`, `inspect_app_ui`, and `inspect_app_menu` are available in read-only mode.
 Clicking, typing, and key presses require the default `unrestricted` mode.

@@ -111,6 +111,8 @@ INSPECT_APP_SCRIPT = """on run argv
                     set roleText to ""
                     set nameText to ""
                     set descriptionText to ""
+                    set availability to "unknown"
+                    set stateText to ""
                     try
                         set roleText to role of elementRef as text
                     end try
@@ -120,8 +122,20 @@ INSPECT_APP_SCRIPT = """on run argv
                     try
                         set descriptionText to accessibility description of elementRef as text
                     end try
+                    try
+                        if enabled of elementRef then
+                            set availability to "enabled"
+                        else
+                            set availability to "disabled"
+                        end if
+                    end try
+                    if roleText is "AXCheckBox" or roleText is "AXRadioButton" or roleText is "AXSwitch" then
+                        try
+                            set stateText to value of elementRef as text
+                        end try
+                    end if
                     if roleText is not "" or nameText is not "" or descriptionText is not "" then
-                        set end of entries to (elementIndex as text) & tab & roleText & tab & nameText & tab & descriptionText
+                        set end of entries to (elementIndex as text) & tab & roleText & tab & nameText & tab & descriptionText & tab & availability & tab & stateText
                     end if
                 end repeat
             end if

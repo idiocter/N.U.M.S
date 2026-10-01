@@ -88,7 +88,7 @@ TOOL_SCHEMAS = [
     _schema("open_item", "Open an app, file, folder, or URL.", {"target": {"type": "string"}}, ["target"]),
     _schema("list_running_apps", "List running foreground Mac apps by process name.", {}, []),
     _schema(
-        "inspect_app_ui", "Inspect 120 accessibility elements in an app's front window; use offset for later pages.",
+        "inspect_app_ui", "Inspect 120 front-window accessibility elements with availability and toggle state; use offset for later pages.",
         {"app": {"type": "string"}, "offset": {"type": "string"}}, ["app"],
     ),
     _schema(
