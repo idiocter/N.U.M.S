@@ -216,7 +216,11 @@ TYPE_TEXT_SCRIPT = """on run argv
                     end if
                 end repeat
                 if (count of matches) is not 1 then error "Expected one matching text field; found " & (count of matches)
-                click item 1 of matches
+                set targetField to item 1 of matches
+                click targetField
+                if not (exists window 1) then error "Front window changed after focusing the text field"
+                if (name of window 1) is not targetWindow then error "Front window changed after focusing the text field"
+                if not (focused of targetField) then error "Text field did not receive focus; nothing was typed"
             end if
             keystroke textValue
         end tell
