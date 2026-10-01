@@ -58,13 +58,26 @@ CLICK_MENU_ITEM_SCRIPT = """on run argv
             set frontmost to true
             if not (exists menu bar item menuName of menu bar 1) then error "Menu not found: " & menuName
             if submenuName is "" then
-                set targetItem to menu item itemName of menu menuName of menu bar item menuName of menu bar 1
+                set candidateItems to menu items of menu menuName of menu bar item menuName of menu bar 1
             else
-                set parentItem to menu item submenuName of menu menuName of menu bar item menuName of menu bar 1
-                if not (exists parentItem) then error "Submenu not found: " & submenuName
-                set targetItem to menu item itemName of menu of parentItem
+                set submenuMatches to {}
+                repeat with candidate in menu items of menu menuName of menu bar item menuName of menu bar 1
+                    try
+                        if (name of candidate as text) is submenuName then set end of submenuMatches to contents of candidate
+                    end try
+                end repeat
+                if (count of submenuMatches) is not 1 then error "Expected one matching submenu; found " & (count of submenuMatches)
+                set candidateItems to menu items of menu of item 1 of submenuMatches
             end if
-            if not (exists targetItem) then error "Menu item not found: " & itemName
+            set itemMatches to {}
+            repeat with candidate in candidateItems
+                try
+                    if (name of candidate as text) is itemName then set end of itemMatches to contents of candidate
+                end try
+            end repeat
+            if (count of itemMatches) is not 1 then error "Expected one matching menu item; found " & (count of itemMatches)
+            set targetItem to item 1 of itemMatches
+            if not (enabled of targetItem) then error "Menu item is disabled: " & itemName
             click targetItem
         end tell
     end tell
