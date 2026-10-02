@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import platform
 import tempfile
 from pathlib import Path
 
@@ -27,6 +28,16 @@ def probe_model_tool_call(settings: Settings) -> tuple[bool, str | None]:
     if len(calls) != 1 or calls[0].get("function", {}).get("name") != "system_info":
         return False, "model did not choose system_info"
     return True, None
+
+
+def probe_mac_ui() -> tuple[bool, str | None]:
+    """Check that this process can query System Events without changing app state."""
+    if platform.system() != "Darwin":
+        return False, "Mac app control requires macOS"
+    result = json.loads(MacTools("read_only").execute("list_running_apps", {}))
+    if result.get("exit_code") == 0:
+        return True, None
+    return False, result.get("hint") or result.get("output") or result.get("error") or "System Events did not respond"
 
 
 def self_test(settings: Settings) -> tuple[bool, list[str]]:

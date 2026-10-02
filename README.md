@@ -162,14 +162,16 @@ Inspection shows disabled controls and menu items, plus checkbox and radio state
 when the app exposes it.
 For example, ask `uv run nums "Inspect the front window of Safari"` before
 asking it to use a named control. Use the inspected element index when labels
-repeat. Clicks fail when the front window changes or a target is ambiguous.
+repeat or when a control has no label. UI inspection returns 40 elements by
+default; use `offset` for the next page or `limit` (up to 120) for a larger page.
+Clicks fail when the front window changes or a target is ambiguous.
 Targeted typing also stops if the selected field does not receive focus.
 
 `list_running_apps`, `inspect_app_ui`, and `inspect_app_menu` are available in read-only mode.
 Clicking, typing, and key presses require the default `unrestricted` mode.
 macOS must allow the process running NUMS to control System Events and use
-Accessibility. These tools use the app's accessibility information; apps that
-do not expose a control's label may need app-specific AppleScript instead.
+Accessibility. These tools use the app's accessibility information; controls
+with neither a useful role nor a stable inspected index may need app-specific AppleScript.
 NUMS does not interpret screenshots or click arbitrary screen coordinates.
 
 For broad access, open **System Settings → Privacy & Security** and grant your terminal only the permissions you actually want it to have, such as:
@@ -202,7 +204,9 @@ uv run pytest
 `system_info` tool call. It does not execute the model's proposed action or
 modify user files.
 `--doctor` also checks whether Ollama can actually produce that tool call,
-so a model listed by Ollama but unable to load is reported as a failure.
+so a model listed by Ollama but unable to load is reported as a failure. It
+also makes a read-only System Events query to check Mac app UI access, and
+returns a failure if that check cannot run.
 `--voice-test` listens for one sentence for up to 15 seconds and prints the
 transcript, providing the final manual check for microphone selection and
 recognition quality.

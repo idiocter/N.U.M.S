@@ -314,6 +314,7 @@ def test_ui_permission_failure_names_required_setting(monkeypatch: pytest.Monkey
     for diagnostic, setting in (
         ("Not authorized to send Apple events to System Events. (-1743)", "Automation"),
         ("osascript is not allowed assistive access. (-1719)", "Accessibility"),
+        ("An error of type -10827 has occurred. (-10827)", "Launch Services"),
     ):
         monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: json.dumps({
             "exit_code": 1, "error": "Command exited with status 1", "output": diagnostic,

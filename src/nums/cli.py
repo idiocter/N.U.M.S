@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 
 from .agent import Agent
 from .config import Settings
-from .diagnostics import probe_model_tool_call, self_test, voice_test
+from .diagnostics import probe_mac_ui, probe_model_tool_call, self_test, voice_test
 from .ollama import OllamaClient, OllamaError
 from .service import install_service, service_plist, uninstall_service
 from .wake import (
@@ -51,7 +51,9 @@ def doctor(settings: Settings) -> int:
     whisper_ready, wake_model_ready = voice_dependencies(settings.whisper_model)
     print(f"Whisper stream: {'yes' if whisper_ready else 'no'}")
     print(f"Wake model: {'yes' if wake_model_ready else 'no'} ({settings.whisper_model})")
-    return 0 if model_ready else 1
+    ui_ready, ui_error = probe_mac_ui()
+    print(f"Mac app UI: {'ok' if ui_ready else f'failed ({ui_error})'}")
+    return 0 if model_ready and ui_ready else 1
 
 
 def prepare_voice(settings: Settings) -> None:
@@ -170,7 +172,7 @@ def wake_mode(agent: Agent, settings: Settings) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="NUMS local macOS assistant")
     parser.add_argument("prompt", nargs="*", help="Run one request and exit")
-    parser.add_argument("--doctor", action="store_true", help="Check Ollama and model availability")
+    parser.add_argument("--doctor", action="store_true", help="Check model, voice dependencies, and Mac app UI access")
     parser.add_argument("--self-test", action="store_true", help="Run non-destructive tool and model checks")
     parser.add_argument("--voice-test", action="store_true", help="Listen for and print one test transcript")
     parser.add_argument("--pull", action="store_true", help="Download the configured local model")

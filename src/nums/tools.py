@@ -220,6 +220,8 @@ def _with_ui_permission_hint(result: str) -> str:
         response["hint"] = "Allow your terminal to control System Events in System Settings > Privacy & Security > Automation."
     elif any(marker in output for marker in ("-25211", "-1719", "not allowed assistive access")):
         response["hint"] = "Allow your terminal in System Settings > Privacy & Security > Accessibility."
+    elif "-10827" in output:
+        response["hint"] = "Launch Services could not open System Events. Retry from a normal logged-in macOS desktop session."
     return json.dumps(response)
 
 

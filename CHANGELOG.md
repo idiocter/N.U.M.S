@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added unlabeled-control targeting by inspected index, smaller configurable UI pages, and a read-only Mac app UI check in `--doctor`.
 - Show UI control availability and toggle state, reject ambiguous or disabled menu actions, and verify text-field focus before typing.
 - Paginated UI inspection; indexed control clicks; menu and submenu inspection and clicks; targeted text-field typing; actionable Mac permission errors.
 - Added general Mac app controls through Accessibility: inspect labeled UI elements, click exact matches, type text, and press keys or shortcuts.
