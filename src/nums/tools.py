@@ -101,12 +101,12 @@ TOOL_SCHEMAS = [
         ["app", "menu", "item"],
     ),
     _schema(
-        "click_app_element", "Click a front-window element matching its AX role and label; use an inspected index when labels repeat.",
+        "click_app_element", "Click a front-window element by role and label, or by role and inspected index when unlabeled.",
         {"app": {"type": "string"}, "window": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "index": {"type": "string"}},
-        ["app", "window", "role", "label"],
+        ["app", "window", "role"],
     ),
     _schema(
-        "type_in_app", "Type into an exact inspected text field, or the currently focused control when no role and label are supplied.",
+        "type_in_app", "Type into an inspected text field by role and label or index, or the currently focused control when no target is supplied.",
         {"app": {"type": "string"}, "window": {"type": "string"}, "text": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "index": {"type": "string"}},
         ["app", "window", "text"],
     ),
@@ -483,26 +483,31 @@ class MacTools:
         ], timeout=20)
 
     def click_app_element(self, args: dict[str, Any]) -> str:
-        if not all(args[key].strip() for key in ("app", "window", "role", "label")):
-            raise ValueError("app, window, role, and label must not be empty")
+        if not all(args[key].strip() for key in ("app", "window", "role")):
+            raise ValueError("app, window, and role must not be empty")
         index = args.get("index", "")
         if index and (not index.isdecimal() or int(index) < 1):
             raise ValueError("index must be a positive element number")
+        label = args.get("label", "")
+        if not label and not index:
+            raise ValueError("label or inspected index is required")
         return _run([
             "osascript", "-e", CLICK_ELEMENT_SCRIPT,
-            args["app"], args["window"], args["role"], args["label"], index,
+            args["app"], args["window"], args["role"], label, index,
         ], timeout=20)
 
     def type_in_app(self, args: dict[str, Any]) -> str:
         if not args["app"].strip() or not args["window"].strip() or not args["text"]:
             raise ValueError("app, window, and text must not be empty")
         role, label, index = (args.get(key, "") for key in ("role", "label", "index"))
-        if bool(role) != bool(label):
-            raise ValueError("role and label must be supplied together")
+        if label and not role:
+            raise ValueError("label requires a role")
         if role and role not in {"AXTextField", "AXTextArea", "AXComboBox"}:
             raise ValueError("role must be AXTextField, AXTextArea, or AXComboBox")
         if index and (not role or not index.isdecimal() or int(index) < 1):
             raise ValueError("index requires a text field and a positive element number")
+        if role and not (label or index):
+            raise ValueError("targeted typing requires a label or inspected index")
         return _run([
             "osascript", "-e", TYPE_TEXT_SCRIPT,
             args["app"], args["window"], args["text"], role, label, index,

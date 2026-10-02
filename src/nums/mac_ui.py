@@ -178,7 +178,7 @@ CLICK_ELEMENT_SCRIPT = """on run argv
                     try
                         set descriptionText to accessibility description of elementRef as text
                     end try
-                    if roleText is targetRole and (nameText is targetLabel or descriptionText is targetLabel) then
+                    if roleText is targetRole and (targetLabel is "" or nameText is targetLabel or descriptionText is targetLabel) then
                         set end of matches to contents of elementRef
                     end if
                 end if
@@ -224,7 +224,7 @@ TYPE_TEXT_SCRIPT = """on run argv
                         try
                             set descriptionText to accessibility description of elementRef as text
                         end try
-                        if roleText is targetRole and (nameText is targetLabel or descriptionText is targetLabel) then
+                        if roleText is targetRole and (targetLabel is "" or nameText is targetLabel or descriptionText is targetLabel) then
                             set end of matches to contents of elementRef
                         end if
                     end if

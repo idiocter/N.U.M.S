@@ -343,6 +343,10 @@ def test_type_in_exact_text_field(monkeypatch: pytest.MonkeyPatch) -> None:
     args = {"app": "Notes", "window": "Notes", "text": "hello", "role": "AXTextArea", "label": "Body"}
     assert MacTools().execute("type_in_app", {**args, "index": "12"}) == "ok"
     assert commands[0][-6:] == ["Notes", "Notes", "hello", "AXTextArea", "Body", "12"]
+    assert MacTools().execute("type_in_app", {
+        "app": "Notes", "window": "Notes", "text": "hello", "role": "AXTextArea", "index": "13",
+    }) == "ok"
+    assert commands[1][-3:] == ["AXTextArea", "", "13"]
     for bad in ({"role": "AXButton"}, {"index": "0"}):
         result = json.loads(MacTools().execute("type_in_app", {**args, **bad}))
         assert "error" in result
@@ -360,6 +364,13 @@ def test_indexed_click_passes_inspected_index_and_rejects_bad_values(
 
     assert MacTools().execute("click_app_element", {**args, "index": "7"}) == "ok"
     assert commands[0][-1] == "7"
+    assert MacTools().execute("click_app_element", {
+        "app": "Finder", "window": "Documents", "role": "AXButton", "index": "8",
+    }) == "ok"
+    assert commands[1][-2:] == ["", "8"]
+    assert "error" in json.loads(MacTools().execute("click_app_element", {
+        "app": "Finder", "window": "Documents", "role": "AXButton",
+    }))
     for bad in ("0", "-1", "abc"):
         result = json.loads(MacTools().execute("click_app_element", {**args, "index": bad}))
         assert "positive" in result["error"]
