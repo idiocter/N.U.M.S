@@ -88,8 +88,8 @@ TOOL_SCHEMAS = [
     _schema("open_item", "Open an app, file, folder, or URL.", {"target": {"type": "string"}}, ["target"]),
     _schema("list_running_apps", "List running foreground Mac apps by process name.", {}, []),
     _schema(
-        "inspect_app_ui", "Inspect 120 front-window accessibility elements with availability and toggle state; use offset for later pages.",
-        {"app": {"type": "string"}, "offset": {"type": "string"}}, ["app"],
+        "inspect_app_ui", "Inspect a page of front-window accessibility elements with availability and toggle state; use offset and limit to page.",
+        {"app": {"type": "string"}, "offset": {"type": "string"}, "limit": {"type": "string"}}, ["app"],
     ),
     _schema(
         "inspect_app_menu", "List app menus or named menu/submenu items with enabled status.",
@@ -462,7 +462,10 @@ class MacTools:
         offset = args.get("offset", "0")
         if not args["app"].strip() or not offset.isdecimal():
             raise ValueError("app must not be empty and offset must be nonnegative")
-        return _run(["osascript", "-e", INSPECT_APP_SCRIPT, args["app"], offset], timeout=20)
+        limit = args.get("limit", "40")
+        if not limit.isdecimal() or not 1 <= int(limit) <= 120:
+            raise ValueError("limit must be between 1 and 120")
+        return _run(["osascript", "-e", INSPECT_APP_SCRIPT, args["app"], offset, limit], timeout=20)
 
     def inspect_app_menu(self, args: dict[str, Any]) -> str:
         if not args["app"].strip():

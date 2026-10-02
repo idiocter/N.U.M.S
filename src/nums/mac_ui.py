@@ -92,6 +92,7 @@ end run"""
 INSPECT_APP_SCRIPT = """on run argv
     set appName to item 1 of argv
     set offsetCount to item 2 of argv as integer
+    set pageSize to item 3 of argv as integer
     tell application "System Events"
         if not (exists process appName) then error "App is not running: " & appName
         tell process appName
@@ -104,7 +105,7 @@ INSPECT_APP_SCRIPT = """on run argv
             set end of entries to "Total elements: " & totalCount
             set startIndex to offsetCount + 1
             set lastIndex to totalCount
-            if lastIndex > offsetCount + 120 then set lastIndex to offsetCount + 120
+            if lastIndex > offsetCount + pageSize then set lastIndex to offsetCount + pageSize
             if startIndex <= lastIndex then
                 repeat with elementIndex from startIndex to lastIndex
                     set elementRef to item elementIndex of elements

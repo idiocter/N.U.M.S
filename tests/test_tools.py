@@ -267,11 +267,19 @@ def test_app_inspection_passes_page_offset(monkeypatch: pytest.MonkeyPatch) -> N
     assert MacTools("read_only").execute("inspect_app_ui", {
         "app": "Finder", "offset": "120",
     }) == "ok"
-    assert commands[0][-2:] == ["Finder", "120"]
+    assert commands[0][-3:] == ["Finder", "120", "40"]
+    assert MacTools("read_only").execute("inspect_app_ui", {
+        "app": "Finder", "offset": "40", "limit": "80",
+    }) == "ok"
+    assert commands[1][-3:] == ["Finder", "40", "80"]
     invalid = json.loads(MacTools().execute("inspect_app_ui", {
         "app": "Finder", "offset": "-1",
     }))
     assert "nonnegative" in invalid["error"]
+    invalid_limit = json.loads(MacTools().execute("inspect_app_ui", {
+        "app": "Finder", "limit": "121",
+    }))
+    assert "between 1 and 120" in invalid_limit["error"]
 
 
 def test_menu_inspection_lists_menus_or_named_items(monkeypatch: pytest.MonkeyPatch) -> None:
