@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 
 from .mac_ui import (
     CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
-    TYPE_TEXT_SCRIPT,
+    NOTIFY_SCRIPT, TYPE_TEXT_SCRIPT,
     key_script,
 )
 from .policy import tool_allowed
@@ -544,8 +544,7 @@ class MacTools:
         return _run(["say", args["text"]])
 
     def notify(self, args: dict[str, Any]) -> str:
-        script = 'display notification ' + json.dumps(args["message"]) + ' with title ' + json.dumps(args["title"])
-        return _run(["osascript", "-e", script])
+        return _run(["osascript", "-e", NOTIFY_SCRIPT, args["message"], args["title"]])
 
     def system_info(self, args: dict[str, Any]) -> str:
         return json.dumps(

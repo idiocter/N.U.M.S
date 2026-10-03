@@ -8,6 +8,11 @@ LIST_APPS_SCRIPT = """tell application "System Events"
 end tell"""
 
 
+NOTIFY_SCRIPT = """on run argv
+    display notification (item 1 of argv) with title (item 2 of argv)
+end run"""
+
+
 LIST_WINDOWS_SCRIPT = """on run argv
     set appName to item 1 of argv
     tell application "System Events"

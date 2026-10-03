@@ -10,7 +10,7 @@ import pytest
 from nums.tools import MacTools, _run
 from nums.mac_ui import (
     CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
-    TYPE_TEXT_SCRIPT,
+    NOTIFY_SCRIPT, TYPE_TEXT_SCRIPT,
     key_script,
 )
 
@@ -300,6 +300,15 @@ def test_focus_window_requires_unrestricted_mode(monkeypatch: pytest.MonkeyPatch
     assert blocked["action_mode"] == "standard"
 
 
+def test_notification_passes_user_text_as_arguments(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
+    message = 'Done " now\nwith details'
+    assert MacTools("standard").execute("notify", {"message": message, "title": "NUMS"}) == "ok"
+    assert commands[0][-2:] == [message, "NUMS"]
+    assert message not in commands[0][2]
+
+
 def test_menu_inspection_lists_menus_or_named_items(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
@@ -416,7 +425,7 @@ def test_accessibility_scripts_compile_on_mac(tmp_path: Path) -> None:
     scripts = [
         LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT,
         CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT,
-        TYPE_TEXT_SCRIPT, key_script("s", "command"), key_script("return"),
+        TYPE_TEXT_SCRIPT, NOTIFY_SCRIPT, key_script("s", "command"), key_script("return"),
     ]
     for index, script in enumerate(scripts):
         source = tmp_path / f"ui-{index}.applescript"
