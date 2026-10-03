@@ -19,9 +19,10 @@ LIST_WINDOWS_SCRIPT = """on run argv
         if not (exists process appName) then error "App is not running: " & appName
         tell process appName
             set entries to {"Windows for " & appName}
-            repeat with windowRef in windows
+            set allWindows to windows
+            repeat with windowIndex from 1 to count of allWindows
                 try
-                    set end of entries to name of windowRef as text
+                    set end of entries to (windowIndex as text) & tab & (name of item windowIndex of allWindows as text)
                 end try
             end repeat
         end tell
@@ -34,14 +35,21 @@ end run"""
 FOCUS_WINDOW_SCRIPT = """on run argv
     set appName to item 1 of argv
     set targetTitle to item 2 of argv
+    set selectedIndexText to item 3 of argv
+    set selectedIndex to 0
+    if selectedIndexText is not "" then set selectedIndex to selectedIndexText as integer
     tell application "System Events"
         if not (exists process appName) then error "App is not running: " & appName
         tell process appName
             set matches to {}
-            repeat with windowRef in windows
-                try
-                    if (name of windowRef as text) is targetTitle then set end of matches to contents of windowRef
-                end try
+            set allWindows to windows
+            repeat with windowIndex from 1 to count of allWindows
+                if selectedIndex is 0 or windowIndex is selectedIndex then
+                    set windowRef to item windowIndex of allWindows
+                    try
+                        if (name of windowRef as text) is targetTitle then set end of matches to contents of windowRef
+                    end try
+                end if
             end repeat
             if (count of matches) is not 1 then error "Expected one matching window; found " & (count of matches)
             set frontmost to true

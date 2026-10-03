@@ -88,7 +88,7 @@ TOOL_SCHEMAS = [
     _schema("open_item", "Open an app, file, folder, or URL.", {"target": {"type": "string"}}, ["target"]),
     _schema("list_running_apps", "List running foreground Mac apps by process name.", {}, []),
     _schema("list_app_windows", "List window titles in a running Mac app.", {"app": {"type": "string"}}, ["app"]),
-    _schema("focus_app_window", "Raise one exact named window in a running Mac app.", {"app": {"type": "string"}, "window": {"type": "string"}}, ["app", "window"]),
+    _schema("focus_app_window", "Raise one exact named window in a running Mac app; use inspected index if titles repeat.", {"app": {"type": "string"}, "window": {"type": "string"}, "index": {"type": "string"}}, ["app", "window"]),
     _schema(
         "inspect_app_ui", "Inspect a page of front-window accessibility elements with availability and toggle state; use offset and limit to page.",
         {"app": {"type": "string"}, "offset": {"type": "string"}, "limit": {"type": "string"}}, ["app"],
@@ -472,7 +472,10 @@ class MacTools:
     def focus_app_window(self, args: dict[str, Any]) -> str:
         if not args["app"].strip() or not args["window"].strip():
             raise ValueError("app and window must not be empty")
-        return _run(["osascript", "-e", FOCUS_WINDOW_SCRIPT, args["app"], args["window"]], timeout=20)
+        index = args.get("index", "")
+        if index and (not index.isdecimal() or int(index) < 1):
+            raise ValueError("index must be a positive window number")
+        return _run(["osascript", "-e", FOCUS_WINDOW_SCRIPT, args["app"], args["window"], index], timeout=20)
 
     def inspect_app_ui(self, args: dict[str, Any]) -> str:
         offset = args.get("offset", "0")

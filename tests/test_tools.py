@@ -293,7 +293,11 @@ def test_focus_window_requires_unrestricted_mode(monkeypatch: pytest.MonkeyPatch
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
     assert MacTools().execute("focus_app_window", {"app": "Finder", "window": "Documents"}) == "ok"
-    assert commands[0][-2:] == ["Finder", "Documents"]
+    assert commands[0][-3:] == ["Finder", "Documents", ""]
+    assert MacTools().execute("focus_app_window", {
+        "app": "Finder", "window": "Documents", "index": "2",
+    }) == "ok"
+    assert commands[1][-3:] == ["Finder", "Documents", "2"]
     blocked = json.loads(MacTools("standard").execute("focus_app_window", {
         "app": "Finder", "window": "Documents",
     }))
