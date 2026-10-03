@@ -18,6 +18,8 @@ uv run nums --voice      # wake phrase voice mode
 `uv run` syncs the Python environment automatically. NUMS starts the local
 Ollama server if it is not running and leaves it available after NUMS exits.
 Ollama startup errors are written to `~/Library/Logs/NUMS-Ollama.log`.
+Text mode checks that the configured model is installed before accepting a
+request and points to `uv run nums --pull` when it is missing.
 
 One-shot requests work too:
 
@@ -70,7 +72,9 @@ uv run nums --voice
 ```
 
 The first voice launch downloads the English Whisper model automatically if it
-is missing. `uv run nums --setup-voice` can download it ahead of time.
+is missing or the cached file is incomplete. Downloads have a time limit and
+keep a partial file so the next attempt can resume. `uv run nums --setup-voice`
+can download it ahead of time.
 `--wake` remains an alias for `--voice`. Plain `uv run nums` starts text mode.
 Voice mode checks that Qwen can load before it opens the microphone; a model
 load failure appears immediately in the terminal.
@@ -89,8 +93,12 @@ service after changing those settings or the microphone runtime path.
 If starting a replacement service fails, NUMS restores the previous plist.
 
 Say “hey numnum” and wait for the chime. NUMS stays online after the first command, so you can continue talking to it without repeating the wake phrase. You can also say both together, such as “hey numnum, open Safari.”
+The wake phrase must begin a spoken turn; mentioning it later in a sentence
+does not wake NUMS.
 
 When you are finished, say **“aight baby girl, let’s sleep.”** NUMS says good night and returns to wake-only mode. The first launch may trigger a macOS Microphone permission prompt for your terminal.
+Say a sleep phrase on its own turn so a request that merely mentions one is
+handled as a request.
 
 An active voice session returns to sleep after five idle minutes. Change this
 with `NUMS_SESSION_TIMEOUT`, and provide custom sleep phrases separated by `|`
@@ -155,19 +163,23 @@ been completed. Review important changes and their test results before use.
 ## App control
 
 Text and voice requests use the same Mac tools. NUMS can list running apps,
-inspect pages of the front window's accessibility roles and labels, inspect
+list and raise an exact named window, inspect pages of its accessibility roles and labels, inspect
 menus and submenus, click an exact control or menu item, type into an inspected
 text field or the focused control, and press keys or shortcuts.
 Inspection shows disabled controls and menu items, plus checkbox and radio state
-when the app exposes it.
+when the app exposes it. For checkboxes and switches, `set_app_toggle` requests
+an explicit on or off state and checks the result.
 For example, ask `uv run nums "Inspect the front window of Safari"` before
 asking it to use a named control. Use the inspected element index when labels
 repeat or when a control has no label. UI inspection returns 40 elements by
 default; use `offset` for the next page or `limit` (up to 120) for a larger page.
 Clicks fail when the front window changes or a target is ambiguous.
 Targeted typing also stops if the selected field does not receive focus.
+Window titles are listed with indexes so repeated titles can be selected
+precisely. Keyboard actions support Home, End, Page Up, Page Down, Enter, and
+Forward Delete alongside the existing keys and modifiers.
 
-`list_running_apps`, `inspect_app_ui`, and `inspect_app_menu` are available in read-only mode.
+`list_running_apps`, `list_app_windows`, `inspect_app_ui`, and `inspect_app_menu` are available in read-only mode.
 Clicking, typing, and key presses require the default `unrestricted` mode.
 macOS must allow the process running NUMS to control System Events and use
 Accessibility. These tools use the app's accessibility information; controls

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added window listing and precise window raising, explicit checkbox and switch state control, and more Mac navigation keys.
+- Improved UI action checks, app opening, notifications, and reminder feedback.
+- Improved voice model validation and download recovery; reduced accidental wake and sleep triggers; checked text model availability at startup.
 - Added unlabeled-control targeting by inspected index, smaller configurable UI pages, and a read-only Mac app UI check in `--doctor`.
 - Show UI control availability and toggle state, reject ambiguous or disabled menu actions, and verify text-field focus before typing.
 - Paginated UI inspection; indexed control clicks; menu and submenu inspection and clicks; targeted text-field typing; actionable Mac permission errors.
