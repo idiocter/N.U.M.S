@@ -434,6 +434,12 @@ def test_press_app_key_rejects_unknown_modifier() -> None:
     assert "modifiers must be" in result["error"]
 
 
+def test_extended_navigation_keys_have_mac_key_codes() -> None:
+    assert "key code 116" in key_script("page_up")
+    assert "key code 121" in key_script("page_down")
+    assert "key code 117" in key_script("forward_delete")
+
+
 @pytest.mark.skipif(platform.system() != "Darwin", reason="AppleScript compiler requires macOS")
 def test_accessibility_scripts_compile_on_mac(tmp_path: Path) -> None:
     scripts = [

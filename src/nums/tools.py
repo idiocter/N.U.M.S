@@ -118,7 +118,7 @@ TOOL_SCHEMAS = [
         ["app", "window", "text"],
     ),
     _schema(
-        "press_app_key", "Press one key or a shortcut in the named app and front window. Modifiers: command, option, control, shift, comma-separated.",
+        "press_app_key", "Press one key or shortcut in the named app and front window. Named keys include arrows, home, end, page_up, page_down, enter, return, delete, forward_delete, tab, space, escape. Modifiers: command, option, control, shift.",
         {"app": {"type": "string"}, "window": {"type": "string"}, "key": {"type": "string"}, "modifiers": {"type": "string"}},
         ["app", "window", "key"],
     ),
