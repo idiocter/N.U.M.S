@@ -85,7 +85,7 @@ TOOL_SCHEMAS = [
         {"command": {"type": "string"}, "cwd": {"type": "string"}},
         ["command"],
     ),
-    _schema("open_item", "Open an app, file, folder, or URL.", {"target": {"type": "string"}}, ["target"]),
+    _schema("open_item", "Open an app, file, folder, or URL; set kind to app, path, or url when the target is ambiguous.", {"target": {"type": "string"}, "kind": {"type": "string"}}, ["target"]),
     _schema("list_running_apps", "List running foreground Mac apps by process name.", {}, []),
     _schema("list_app_windows", "List window titles in a running Mac app.", {"app": {"type": "string"}}, ["app"]),
     _schema("focus_app_window", "Raise one exact named window in a running Mac app; use inspected index if titles repeat.", {"app": {"type": "string"}, "window": {"type": "string"}, "index": {"type": "string"}}, ["app", "window"]),
@@ -456,7 +456,20 @@ class MacTools:
 
     def open_item(self, args: dict[str, Any]) -> str:
         target = args["target"]
+        if not target.strip():
+            raise ValueError("target must not be empty")
+        kind = args.get("kind", "auto")
+        if kind not in {"auto", "app", "path", "url"}:
+            raise ValueError("kind must be auto, app, path, or url")
         path = Path(target).expanduser()
+        if kind == "app":
+            return _run(["open", "-a", target])
+        if kind == "path":
+            return _run(["open", str(path)])
+        if kind == "url":
+            if not urlparse(target).scheme:
+                raise ValueError("url target must include a scheme")
+            return _run(["open", target])
         if urlparse(target).scheme or path.exists() or path.suffix or "/" in target:
             return _run(["open", str(path) if target.startswith("~") else target])
         return _run(["open", "-a", target])

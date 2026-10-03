@@ -652,6 +652,15 @@ def test_open_item_dispatches_apps_and_urls(monkeypatch: pytest.MonkeyPatch, tar
     assert commands == [expected]
 
 
+def test_open_item_explicit_kind_resolves_dotted_app_names(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command: commands.append(command) or "ok")
+    assert MacTools().execute("open_item", {"target": "Some.App", "kind": "app"}) == "ok"
+    assert commands == [["open", "-a", "Some.App"]]
+    invalid = json.loads(MacTools().execute("open_item", {"target": "Some.App", "kind": "unknown"}))
+    assert "kind must be" in invalid["error"]
+
+
 def test_trash_path_preserves_existing_name_and_moves_symlink_itself(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
