@@ -499,6 +499,9 @@ def test_reminder_passes_values_as_arguments(monkeypatch: pytest.MonkeyPatch) ->
     MacTools("standard").create_reminder({"title": 'Call "Sam"', "notes": "At 4"})
 
     assert commands[0][-2:] == ['Call "Sam"', "At 4"]
+    rejected = json.loads(MacTools("standard").execute("create_reminder", {"title": "  "}))
+    assert "title must not be empty" in rejected["error"]
+    assert len(commands) == 1
 
 
 def test_search_treats_dash_prefixed_query_as_text(tmp_path: Path) -> None:

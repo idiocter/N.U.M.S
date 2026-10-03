@@ -575,10 +575,13 @@ class MacTools:
         return json.dumps({"exit_code": 0, "characters": len(args["text"])})
 
     def create_reminder(self, args: dict[str, Any]) -> str:
+        if not args["title"].strip():
+            raise ValueError("title must not be empty")
         script = """on run argv
 tell application "Reminders"
   tell default list
-    make new reminder with properties {name:item 1 of argv, body:item 2 of argv}
+    set createdReminder to make new reminder with properties {name:item 1 of argv, body:item 2 of argv}
+    return name of createdReminder
   end tell
 end tell
 end run"""
