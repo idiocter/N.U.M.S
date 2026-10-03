@@ -162,6 +162,7 @@ CLICK_ELEMENT_SCRIPT = """on run argv
             if not (exists window 1) then error "App has no open window: " & appName
             if (name of window 1) is not targetWindow then error "Front window changed; inspect the app again"
             set frontmost to true
+            if not (exists window 1) or (name of window 1) is not targetWindow then error "Front window changed during activation; inspect the app again"
             set matches to {}
             set elements to entire contents of window 1
             repeat with elementIndex from 1 to count of elements
@@ -209,6 +210,7 @@ TYPE_TEXT_SCRIPT = """on run argv
             if not (exists window 1) then error "App has no open window: " & appName
             if (name of window 1) is not targetWindow then error "Front window changed; inspect the app again"
             set frontmost to true
+            if not (exists window 1) or (name of window 1) is not targetWindow then error "Front window changed during activation; inspect the app again"
             if targetRole is not "" then
                 set matches to {}
                 set elements to entire contents of window 1
@@ -289,6 +291,7 @@ def key_script(key: str, modifiers: str = "") -> str:
             if not (exists window 1) then error "App has no open window: " & appName
             if (name of window 1) is not targetWindow then error "Front window changed; inspect the app again"
             set frontmost to true
+            if not (exists window 1) or (name of window 1) is not targetWindow then error "Front window changed during activation; inspect the app again"
             {action}
         end tell
     end tell
