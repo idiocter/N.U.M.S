@@ -36,6 +36,10 @@ def test_unrelated_speech_does_not_wake() -> None:
     assert WakePhraseDetector().feed("open Safari") is None
 
 
+def test_mentioning_wake_phrase_inside_sentence_does_not_wake() -> None:
+    assert WakePhraseDetector().feed("I heard someone say hey numnum today") is None
+
+
 def test_repeated_transcript_is_ignored() -> None:
     detector = WakePhraseDetector()
 

@@ -82,7 +82,7 @@ class WakePhraseDetector:
             for item in sorted(variants, key=len, reverse=True)
         )
         self.wake_pattern = re.compile(
-            rf"\b(?:{alternatives})\b[\s,.:;!?-]*(.*)", re.I
+            rf"^(?:{alternatives})\b[\s,.:;!?-]*(.*)", re.I
         )
         sleep_variants = set(sleep_phrases or ()) | {
             "aight baby girl lets sleep",
