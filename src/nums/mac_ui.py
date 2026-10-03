@@ -185,7 +185,9 @@ CLICK_ELEMENT_SCRIPT = """on run argv
                 end if
             end repeat
             if (count of matches) is not 1 then error "Expected one matching UI element; found " & (count of matches)
-            click item 1 of matches
+            set targetElement to item 1 of matches
+            if not (enabled of targetElement) then error "UI element is disabled; inspect the app again"
+            click targetElement
         end tell
     end tell
     return "Clicked " & targetRole & " " & targetLabel
