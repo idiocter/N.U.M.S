@@ -9,7 +9,7 @@ import pytest
 
 from nums.tools import MacTools, _run
 from nums.mac_ui import (
-    CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
+    CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
     TYPE_TEXT_SCRIPT,
     key_script,
 )
@@ -289,6 +289,17 @@ def test_list_app_windows_is_read_only(monkeypatch: pytest.MonkeyPatch) -> None:
     assert commands[0][-1] == "Finder"
 
 
+def test_focus_window_requires_unrestricted_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
+    assert MacTools().execute("focus_app_window", {"app": "Finder", "window": "Documents"}) == "ok"
+    assert commands[0][-2:] == ["Finder", "Documents"]
+    blocked = json.loads(MacTools("standard").execute("focus_app_window", {
+        "app": "Finder", "window": "Documents",
+    }))
+    assert blocked["action_mode"] == "standard"
+
+
 def test_menu_inspection_lists_menus_or_named_items(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
@@ -403,7 +414,7 @@ def test_press_app_key_rejects_unknown_modifier() -> None:
 @pytest.mark.skipif(platform.system() != "Darwin", reason="AppleScript compiler requires macOS")
 def test_accessibility_scripts_compile_on_mac(tmp_path: Path) -> None:
     scripts = [
-        LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT,
+        LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT,
         CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT,
         TYPE_TEXT_SCRIPT, key_script("s", "command"), key_script("return"),
     ]

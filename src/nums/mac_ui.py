@@ -26,6 +26,29 @@ LIST_WINDOWS_SCRIPT = """on run argv
 end run"""
 
 
+FOCUS_WINDOW_SCRIPT = """on run argv
+    set appName to item 1 of argv
+    set targetTitle to item 2 of argv
+    tell application "System Events"
+        if not (exists process appName) then error "App is not running: " & appName
+        tell process appName
+            set matches to {}
+            repeat with windowRef in windows
+                try
+                    if (name of windowRef as text) is targetTitle then set end of matches to contents of windowRef
+                end try
+            end repeat
+            if (count of matches) is not 1 then error "Expected one matching window; found " & (count of matches)
+            set frontmost to true
+            perform action "AXRaise" of item 1 of matches
+            if not (exists window 1) then error "Window did not become frontmost"
+            if (name of window 1) is not targetTitle then error "Window did not become frontmost"
+        end tell
+    end tell
+    return "Focused window " & targetTitle
+end run"""
+
+
 INSPECT_MENU_SCRIPT = """on run argv
     set appName to item 1 of argv
     set menuName to item 2 of argv
