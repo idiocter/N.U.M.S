@@ -9,7 +9,7 @@ import pytest
 
 from nums.tools import MacTools, _run
 from nums.mac_ui import (
-    CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT,
+    CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
     TYPE_TEXT_SCRIPT,
     key_script,
 )
@@ -282,6 +282,13 @@ def test_app_inspection_passes_page_offset(monkeypatch: pytest.MonkeyPatch) -> N
     assert "between 1 and 120" in invalid_limit["error"]
 
 
+def test_list_app_windows_is_read_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
+    assert MacTools("read_only").execute("list_app_windows", {"app": "Finder"}) == "ok"
+    assert commands[0][-1] == "Finder"
+
+
 def test_menu_inspection_lists_menus_or_named_items(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
@@ -396,7 +403,7 @@ def test_press_app_key_rejects_unknown_modifier() -> None:
 @pytest.mark.skipif(platform.system() != "Darwin", reason="AppleScript compiler requires macOS")
 def test_accessibility_scripts_compile_on_mac(tmp_path: Path) -> None:
     scripts = [
-        LIST_APPS_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT,
+        LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT,
         CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT,
         TYPE_TEXT_SCRIPT, key_script("s", "command"), key_script("return"),
     ]

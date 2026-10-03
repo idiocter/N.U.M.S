@@ -13,7 +13,7 @@ from typing import Any, Callable
 from urllib.parse import urlparse
 
 from .mac_ui import (
-    CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT,
+    CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
     TYPE_TEXT_SCRIPT,
     key_script,
 )
@@ -87,6 +87,7 @@ TOOL_SCHEMAS = [
     ),
     _schema("open_item", "Open an app, file, folder, or URL.", {"target": {"type": "string"}}, ["target"]),
     _schema("list_running_apps", "List running foreground Mac apps by process name.", {}, []),
+    _schema("list_app_windows", "List window titles in a running Mac app.", {"app": {"type": "string"}}, ["app"]),
     _schema(
         "inspect_app_ui", "Inspect a page of front-window accessibility elements with availability and toggle state; use offset and limit to page.",
         {"app": {"type": "string"}, "offset": {"type": "string"}, "limit": {"type": "string"}}, ["app"],
@@ -203,7 +204,7 @@ def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
 
 
 UI_TOOLS = {
-    "list_running_apps", "inspect_app_ui", "inspect_app_menu", "click_app_menu_item",
+    "list_running_apps", "list_app_windows", "inspect_app_ui", "inspect_app_menu", "click_app_menu_item",
     "click_app_element", "type_in_app", "press_app_key",
 }
 
@@ -243,6 +244,7 @@ class MacTools:
             "shell": self.shell,
             "open_item": self.open_item,
             "list_running_apps": self.list_running_apps,
+            "list_app_windows": self.list_app_windows,
             "inspect_app_ui": self.inspect_app_ui,
             "inspect_app_menu": self.inspect_app_menu,
             "click_app_menu_item": self.click_app_menu_item,
@@ -459,6 +461,11 @@ class MacTools:
 
     def list_running_apps(self, args: dict[str, Any]) -> str:
         return _run(["osascript", "-e", LIST_APPS_SCRIPT], timeout=20)
+
+    def list_app_windows(self, args: dict[str, Any]) -> str:
+        if not args["app"].strip():
+            raise ValueError("app must not be empty")
+        return _run(["osascript", "-e", LIST_WINDOWS_SCRIPT, args["app"]], timeout=20)
 
     def inspect_app_ui(self, args: dict[str, Any]) -> str:
         offset = args.get("offset", "0")

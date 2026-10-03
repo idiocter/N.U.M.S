@@ -8,6 +8,24 @@ LIST_APPS_SCRIPT = """tell application "System Events"
 end tell"""
 
 
+LIST_WINDOWS_SCRIPT = """on run argv
+    set appName to item 1 of argv
+    tell application "System Events"
+        if not (exists process appName) then error "App is not running: " & appName
+        tell process appName
+            set entries to {"Windows for " & appName}
+            repeat with windowRef in windows
+                try
+                    set end of entries to name of windowRef as text
+                end try
+            end repeat
+        end tell
+    end tell
+    set AppleScript's text item delimiters to linefeed
+    return entries as text
+end run"""
+
+
 INSPECT_MENU_SCRIPT = """on run argv
     set appName to item 1 of argv
     set menuName to item 2 of argv
