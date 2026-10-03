@@ -15,6 +15,7 @@ from typing import Iterator
 VOICE_MODEL_URL = (
     "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin"
 )
+MIN_VOICE_MODEL_BYTES = 50_000_000
 
 
 @dataclass(frozen=True)
@@ -152,7 +153,8 @@ class WakePhraseDetector:
 
 
 def voice_dependencies(model_path: str) -> tuple[bool, bool]:
-    return shutil.which("whisper-stream") is not None, Path(model_path).is_file()
+    model = Path(model_path).expanduser()
+    return shutil.which("whisper-stream") is not None, model.is_file() and model.stat().st_size >= MIN_VOICE_MODEL_BYTES
 
 
 def download_voice_model(model_path: str) -> Path:
@@ -172,7 +174,7 @@ def download_voice_model(model_path: str) -> Path:
         ],
         check=True,
     )
-    if partial.stat().st_size < 50_000_000:
+    if partial.stat().st_size < MIN_VOICE_MODEL_BYTES:
         raise RuntimeError("Downloaded Whisper model is unexpectedly small")
     partial.replace(destination)
     return destination

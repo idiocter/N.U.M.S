@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from nums.wake import ListenerLock, WakePhraseDetector, WhisperStream
+from nums.wake import ListenerLock, WakePhraseDetector, WhisperStream, voice_dependencies
 
 
 def test_wake_phrase_with_command() -> None:
@@ -134,6 +134,16 @@ def test_only_one_listener_can_hold_the_microphone(tmp_path: Path) -> None:
 
     with ListenerLock(lock_path):
         pass
+
+
+def test_voice_dependencies_rejects_incomplete_model(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr("nums.wake.shutil.which", lambda _: "/usr/local/bin/whisper-stream")
+    model = tmp_path / "ggml-base.en.bin"
+    model.write_bytes(b"partial")
+    assert voice_dependencies(str(model)) == (True, False)
+    with model.open("r+b") as handle:
+        handle.truncate(50_000_000)
+    assert voice_dependencies(str(model)) == (True, True)
 
 
 def test_timestamped_transcript_is_a_command_during_session() -> None:
