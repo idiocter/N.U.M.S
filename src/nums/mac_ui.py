@@ -255,6 +255,61 @@ CLICK_ELEMENT_SCRIPT = """on run argv
 end run"""
 
 
+SET_TOGGLE_SCRIPT = """on run argv
+    set appName to item 1 of argv
+    set targetWindow to item 2 of argv
+    set targetRole to item 3 of argv
+    set targetLabel to item 4 of argv
+    set selectedIndexText to item 5 of argv
+    set desiredState to item 6 of argv
+    set selectedIndex to 0
+    if selectedIndexText is not "" then set selectedIndex to selectedIndexText as integer
+    tell application "System Events"
+        if not (exists process appName) then error "App is not running: " & appName
+        tell process appName
+            if not (exists window 1) then error "App has no open window: " & appName
+            if (name of window 1) is not targetWindow then error "Front window changed; inspect the app again"
+            set frontmost to true
+            if not (exists window 1) or (name of window 1) is not targetWindow then error "Front window changed during activation; inspect the app again"
+            set matches to {}
+            set elements to entire contents of window 1
+            repeat with elementIndex from 1 to count of elements
+                if selectedIndex is 0 or elementIndex is selectedIndex then
+                    set elementRef to item elementIndex of elements
+                    set roleText to ""
+                    set nameText to ""
+                    set descriptionText to ""
+                    try
+                        set roleText to role of elementRef as text
+                    end try
+                    try
+                        set nameText to name of elementRef as text
+                    end try
+                    try
+                        set descriptionText to accessibility description of elementRef as text
+                    end try
+                    if roleText is targetRole and (targetLabel is "" or nameText is targetLabel or descriptionText is targetLabel) then
+                        set end of matches to contents of elementRef
+                    end if
+                end if
+            end repeat
+            if (count of matches) is not 1 then error "Expected one matching toggle; found " & (count of matches)
+            set targetElement to item 1 of matches
+            if not (enabled of targetElement) then error "Toggle is disabled"
+            set currentState to (value of targetElement) as text
+            if currentState is not "0" and currentState is not "1" and currentState is not "false" and currentState is not "true" then error "Toggle state is unavailable"
+            set currentOn to currentState is "1" or currentState is "true"
+            set desiredOn to desiredState is "on"
+            if currentOn is not desiredOn then click targetElement
+            set finalState to (value of targetElement) as text
+            set finalOn to finalState is "1" or finalState is "true"
+            if finalOn is not desiredOn then error "Toggle did not reach requested state"
+        end tell
+    end tell
+    return "Toggle is " & desiredState
+end run"""
+
+
 TYPE_TEXT_SCRIPT = """on run argv
     set appName to item 1 of argv
     set targetWindow to item 2 of argv

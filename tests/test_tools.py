@@ -10,7 +10,7 @@ import pytest
 from nums.tools import MacTools, _run
 from nums.mac_ui import (
     CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
-    NOTIFY_SCRIPT, TYPE_TEXT_SCRIPT,
+    NOTIFY_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT,
     key_script,
 )
 
@@ -416,6 +416,16 @@ def test_indexed_click_passes_inspected_index_and_rejects_bad_values(
         assert "positive" in result["error"]
 
 
+def test_set_toggle_requires_valid_state_and_unrestricted_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
+    args = {"app": "Settings", "window": "Privacy", "role": "AXSwitch", "index": "4", "state": "on"}
+    assert MacTools().execute("set_app_toggle", args) == "ok"
+    assert commands[0][-6:] == ["Settings", "Privacy", "AXSwitch", "", "4", "on"]
+    assert "error" in json.loads(MacTools().execute("set_app_toggle", {**args, "state": "toggle"}))
+    assert json.loads(MacTools("standard").execute("set_app_toggle", args))["action_mode"] == "standard"
+
+
 def test_press_app_key_rejects_unknown_modifier() -> None:
     result = json.loads(MacTools().execute("press_app_key", {
         "app": "Finder", "window": "Documents", "key": "s", "modifiers": "super",
@@ -428,7 +438,7 @@ def test_press_app_key_rejects_unknown_modifier() -> None:
 def test_accessibility_scripts_compile_on_mac(tmp_path: Path) -> None:
     scripts = [
         LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT,
-        CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT,
+        CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, SET_TOGGLE_SCRIPT,
         TYPE_TEXT_SCRIPT, NOTIFY_SCRIPT, key_script("s", "command"), key_script("return"),
     ]
     for index, script in enumerate(scripts):

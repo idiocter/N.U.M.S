@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 
 from .mac_ui import (
     CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
-    NOTIFY_SCRIPT, TYPE_TEXT_SCRIPT,
+    NOTIFY_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT,
     key_script,
 )
 from .policy import tool_allowed
@@ -106,6 +106,11 @@ TOOL_SCHEMAS = [
         "click_app_element", "Click a front-window element by role and label, or by role and inspected index when unlabeled.",
         {"app": {"type": "string"}, "window": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "index": {"type": "string"}},
         ["app", "window", "role"],
+    ),
+    _schema(
+        "set_app_toggle", "Set an inspected checkbox or switch on or off; does nothing if already in the requested state.",
+        {"app": {"type": "string"}, "window": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "index": {"type": "string"}, "state": {"type": "string"}},
+        ["app", "window", "role", "state"],
     ),
     _schema(
         "type_in_app", "Type into an inspected text field by role and label or index, or the currently focused control when no target is supplied.",
@@ -206,7 +211,7 @@ def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
 
 UI_TOOLS = {
     "list_running_apps", "list_app_windows", "focus_app_window", "inspect_app_ui", "inspect_app_menu", "click_app_menu_item",
-    "click_app_element", "type_in_app", "press_app_key",
+    "click_app_element", "set_app_toggle", "type_in_app", "press_app_key",
 }
 
 
@@ -251,6 +256,7 @@ class MacTools:
             "inspect_app_menu": self.inspect_app_menu,
             "click_app_menu_item": self.click_app_menu_item,
             "click_app_element": self.click_app_element,
+            "set_app_toggle": self.set_app_toggle,
             "type_in_app": self.type_in_app,
             "press_app_key": self.press_app_key,
             "speak": self.speak,
@@ -546,6 +552,23 @@ class MacTools:
         return _run([
             "osascript", "-e", TYPE_TEXT_SCRIPT,
             args["app"], args["window"], args["text"], role, label, index,
+        ], timeout=20)
+
+    def set_app_toggle(self, args: dict[str, Any]) -> str:
+        if not args["app"].strip() or not args["window"].strip():
+            raise ValueError("app and window must not be empty")
+        if args["role"] not in {"AXCheckBox", "AXSwitch"}:
+            raise ValueError("role must be AXCheckBox or AXSwitch")
+        if args["state"] not in {"on", "off"}:
+            raise ValueError("state must be on or off")
+        label, index = args.get("label", ""), args.get("index", "")
+        if index and (not index.isdecimal() or int(index) < 1):
+            raise ValueError("index must be a positive element number")
+        if not label and not index:
+            raise ValueError("label or inspected index is required")
+        return _run([
+            "osascript", "-e", SET_TOGGLE_SCRIPT,
+            args["app"], args["window"], args["role"], label, index, args["state"],
         ], timeout=20)
 
     def press_app_key(self, args: dict[str, Any]) -> str:
