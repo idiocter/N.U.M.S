@@ -28,8 +28,14 @@ INSPECT_MENU_SCRIPT = """on run argv
                     set entries to {"Menu: " & menuName}
                     set itemsToInspect to menu items of menu menuName of menu bar item menuName of menu bar 1
                 else
-                    set parentItem to menu item submenuName of menu menuName of menu bar item menuName of menu bar 1
-                    if not (exists parentItem) then error "Submenu not found: " & submenuName
+                    set submenuMatches to {}
+                    repeat with candidate in menu items of menu menuName of menu bar item menuName of menu bar 1
+                        try
+                            if (name of candidate as text) is submenuName then set end of submenuMatches to contents of candidate
+                        end try
+                    end repeat
+                    if (count of submenuMatches) is not 1 then error "Expected one matching submenu; found " & (count of submenuMatches)
+                    set parentItem to item 1 of submenuMatches
                     set entries to {"Submenu: " & menuName & " > " & submenuName}
                     set itemsToInspect to menu items of menu of parentItem
                 end if
