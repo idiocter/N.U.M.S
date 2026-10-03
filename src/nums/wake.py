@@ -98,7 +98,7 @@ class WakePhraseDetector:
             re.escape(item).replace(r"\ ", r"[\s,.-]+")
             for item in sorted(sleep_variants, key=len, reverse=True)
         )
-        self.sleep_pattern = re.compile(rf"\b(?:{sleep_alternatives})\b", re.I)
+        self.sleep_pattern = re.compile(rf"^(?:{sleep_alternatives})[\s,.:;!?-]*$", re.I)
 
     def feed(self, transcript: str) -> WakeEvent | None:
         now = time.monotonic()
@@ -116,7 +116,7 @@ class WakePhraseDetector:
         self.last_transcript = cleaned
         normalized = cleaned.replace("'", "").replace("’", "")
 
-        if self.active_session and self.sleep_pattern.search(normalized):
+        if self.active_session and self.sleep_pattern.fullmatch(normalized):
             self.active_session = False
             self.last_command_at = 0.0
             return WakeEvent("sleep")

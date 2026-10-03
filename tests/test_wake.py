@@ -78,6 +78,17 @@ def test_sleep_phrase_ends_the_conversation() -> None:
     assert ignored is None
 
 
+def test_sleep_words_inside_a_request_do_not_end_session() -> None:
+    detector = WakePhraseDetector()
+    detector.cooldown_seconds = 0
+    detector.feed("Hey num num")
+
+    event = detector.feed("search for the song good night nums")
+
+    assert event is not None and event.kind == "command"
+    assert detector.active_session
+
+
 def test_custom_sleep_phrase_ends_session() -> None:
     detector = WakePhraseDetector(sleep_phrases=("power down",))
     detector.cooldown_seconds = 0
