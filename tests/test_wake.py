@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from nums.wake import ListenerLock, WakePhraseDetector, WhisperStream, voice_dependencies
+from nums.wake import ListenerLock, WakePhraseDetector, WhisperStream, download_voice_model, voice_dependencies
 
 
 def test_wake_phrase_with_command() -> None:
@@ -144,6 +144,23 @@ def test_voice_dependencies_rejects_incomplete_model(monkeypatch: pytest.MonkeyP
     with model.open("r+b") as handle:
         handle.truncate(50_000_000)
     assert voice_dependencies(str(model)) == (True, True)
+
+
+def test_voice_download_has_timeout_and_keeps_resume_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    commands = []
+
+    def failed_download(command: list[str], **kwargs: object) -> None:
+        commands.append(command)
+        Path(command[command.index("--output") + 1]).write_bytes(b"partial")
+        raise RuntimeError("offline")
+
+    monkeypatch.setattr("nums.wake.subprocess.run", failed_download)
+    model = tmp_path / "voice.bin"
+    with pytest.raises(RuntimeError, match="offline"):
+        download_voice_model(str(model))
+    assert "--max-time" in commands[0]
+    assert "--retry" in commands[0]
+    assert model.with_suffix(".bin.part").read_bytes() == b"partial"
 
 
 def test_timestamped_transcript_is_a_command_during_session() -> None:
