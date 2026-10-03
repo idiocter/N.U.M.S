@@ -116,6 +116,12 @@ def verify_voice_model(settings: Settings) -> None:
         raise SystemExit(f"The local model is not ready for voice mode: {exc}") from exc
 
 
+def verify_text_model(settings: Settings) -> None:
+    client = OllamaClient(settings.ollama_url, settings.model, timeout=settings.ollama_timeout_seconds)
+    if not client.has_model():
+        raise SystemExit(f"The local model {settings.model} is missing. Run `uv run nums --pull`.")
+
+
 def wake_mode(agent: Agent, settings: Settings) -> None:
     try:
         with ListenerLock():
@@ -228,6 +234,8 @@ def main() -> None:
     ensure_ollama_running(settings)
     if args.voice:
         verify_voice_model(settings)
+    else:
+        verify_text_model(settings)
     try:
         agent = Agent(settings)
     except ValueError as exc:

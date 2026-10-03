@@ -3,7 +3,7 @@ from contextlib import nullcontext
 import pytest
 
 from nums.cli import (
-    doctor, ensure_ollama_running, main, prepare_voice, verify_voice_model, wake_mode,
+    doctor, ensure_ollama_running, main, prepare_voice, verify_text_model, verify_voice_model, wake_mode,
 )
 from nums.config import Settings
 from nums.ollama import OllamaError
@@ -153,11 +153,18 @@ def test_default_command_starts_text_mode(monkeypatch: pytest.MonkeyPatch, capsy
     monkeypatch.setattr("nums.cli.Agent", lambda settings: object())
     monkeypatch.setattr("nums.cli.prepare_voice", lambda settings: pytest.fail("voice setup ran"))
     monkeypatch.setattr("nums.cli.ensure_ollama_running", lambda settings: None)
+    monkeypatch.setattr("nums.cli.verify_text_model", lambda settings: None)
     monkeypatch.setattr("builtins.input", lambda _: (_ for _ in ()).throw(EOFError))
 
     main()
 
     assert "Type /help for commands" in capsys.readouterr().out
+
+
+def test_text_mode_explains_missing_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("nums.cli.OllamaClient.has_model", lambda self: False)
+    with pytest.raises(SystemExit, match="uv run nums --pull"):
+        verify_text_model(Settings())
 
 
 def test_local_ollama_starts_when_needed(monkeypatch: pytest.MonkeyPatch, tmp_path, capsys) -> None:
