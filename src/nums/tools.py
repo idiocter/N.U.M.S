@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 
 from .mac_ui import (
     CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
-    NOTIFY_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT, WAIT_ELEMENT_SCRIPT,
+    NOTIFY_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT, WAIT_ELEMENT_SCRIPT, WAIT_WINDOW_SCRIPT,
     key_script,
 )
 from .policy import tool_allowed
@@ -88,6 +88,11 @@ TOOL_SCHEMAS = [
     _schema("open_item", "Open an app, file, folder, or URL; set kind to app, path, or url when the target is ambiguous.", {"target": {"type": "string"}, "kind": {"type": "string"}}, ["target"]),
     _schema("list_running_apps", "List running foreground Mac apps by process name.", {}, []),
     _schema("list_app_windows", "List window titles in a running Mac app.", {"app": {"type": "string"}}, ["app"]),
+    _schema(
+        "wait_for_app_window", "Wait for one exact named window to appear. Timeout defaults to 10 seconds and is capped at 30.",
+        {"app": {"type": "string"}, "window": {"type": "string"}, "timeout": {"type": "string"}},
+        ["app", "window"],
+    ),
     _schema("focus_app_window", "Raise one exact named window in a running Mac app; use inspected index if titles repeat.", {"app": {"type": "string"}, "window": {"type": "string"}, "index": {"type": "string"}}, ["app", "window"]),
     _schema(
         "inspect_app_ui", "Inspect a page of front-window accessibility elements with availability and toggle state; use offset and limit to page.",
@@ -215,7 +220,7 @@ def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
 
 
 UI_TOOLS = {
-    "list_running_apps", "list_app_windows", "focus_app_window", "inspect_app_ui", "wait_for_app_element", "inspect_app_menu", "click_app_menu_item",
+    "list_running_apps", "list_app_windows", "wait_for_app_window", "focus_app_window", "inspect_app_ui", "wait_for_app_element", "inspect_app_menu", "click_app_menu_item",
     "click_app_element", "set_app_toggle", "type_in_app", "press_app_key",
 }
 
@@ -256,6 +261,7 @@ class MacTools:
             "open_item": self.open_item,
             "list_running_apps": self.list_running_apps,
             "list_app_windows": self.list_app_windows,
+            "wait_for_app_window": self.wait_for_app_window,
             "focus_app_window": self.focus_app_window,
             "inspect_app_ui": self.inspect_app_ui,
             "wait_for_app_element": self.wait_for_app_element,
@@ -493,6 +499,17 @@ class MacTools:
         if not args["app"].strip():
             raise ValueError("app must not be empty")
         return _run(["osascript", "-e", LIST_WINDOWS_SCRIPT, args["app"]], timeout=20)
+
+    def wait_for_app_window(self, args: dict[str, Any]) -> str:
+        if not args["app"].strip() or not args["window"].strip():
+            raise ValueError("app and window must not be empty")
+        timeout = args.get("timeout", "10")
+        if not timeout.isdecimal() or not 1 <= int(timeout) <= 30:
+            raise ValueError("timeout must be between 1 and 30 seconds")
+        return _run([
+            "osascript", "-e", WAIT_WINDOW_SCRIPT,
+            args["app"], args["window"], timeout,
+        ], timeout=int(timeout) + 5)
 
     def focus_app_window(self, args: dict[str, Any]) -> str:
         if not args["app"].strip() or not args["window"].strip():

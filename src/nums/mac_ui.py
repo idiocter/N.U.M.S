@@ -32,6 +32,32 @@ LIST_WINDOWS_SCRIPT = """on run argv
 end run"""
 
 
+WAIT_WINDOW_SCRIPT = """on run argv
+    set appName to item 1 of argv
+    set targetTitle to item 2 of argv
+    set timeoutSeconds to item 3 of argv as integer
+    set deadline to (current date) + timeoutSeconds
+    repeat
+        set matchCount to 0
+        tell application "System Events"
+            if exists process appName then
+                tell process appName
+                    repeat with windowRef in windows
+                        try
+                            if (name of windowRef as text) is targetTitle then set matchCount to matchCount + 1
+                        end try
+                    end repeat
+                end tell
+            end if
+        end tell
+        if matchCount > 1 then error "Expected one matching window; found " & matchCount
+        if matchCount is 1 then return "Window appeared: " & targetTitle
+        if (current date) is greater than or equal to deadline then error "Timed out waiting for window: " & targetTitle
+        delay 0.2
+    end repeat
+end run"""
+
+
 FOCUS_WINDOW_SCRIPT = """on run argv
     set appName to item 1 of argv
     set targetTitle to item 2 of argv

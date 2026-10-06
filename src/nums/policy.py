@@ -7,7 +7,7 @@ READ_ONLY_TOOLS = {
     "read_file", "read_lines", "list_directory", "find_files", "search_files",
     "git_status", "git_diff", "system_info",
     "get_clipboard", "get_calendar_events", "list_running_apps", "inspect_app_ui",
-    "wait_for_app_element", "inspect_app_menu", "list_app_windows",
+    "wait_for_app_element", "inspect_app_menu", "list_app_windows", "wait_for_app_window",
 }
 STANDARD_TOOLS = READ_ONLY_TOOLS | {
     "write_file", "replace_in_file", "open_item", "speak", "notify", "set_clipboard", "create_reminder",

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added bounded waits for exact Mac windows and dialogs before later automation steps.
 - Added bounded waits for exact Mac accessibility controls to appear or become enabled during asynchronous app workflows.
 - Added window listing and precise window raising, explicit checkbox and switch state control, and more Mac navigation keys.
 - Improved UI action checks, app opening, notifications, and reminder feedback.

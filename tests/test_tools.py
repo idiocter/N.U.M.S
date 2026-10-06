@@ -10,7 +10,7 @@ import pytest
 from nums.tools import MacTools, _run
 from nums.mac_ui import (
     CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
-    NOTIFY_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT, WAIT_ELEMENT_SCRIPT,
+    NOTIFY_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT, WAIT_ELEMENT_SCRIPT, WAIT_WINDOW_SCRIPT,
     key_script,
 )
 
@@ -289,6 +289,25 @@ def test_list_app_windows_is_read_only(monkeypatch: pytest.MonkeyPatch) -> None:
     assert commands[0][-1] == "Finder"
 
 
+def test_wait_for_app_window_is_bounded_and_read_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = []
+    monkeypatch.setattr(
+        "nums.tools._run",
+        lambda command, **kwargs: calls.append((command, kwargs)) or "ready",
+    )
+    args = {"app": "Preview", "window": "Export", "timeout": "8"}
+
+    assert MacTools("read_only").execute("wait_for_app_window", args) == "ready"
+    assert calls[0][0][-3:] == ["Preview", "Export", "8"]
+    assert calls[0][1]["timeout"] == 13
+
+    for update in ({"timeout": "0"}, {"timeout": "31"}, {"window": ""}):
+        result = json.loads(MacTools("read_only").execute(
+            "wait_for_app_window", {**args, **update},
+        ))
+        assert "error" in result
+
+
 def test_focus_window_requires_unrestricted_mode(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
@@ -470,7 +489,7 @@ def test_extended_navigation_keys_have_mac_key_codes() -> None:
 @pytest.mark.skipif(platform.system() != "Darwin", reason="AppleScript compiler requires macOS")
 def test_accessibility_scripts_compile_on_mac(tmp_path: Path) -> None:
     scripts = [
-        LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT,
+        LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT, WAIT_WINDOW_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT,
         CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, SET_TOGGLE_SCRIPT,
         TYPE_TEXT_SCRIPT, WAIT_ELEMENT_SCRIPT, NOTIFY_SCRIPT,
         key_script("s", "command"), key_script("return"),
