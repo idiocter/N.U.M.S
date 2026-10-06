@@ -336,6 +336,73 @@ CLICK_ELEMENT_SCRIPT = """on run argv
 end run"""
 
 
+SELECT_POPUP_ITEM_SCRIPT = """on run argv
+    set appName to item 1 of argv
+    set targetWindow to item 2 of argv
+    set targetLabel to item 3 of argv
+    set selectedIndexText to item 4 of argv
+    set itemName to item 5 of argv
+    set selectedIndex to 0
+    if selectedIndexText is not "" then set selectedIndex to selectedIndexText as integer
+    tell application "System Events"
+        if not (exists process appName) then error "App is not running: " & appName
+        tell process appName
+            if not (exists window 1) then error "App has no open window: " & appName
+            if (name of window 1) is not targetWindow then error "Front window changed; inspect the app again"
+            set frontmost to true
+            if not (exists window 1) or (name of window 1) is not targetWindow then error "Front window changed during activation; inspect the app again"
+            set matches to {}
+            set elements to entire contents of window 1
+            repeat with elementIndex from 1 to count of elements
+                if selectedIndex is 0 or elementIndex is selectedIndex then
+                    set elementRef to item elementIndex of elements
+                    set roleText to ""
+                    set nameText to ""
+                    set descriptionText to ""
+                    try
+                        set roleText to role of elementRef as text
+                    end try
+                    try
+                        set nameText to name of elementRef as text
+                    end try
+                    try
+                        set descriptionText to accessibility description of elementRef as text
+                    end try
+                    if roleText is "AXPopUpButton" and (targetLabel is "" or nameText is targetLabel or descriptionText is targetLabel) then
+                        set end of matches to contents of elementRef
+                    end if
+                end if
+            end repeat
+            if (count of matches) is not 1 then error "Expected one matching popup; found " & (count of matches)
+            set targetElement to item 1 of matches
+            if not (enabled of targetElement) then error "Popup is disabled"
+            click targetElement
+            set menuDeadline to (current date) + 2
+            repeat until exists menu 1 of targetElement
+                if (current date) is greater than or equal to menuDeadline then error "Popup menu did not appear"
+                delay 0.1
+            end repeat
+            set itemMatches to {}
+            repeat with candidate in menu items of menu 1 of targetElement
+                try
+                    if (name of candidate as text) is itemName then set end of itemMatches to contents of candidate
+                end try
+            end repeat
+            if (count of itemMatches) is not 1 then error "Expected one matching popup item; found " & (count of itemMatches)
+            set targetItem to item 1 of itemMatches
+            if not (enabled of targetItem) then error "Popup item is disabled: " & itemName
+            click targetItem
+            set finalValue to ""
+            try
+                set finalValue to value of targetElement as text
+            end try
+            if finalValue is not "" and finalValue is not itemName then error "Popup did not reach requested value"
+        end tell
+    end tell
+    return "Selected popup item " & itemName
+end run"""
+
+
 SET_TOGGLE_SCRIPT = """on run argv
     set appName to item 1 of argv
     set targetWindow to item 2 of argv

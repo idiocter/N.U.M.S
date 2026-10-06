@@ -14,7 +14,8 @@ from urllib.parse import urlparse
 
 from .mac_ui import (
     CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
-    NOTIFY_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT, WAIT_ELEMENT_SCRIPT, WAIT_WINDOW_SCRIPT,
+    NOTIFY_SCRIPT, SELECT_POPUP_ITEM_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT,
+    WAIT_ELEMENT_SCRIPT, WAIT_WINDOW_SCRIPT,
     key_script,
 )
 from .policy import tool_allowed
@@ -116,6 +117,11 @@ TOOL_SCHEMAS = [
         "click_app_element", "Click a front-window element by role and label, or by role and inspected index when unlabeled.",
         {"app": {"type": "string"}, "window": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "index": {"type": "string"}},
         ["app", "window", "role"],
+    ),
+    _schema(
+        "select_app_popup_item", "Select one exact item from an inspected AXPopUpButton by label or element index.",
+        {"app": {"type": "string"}, "window": {"type": "string"}, "label": {"type": "string"}, "index": {"type": "string"}, "item": {"type": "string"}},
+        ["app", "window", "item"],
     ),
     _schema(
         "set_app_toggle", "Set an inspected checkbox or switch on or off; does nothing if already in the requested state.",
@@ -221,7 +227,7 @@ def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
 
 UI_TOOLS = {
     "list_running_apps", "list_app_windows", "wait_for_app_window", "focus_app_window", "inspect_app_ui", "wait_for_app_element", "inspect_app_menu", "click_app_menu_item",
-    "click_app_element", "set_app_toggle", "type_in_app", "press_app_key",
+    "click_app_element", "select_app_popup_item", "set_app_toggle", "type_in_app", "press_app_key",
 }
 
 
@@ -268,6 +274,7 @@ class MacTools:
             "inspect_app_menu": self.inspect_app_menu,
             "click_app_menu_item": self.click_app_menu_item,
             "click_app_element": self.click_app_element,
+            "select_app_popup_item": self.select_app_popup_item,
             "set_app_toggle": self.set_app_toggle,
             "type_in_app": self.type_in_app,
             "press_app_key": self.press_app_key,
@@ -572,6 +579,19 @@ class MacTools:
         return _run([
             "osascript", "-e", CLICK_ELEMENT_SCRIPT,
             args["app"], args["window"], args["role"], label, index,
+        ], timeout=20)
+
+    def select_app_popup_item(self, args: dict[str, Any]) -> str:
+        if not all(args[key].strip() for key in ("app", "window", "item")):
+            raise ValueError("app, window, and item must not be empty")
+        label, index = args.get("label", ""), args.get("index", "")
+        if index and (not index.isdecimal() or int(index) < 1):
+            raise ValueError("index must be a positive element number")
+        if not label and not index:
+            raise ValueError("label or inspected index is required")
+        return _run([
+            "osascript", "-e", SELECT_POPUP_ITEM_SCRIPT,
+            args["app"], args["window"], label, index, args["item"],
         ], timeout=20)
 
     def type_in_app(self, args: dict[str, Any]) -> str:

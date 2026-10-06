@@ -165,7 +165,8 @@ been completed. Review important changes and their test results before use.
 Text and voice requests use the same Mac tools. NUMS can list running apps,
 wait for, list, and raise an exact named window, inspect pages of its accessibility roles and labels, inspect
 menus and submenus, click an exact control or menu item, type into an inspected
-text field or the focused control, and press keys or shortcuts.
+text field or the focused control, select an exact option from an inspected
+popup control, and press keys or shortcuts.
 It can wait up to 30 seconds for an exact labeled control to appear or become
 enabled, which makes workflows with loading views and delayed dialogs more reliable.
 Inspection shows disabled controls and menu items, plus checkbox and radio state
@@ -184,6 +185,8 @@ Forward Delete alongside the existing keys and modifiers.
 `list_running_apps`, `list_app_windows`, `wait_for_app_window`, `inspect_app_ui`, `wait_for_app_element`,
 and `inspect_app_menu` are available in read-only mode.
 Clicking, typing, and key presses require the default `unrestricted` mode.
+Popup selection also requires `unrestricted` mode and rejects ambiguous,
+missing, or disabled controls and options.
 macOS must allow the process running NUMS to control System Events and use
 Accessibility. These tools use the app's accessibility information; controls
 with neither a useful role nor a stable inspected index may need app-specific AppleScript.

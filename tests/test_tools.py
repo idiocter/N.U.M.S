@@ -10,7 +10,8 @@ import pytest
 from nums.tools import MacTools, _run
 from nums.mac_ui import (
     CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
-    NOTIFY_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT, WAIT_ELEMENT_SCRIPT, WAIT_WINDOW_SCRIPT,
+    NOTIFY_SCRIPT, SELECT_POPUP_ITEM_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT,
+    WAIT_ELEMENT_SCRIPT, WAIT_WINDOW_SCRIPT,
     key_script,
 )
 
@@ -435,6 +436,33 @@ def test_indexed_click_passes_inspected_index_and_rejects_bad_values(
         assert "positive" in result["error"]
 
 
+def test_select_popup_item_uses_exact_target_and_requires_unrestricted_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
+    args = {
+        "app": "System Settings", "window": "Displays", "label": "Refresh Rate",
+        "item": "60 Hertz",
+    }
+
+    assert MacTools().execute("select_app_popup_item", args) == "ok"
+    assert commands[0][-5:] == ["System Settings", "Displays", "Refresh Rate", "", "60 Hertz"]
+    assert MacTools().execute("select_app_popup_item", {
+        "app": "System Settings", "window": "Displays", "index": "9", "item": "60 Hertz",
+    }) == "ok"
+    assert commands[1][-3:] == ["", "9", "60 Hertz"]
+    assert json.loads(MacTools("standard").execute("select_app_popup_item", args))["action_mode"] == "standard"
+
+    for update, message in (
+        ({"label": "", "index": ""}, "label or inspected index"),
+        ({"index": "0"}, "positive element number"),
+        ({"item": ""}, "must not be empty"),
+    ):
+        result = json.loads(MacTools().execute("select_app_popup_item", {**args, **update}))
+        assert message in result["error"]
+
+
 def test_wait_for_app_element_is_bounded_and_read_only(monkeypatch: pytest.MonkeyPatch) -> None:
     calls = []
     monkeypatch.setattr(
@@ -490,7 +518,7 @@ def test_extended_navigation_keys_have_mac_key_codes() -> None:
 def test_accessibility_scripts_compile_on_mac(tmp_path: Path) -> None:
     scripts = [
         LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT, WAIT_WINDOW_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT,
-        CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, SET_TOGGLE_SCRIPT,
+        CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, SELECT_POPUP_ITEM_SCRIPT, SET_TOGGLE_SCRIPT,
         TYPE_TEXT_SCRIPT, WAIT_ELEMENT_SCRIPT, NOTIFY_SCRIPT,
         key_script("s", "command"), key_script("return"),
     ]
