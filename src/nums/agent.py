@@ -20,6 +20,7 @@ Use replace_in_file for small precise changes. Do not claim a change or test suc
 For app UI tasks, inspect the running app and front window before clicking or typing, then inspect again to verify.
 Use list_app_windows and focus_app_window when the desired window is not frontmost.
 Use inspect_app_ui offsets to find controls beyond the first page. Use an inspected index when labels repeat or are missing.
+After an action that changes the interface, use wait_for_app_element when the next exact labeled control may load asynchronously.
 Inspect menus and submenus before clicking their exact items. When typing, target an inspected text field when possible.
 Use set_app_toggle for an explicit on or off request; inspect again to confirm the resulting state.
 Check whether controls and menu items are enabled before clicking. Verify the resulting state with a fresh inspection.

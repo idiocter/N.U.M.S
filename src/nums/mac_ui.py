@@ -208,6 +208,61 @@ INSPECT_APP_SCRIPT = """on run argv
 end run"""
 
 
+WAIT_ELEMENT_SCRIPT = """on run argv
+    set appName to item 1 of argv
+    set targetWindow to item 2 of argv
+    set targetRole to item 3 of argv
+    set targetLabel to item 4 of argv
+    set desiredState to item 5 of argv
+    set timeoutSeconds to item 6 of argv as integer
+    set deadline to (current date) + timeoutSeconds
+    repeat
+        set matchCount to 0
+        set matchEnabled to false
+        tell application "System Events"
+            if exists process appName then
+                tell process appName
+                    if exists window 1 then
+                        if (name of window 1) is targetWindow then
+                            try
+                                set elements to entire contents of window 1
+                                repeat with elementRef in elements
+                                    set roleText to ""
+                                    set nameText to ""
+                                    set descriptionText to ""
+                                    try
+                                        set roleText to role of elementRef as text
+                                    end try
+                                    try
+                                        set nameText to name of elementRef as text
+                                    end try
+                                    try
+                                        set descriptionText to accessibility description of elementRef as text
+                                    end try
+                                    if roleText is targetRole and (nameText is targetLabel or descriptionText is targetLabel) then
+                                        set matchCount to matchCount + 1
+                                        try
+                                            if enabled of elementRef then set matchEnabled to true
+                                        end try
+                                    end if
+                                end repeat
+                            end try
+                        end if
+                    end if
+                end tell
+            end if
+        end tell
+        if matchCount > 1 then error "Expected one matching UI element; found " & matchCount
+        if matchCount is 1 then
+            if desiredState is "exists" then return "UI element appeared: " & targetRole & " " & targetLabel
+            if matchEnabled then return "UI element is enabled: " & targetRole & " " & targetLabel
+        end if
+        if (current date) is greater than or equal to deadline then error "Timed out waiting for UI element: " & targetRole & " " & targetLabel
+        delay 0.2
+    end repeat
+end run"""
+
+
 CLICK_ELEMENT_SCRIPT = """on run argv
     set appName to item 1 of argv
     set targetWindow to item 2 of argv

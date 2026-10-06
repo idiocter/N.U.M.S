@@ -10,7 +10,7 @@ import pytest
 from nums.tools import MacTools, _run
 from nums.mac_ui import (
     CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
-    NOTIFY_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT,
+    NOTIFY_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT, WAIT_ELEMENT_SCRIPT,
     key_script,
 )
 
@@ -416,6 +416,33 @@ def test_indexed_click_passes_inspected_index_and_rejects_bad_values(
         assert "positive" in result["error"]
 
 
+def test_wait_for_app_element_is_bounded_and_read_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = []
+    monkeypatch.setattr(
+        "nums.tools._run",
+        lambda command, **kwargs: calls.append((command, kwargs)) or "ready",
+    )
+    args = {
+        "app": "Safari", "window": "Downloads", "role": "AXButton",
+        "label": "Clear", "state": "enabled", "timeout": "12",
+    }
+
+    assert MacTools("read_only").execute("wait_for_app_element", args) == "ready"
+    assert calls[0][0][-6:] == ["Safari", "Downloads", "AXButton", "Clear", "enabled", "12"]
+    assert calls[0][1]["timeout"] == 17
+
+    for update, message in (
+        ({"state": "visible"}, "state must be"),
+        ({"timeout": "0"}, "timeout must be"),
+        ({"timeout": "31"}, "timeout must be"),
+        ({"label": ""}, "must not be empty"),
+    ):
+        result = json.loads(MacTools("read_only").execute(
+            "wait_for_app_element", {**args, **update},
+        ))
+        assert message in result["error"]
+
+
 def test_set_toggle_requires_valid_state_and_unrestricted_mode(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
@@ -445,7 +472,8 @@ def test_accessibility_scripts_compile_on_mac(tmp_path: Path) -> None:
     scripts = [
         LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT,
         CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, SET_TOGGLE_SCRIPT,
-        TYPE_TEXT_SCRIPT, NOTIFY_SCRIPT, key_script("s", "command"), key_script("return"),
+        TYPE_TEXT_SCRIPT, WAIT_ELEMENT_SCRIPT, NOTIFY_SCRIPT,
+        key_script("s", "command"), key_script("return"),
     ]
     for index, script in enumerate(scripts):
         source = tmp_path / f"ui-{index}.applescript"

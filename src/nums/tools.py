@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 
 from .mac_ui import (
     CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
-    NOTIFY_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT,
+    NOTIFY_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT, WAIT_ELEMENT_SCRIPT,
     key_script,
 )
 from .policy import tool_allowed
@@ -92,6 +92,11 @@ TOOL_SCHEMAS = [
     _schema(
         "inspect_app_ui", "Inspect a page of front-window accessibility elements with availability and toggle state; use offset and limit to page.",
         {"app": {"type": "string"}, "offset": {"type": "string"}, "limit": {"type": "string"}}, ["app"],
+    ),
+    _schema(
+        "wait_for_app_element", "Wait for one exact labeled front-window element. State is exists or enabled (default); timeout defaults to 10 seconds and is capped at 30.",
+        {"app": {"type": "string"}, "window": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "state": {"type": "string"}, "timeout": {"type": "string"}},
+        ["app", "window", "role", "label"],
     ),
     _schema(
         "inspect_app_menu", "List app menus or named menu/submenu items with enabled status.",
@@ -210,7 +215,7 @@ def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
 
 
 UI_TOOLS = {
-    "list_running_apps", "list_app_windows", "focus_app_window", "inspect_app_ui", "inspect_app_menu", "click_app_menu_item",
+    "list_running_apps", "list_app_windows", "focus_app_window", "inspect_app_ui", "wait_for_app_element", "inspect_app_menu", "click_app_menu_item",
     "click_app_element", "set_app_toggle", "type_in_app", "press_app_key",
 }
 
@@ -253,6 +258,7 @@ class MacTools:
             "list_app_windows": self.list_app_windows,
             "focus_app_window": self.focus_app_window,
             "inspect_app_ui": self.inspect_app_ui,
+            "wait_for_app_element": self.wait_for_app_element,
             "inspect_app_menu": self.inspect_app_menu,
             "click_app_menu_item": self.click_app_menu_item,
             "click_app_element": self.click_app_element,
@@ -504,6 +510,20 @@ class MacTools:
         if not limit.isdecimal() or not 1 <= int(limit) <= 120:
             raise ValueError("limit must be between 1 and 120")
         return _run(["osascript", "-e", INSPECT_APP_SCRIPT, args["app"], offset, limit], timeout=20)
+
+    def wait_for_app_element(self, args: dict[str, Any]) -> str:
+        if not all(args[key].strip() for key in ("app", "window", "role", "label")):
+            raise ValueError("app, window, role, and label must not be empty")
+        state = args.get("state", "enabled")
+        if state not in {"exists", "enabled"}:
+            raise ValueError("state must be exists or enabled")
+        timeout = args.get("timeout", "10")
+        if not timeout.isdecimal() or not 1 <= int(timeout) <= 30:
+            raise ValueError("timeout must be between 1 and 30 seconds")
+        return _run([
+            "osascript", "-e", WAIT_ELEMENT_SCRIPT,
+            args["app"], args["window"], args["role"], args["label"], state, timeout,
+        ], timeout=int(timeout) + 5)
 
     def inspect_app_menu(self, args: dict[str, Any]) -> str:
         if not args["app"].strip():
