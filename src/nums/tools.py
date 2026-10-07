@@ -100,7 +100,7 @@ TOOL_SCHEMAS = [
         {"app": {"type": "string"}, "offset": {"type": "string"}, "limit": {"type": "string"}}, ["app"],
     ),
     _schema(
-        "wait_for_app_element", "Wait for one exact labeled front-window element. State is exists or enabled (default); timeout defaults to 10 seconds and is capped at 30.",
+        "wait_for_app_element", "Wait for one exact labeled front-window element to exist, become enabled or disabled, or become absent. Timeout defaults to 10 seconds and is capped at 30.",
         {"app": {"type": "string"}, "window": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "state": {"type": "string"}, "timeout": {"type": "string"}},
         ["app", "window", "role", "label"],
     ),
@@ -545,8 +545,8 @@ class MacTools:
         if not all(args[key].strip() for key in ("app", "window", "role", "label")):
             raise ValueError("app, window, role, and label must not be empty")
         state = args.get("state", "enabled")
-        if state not in {"exists", "enabled"}:
-            raise ValueError("state must be exists or enabled")
+        if state not in {"exists", "enabled", "disabled", "absent"}:
+            raise ValueError("state must be exists, enabled, disabled, or absent")
         timeout = args.get("timeout", "10")
         if not timeout.isdecimal() or not 1 <= int(timeout) <= 30:
             raise ValueError("timeout must be between 1 and 30 seconds")

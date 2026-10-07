@@ -167,8 +167,8 @@ wait for, list, and raise an exact named window, inspect pages of its accessibil
 menus and submenus, click an exact control or menu item, type into an inspected
 text field or the focused control, select an exact option from an inspected
 popup control, and press keys or shortcuts.
-It can wait up to 30 seconds for an exact labeled control to appear or become
-enabled, which makes workflows with loading views and delayed dialogs more reliable.
+It can wait up to 30 seconds for an exact labeled control to appear, disappear,
+become enabled, or become disabled, which makes asynchronous workflows more reliable.
 Menu workflows can also wait for an exact item to appear or become enabled.
 Inspection shows disabled controls and menu items, plus checkbox and radio state
 when the app exposes it. For checkboxes and switches, `set_app_toggle` requests

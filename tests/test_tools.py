@@ -490,6 +490,10 @@ def test_wait_for_app_element_is_bounded_and_read_only(monkeypatch: pytest.Monke
     assert MacTools("read_only").execute("wait_for_app_element", args) == "ready"
     assert calls[0][0][-6:] == ["Safari", "Downloads", "AXButton", "Clear", "enabled", "12"]
     assert calls[0][1]["timeout"] == 17
+    for state in ("exists", "disabled", "absent"):
+        assert MacTools("read_only").execute(
+            "wait_for_app_element", {**args, "state": state},
+        ) == "ready"
 
     for update, message in (
         ({"state": "visible"}, "state must be"),

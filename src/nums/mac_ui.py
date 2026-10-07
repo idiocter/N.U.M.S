@@ -324,9 +324,11 @@ WAIT_ELEMENT_SCRIPT = """on run argv
             end if
         end tell
         if matchCount > 1 then error "Expected one matching UI element; found " & matchCount
+        if matchCount is 0 and desiredState is "absent" then return "UI element is absent: " & targetRole & " " & targetLabel
         if matchCount is 1 then
             if desiredState is "exists" then return "UI element appeared: " & targetRole & " " & targetLabel
-            if matchEnabled then return "UI element is enabled: " & targetRole & " " & targetLabel
+            if desiredState is "enabled" and matchEnabled then return "UI element is enabled: " & targetRole & " " & targetLabel
+            if desiredState is "disabled" then return "UI element is disabled: " & targetRole & " " & targetLabel
         end if
         if (current date) is greater than or equal to deadline then error "Timed out waiting for UI element: " & targetRole & " " & targetLabel
         delay 0.2
