@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Extended explicit state control to expandable Mac disclosure controls.
 - Added idempotent selection of exact Mac radio button options.
 - Added exact text replacement and clearing for inspected Mac text controls.
 - Added read-only inspection of the currently focused Mac UI element.

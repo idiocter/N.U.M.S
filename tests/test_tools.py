@@ -540,6 +540,9 @@ def test_set_toggle_requires_valid_state_and_unrestricted_mode(monkeypatch: pyte
     assert MacTools().execute("set_app_toggle", args) == "ok"
     assert commands[0][-6:] == ["Settings", "Privacy", "AXSwitch", "", "4", "on"]
     assert "error" in json.loads(MacTools().execute("set_app_toggle", {**args, "state": "toggle"}))
+    disclosure = {**args, "role": "AXDisclosureTriangle", "state": "off"}
+    assert MacTools().execute("set_app_toggle", disclosure) == "ok"
+    assert commands[1][-4:] == ["AXDisclosureTriangle", "", "4", "off"]
     assert json.loads(MacTools("standard").execute("set_app_toggle", args))["action_mode"] == "standard"
 
 

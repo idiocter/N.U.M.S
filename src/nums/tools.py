@@ -131,7 +131,7 @@ TOOL_SCHEMAS = [
         ["app", "window", "item"],
     ),
     _schema(
-        "set_app_toggle", "Set an inspected checkbox or switch on or off; does nothing if already in the requested state.",
+        "set_app_toggle", "Set an inspected checkbox, switch, or disclosure triangle on or off; does nothing if already in the requested state.",
         {"app": {"type": "string"}, "window": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "index": {"type": "string"}, "state": {"type": "string"}},
         ["app", "window", "role", "state"],
     ),
@@ -669,8 +669,8 @@ class MacTools:
     def set_app_toggle(self, args: dict[str, Any]) -> str:
         if not args["app"].strip() or not args["window"].strip():
             raise ValueError("app and window must not be empty")
-        if args["role"] not in {"AXCheckBox", "AXSwitch"}:
-            raise ValueError("role must be AXCheckBox or AXSwitch")
+        if args["role"] not in {"AXCheckBox", "AXSwitch", "AXDisclosureTriangle"}:
+            raise ValueError("role must be AXCheckBox, AXSwitch, or AXDisclosureTriangle")
         if args["state"] not in {"on", "off"}:
             raise ValueError("state must be on or off")
         label, index = args.get("label", ""), args.get("index", "")

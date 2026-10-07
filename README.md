@@ -175,7 +175,7 @@ Menu workflows can also wait for an exact item to appear or become enabled.
 Inspection shows disabled controls and menu items, plus exposed values for toggles,
 radio buttons, popup controls, sliders, disclosure controls, and steppers.
 Focused-control inspection reports which element currently receives keyboard input.
-For checkboxes and switches, `set_app_toggle` requests
+For checkboxes, switches, and disclosure triangles, `set_app_toggle` requests
 an explicit on or off state and checks the result.
 `select_app_radio` selects an exact radio option and leaves an already selected
 option unchanged.
