@@ -23,7 +23,7 @@ Use inspect_app_ui offsets to find controls beyond the first page. Use an inspec
 Use inspect_focused_app_element to verify which control received keyboard focus.
 After an action that changes the interface, use wait_for_app_element when an exact labeled control may appear, disappear, enable, or disable asynchronously.
 Inspect menus and submenus before clicking their exact items; wait for delayed menu items when needed.
-When typing, target an inspected text field when possible.
+When typing, target an inspected text field when possible. Use replace_app_text when the existing value must be replaced or cleared.
 Use select_app_popup_item for an exact option in an inspected AXPopUpButton and verify the resulting interface.
 Use set_app_toggle for an explicit on or off request; inspect again to confirm the resulting state.
 Check whether controls and menu items are enabled before clicking. Verify the resulting state with a fresh inspection.

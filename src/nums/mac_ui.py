@@ -545,6 +545,8 @@ TYPE_TEXT_SCRIPT = """on run argv
     set targetRole to item 4 of argv
     set targetLabel to item 5 of argv
     set selectedIndexText to item 6 of argv
+    set inputMode to "append"
+    if (count of argv) is greater than 6 then set inputMode to item 7 of argv
     set selectedIndex to 0
     if selectedIndexText is not "" then set selectedIndex to selectedIndexText as integer
     tell application "System Events"
@@ -584,7 +586,12 @@ TYPE_TEXT_SCRIPT = """on run argv
                 if (name of window 1) is not targetWindow then error "Front window changed after focusing the text field"
                 if not (focused of targetField) then error "Text field did not receive focus; nothing was typed"
             end if
-            keystroke textValue
+            if inputMode is "replace" then keystroke "a" using {command down}
+            if inputMode is "replace" and textValue is "" then
+                key code 51
+            else
+                keystroke textValue
+            end if
         end tell
     end tell
     return "Typed text into " & appName

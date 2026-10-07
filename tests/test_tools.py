@@ -429,17 +429,29 @@ def test_type_in_exact_text_field(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
     args = {"app": "Notes", "window": "Notes", "text": "hello", "role": "AXTextArea", "label": "Body"}
     assert MacTools().execute("type_in_app", {**args, "index": "12"}) == "ok"
-    assert commands[0][-6:] == ["Notes", "Notes", "hello", "AXTextArea", "Body", "12"]
+    assert commands[0][-7:] == ["Notes", "Notes", "hello", "AXTextArea", "Body", "12", "append"]
     assert MacTools().execute("type_in_app", {
         "app": "Notes", "window": "Notes", "text": "hello", "role": "AXTextArea", "index": "13",
     }) == "ok"
-    assert commands[1][-3:] == ["AXTextArea", "", "13"]
+    assert commands[1][-4:] == ["AXTextArea", "", "13", "append"]
     for bad in ({"role": "AXButton"}, {"index": "0"}):
         result = json.loads(MacTools().execute("type_in_app", {**args, **bad}))
         assert "error" in result
     assert "error" in json.loads(MacTools().execute("type_in_app", {
         "app": "Notes", "window": "Notes", "text": "hello", "index": "2",
     }))
+
+
+def test_replace_app_text_requires_an_exact_field(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
+    args = {"app": "Notes", "window": "Notes", "text": "new", "role": "AXTextField", "label": "Title"}
+    assert MacTools().execute("replace_app_text", args) == "ok"
+    assert commands[0][-7:] == ["Notes", "Notes", "new", "AXTextField", "Title", "", "replace"]
+    assert MacTools().execute("replace_app_text", {**args, "text": ""}) == "ok"
+    assert "error" in json.loads(MacTools().execute("replace_app_text", {**args, "label": ""}))
+    assert "error" in json.loads(MacTools().execute("replace_app_text", {**args, "role": "AXButton"}))
+    assert json.loads(MacTools("standard").execute("replace_app_text", args))["action_mode"] == "standard"
 
 
 def test_indexed_click_passes_inspected_index_and_rejects_bad_values(

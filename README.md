@@ -167,6 +167,8 @@ wait for, list, and raise an exact named window, inspect pages of its accessibil
 menus and submenus, click an exact control or menu item, type into an inspected
 text field or the focused control, select an exact option from an inspected
 popup control, and press keys or shortcuts.
+It can replace or clear the complete value of an exact inspected text control
+instead of appending at an uncertain cursor position.
 It can wait up to 30 seconds for an exact labeled control to appear, disappear,
 become enabled, or become disabled, which makes asynchronous workflows more reliable.
 Menu workflows can also wait for an exact item to appear or become enabled.

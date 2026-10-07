@@ -141,6 +141,11 @@ TOOL_SCHEMAS = [
         ["app", "window", "text"],
     ),
     _schema(
+        "replace_app_text", "Replace all text in one inspected text field, text area, or combo box; an empty value clears it.",
+        {"app": {"type": "string"}, "window": {"type": "string"}, "text": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "index": {"type": "string"}},
+        ["app", "window", "text", "role"],
+    ),
+    _schema(
         "press_app_key", "Press one key or shortcut in the named app and front window. Named keys include arrows, home, end, page_up, page_down, enter, return, delete, forward_delete, tab, space, escape. Modifiers: command, option, control, shift.",
         {"app": {"type": "string"}, "window": {"type": "string"}, "key": {"type": "string"}, "modifiers": {"type": "string"}},
         ["app", "window", "key"],
@@ -234,7 +239,7 @@ def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
 
 UI_TOOLS = {
     "list_running_apps", "list_app_windows", "wait_for_app_window", "focus_app_window", "inspect_app_ui", "inspect_focused_app_element", "wait_for_app_element", "inspect_app_menu", "wait_for_app_menu_item", "click_app_menu_item",
-    "click_app_element", "select_app_popup_item", "set_app_toggle", "type_in_app", "press_app_key",
+    "click_app_element", "select_app_popup_item", "set_app_toggle", "type_in_app", "replace_app_text", "press_app_key",
 }
 
 
@@ -286,6 +291,7 @@ class MacTools:
             "select_app_popup_item": self.select_app_popup_item,
             "set_app_toggle": self.set_app_toggle,
             "type_in_app": self.type_in_app,
+            "replace_app_text": self.replace_app_text,
             "press_app_key": self.press_app_key,
             "speak": self.speak,
             "notify": self.notify,
@@ -636,7 +642,22 @@ class MacTools:
             raise ValueError("targeted typing requires a label or inspected index")
         return _run([
             "osascript", "-e", TYPE_TEXT_SCRIPT,
-            args["app"], args["window"], args["text"], role, label, index,
+            args["app"], args["window"], args["text"], role, label, index, "append",
+        ], timeout=20)
+
+    def replace_app_text(self, args: dict[str, Any]) -> str:
+        if not args["app"].strip() or not args["window"].strip():
+            raise ValueError("app and window must not be empty")
+        role, label, index = (args.get(key, "") for key in ("role", "label", "index"))
+        if role not in {"AXTextField", "AXTextArea", "AXComboBox"}:
+            raise ValueError("role must be AXTextField, AXTextArea, or AXComboBox")
+        if index and (not index.isdecimal() or int(index) < 1):
+            raise ValueError("index must be a positive element number")
+        if not label and not index:
+            raise ValueError("label or inspected index is required")
+        return _run([
+            "osascript", "-e", TYPE_TEXT_SCRIPT,
+            args["app"], args["window"], args["text"], role, label, index, "replace",
         ], timeout=20)
 
     def set_app_toggle(self, args: dict[str, Any]) -> str:
