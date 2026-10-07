@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added bounded waits for exact menu and submenu items to appear or become enabled.
 - Added exact, verified option selection for inspected Mac popup controls.
 - Added bounded waits for exact Mac windows and dialogs before later automation steps.
 - Added bounded waits for exact Mac accessibility controls to appear or become enabled during asynchronous app workflows.

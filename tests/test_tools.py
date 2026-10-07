@@ -11,7 +11,7 @@ from nums.tools import MacTools, _run
 from nums.mac_ui import (
     CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
     NOTIFY_SCRIPT, SELECT_POPUP_ITEM_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT,
-    WAIT_ELEMENT_SCRIPT, WAIT_WINDOW_SCRIPT,
+    WAIT_ELEMENT_SCRIPT, WAIT_MENU_ITEM_SCRIPT, WAIT_WINDOW_SCRIPT,
     key_script,
 )
 
@@ -361,6 +361,19 @@ def test_menu_click_passes_exact_names_as_arguments(monkeypatch: pytest.MonkeyPa
     assert blocked["action_mode"] == "standard"
 
 
+def test_wait_for_menu_item_is_bounded_and_read_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: calls.append((command, kwargs)) or "ready")
+    args = {"app": "Safari", "menu": "File", "item": "Share", "state": "enabled", "timeout": "7"}
+    assert MacTools("read_only").execute("wait_for_app_menu_item", args) == "ready"
+    assert calls[0][0][-6:] == ["Safari", "File", "Share", "", "enabled", "7"]
+    assert calls[0][1]["timeout"] == 12
+    for update in ({"state": "visible"}, {"timeout": "0"}, {"item": ""}):
+        assert "error" in json.loads(MacTools("read_only").execute(
+            "wait_for_app_menu_item", {**args, **update},
+        ))
+
+
 def test_ui_permission_failure_names_required_setting(monkeypatch: pytest.MonkeyPatch) -> None:
     for diagnostic, setting in (
         ("Not authorized to send Apple events to System Events. (-1743)", "Automation"),
@@ -519,7 +532,7 @@ def test_accessibility_scripts_compile_on_mac(tmp_path: Path) -> None:
     scripts = [
         LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT, WAIT_WINDOW_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT,
         CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, SELECT_POPUP_ITEM_SCRIPT, SET_TOGGLE_SCRIPT,
-        TYPE_TEXT_SCRIPT, WAIT_ELEMENT_SCRIPT, NOTIFY_SCRIPT,
+        TYPE_TEXT_SCRIPT, WAIT_ELEMENT_SCRIPT, WAIT_MENU_ITEM_SCRIPT, NOTIFY_SCRIPT,
         key_script("s", "command"), key_script("return"),
     ]
     for index, script in enumerate(scripts):

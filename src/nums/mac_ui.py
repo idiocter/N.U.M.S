@@ -137,6 +137,51 @@ INSPECT_MENU_SCRIPT = """on run argv
 end run"""
 
 
+WAIT_MENU_ITEM_SCRIPT = """on run argv
+    set appName to item 1 of argv
+    set menuName to item 2 of argv
+    set itemName to item 3 of argv
+    set submenuName to item 4 of argv
+    set desiredState to item 5 of argv
+    set timeoutSeconds to item 6 of argv as integer
+    set deadline to (current date) + timeoutSeconds
+    repeat
+        set matchCount to 0
+        set matchEnabled to false
+        tell application "System Events"
+            if exists process appName then
+                tell process appName
+                    try
+                        if submenuName is "" then
+                            set candidateItems to menu items of menu menuName of menu bar item menuName of menu bar 1
+                        else
+                            set submenuMatches to {}
+                            repeat with candidate in menu items of menu menuName of menu bar item menuName of menu bar 1
+                                if (name of candidate as text) is submenuName then set end of submenuMatches to contents of candidate
+                            end repeat
+                            if (count of submenuMatches) is 1 then set candidateItems to menu items of menu of item 1 of submenuMatches
+                        end if
+                        repeat with candidate in candidateItems
+                            if (name of candidate as text) is itemName then
+                                set matchCount to matchCount + 1
+                                if enabled of candidate then set matchEnabled to true
+                            end if
+                        end repeat
+                    end try
+                end tell
+            end if
+        end tell
+        if matchCount > 1 then error "Expected one matching menu item; found " & matchCount
+        if matchCount is 1 then
+            if desiredState is "exists" then return "Menu item appeared: " & itemName
+            if matchEnabled then return "Menu item is enabled: " & itemName
+        end if
+        if (current date) is greater than or equal to deadline then error "Timed out waiting for menu item: " & itemName
+        delay 0.2
+    end repeat
+end run"""
+
+
 CLICK_MENU_ITEM_SCRIPT = """on run argv
     set appName to item 1 of argv
     set menuName to item 2 of argv

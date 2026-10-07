@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 from .mac_ui import (
     CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
     NOTIFY_SCRIPT, SELECT_POPUP_ITEM_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT,
-    WAIT_ELEMENT_SCRIPT, WAIT_WINDOW_SCRIPT,
+    WAIT_ELEMENT_SCRIPT, WAIT_MENU_ITEM_SCRIPT, WAIT_WINDOW_SCRIPT,
     key_script,
 )
 from .policy import tool_allowed
@@ -107,6 +107,11 @@ TOOL_SCHEMAS = [
     _schema(
         "inspect_app_menu", "List app menus or named menu/submenu items with enabled status.",
         {"app": {"type": "string"}, "menu": {"type": "string"}, "submenu": {"type": "string"}}, ["app"],
+    ),
+    _schema(
+        "wait_for_app_menu_item", "Wait for one exact menu or submenu item to appear or become enabled.",
+        {"app": {"type": "string"}, "menu": {"type": "string"}, "item": {"type": "string"}, "submenu": {"type": "string"}, "state": {"type": "string"}, "timeout": {"type": "string"}},
+        ["app", "menu", "item"],
     ),
     _schema(
         "click_app_menu_item", "Click an exact menu item in a running app; optionally name its parent submenu.",
@@ -226,7 +231,7 @@ def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
 
 
 UI_TOOLS = {
-    "list_running_apps", "list_app_windows", "wait_for_app_window", "focus_app_window", "inspect_app_ui", "wait_for_app_element", "inspect_app_menu", "click_app_menu_item",
+    "list_running_apps", "list_app_windows", "wait_for_app_window", "focus_app_window", "inspect_app_ui", "wait_for_app_element", "inspect_app_menu", "wait_for_app_menu_item", "click_app_menu_item",
     "click_app_element", "select_app_popup_item", "set_app_toggle", "type_in_app", "press_app_key",
 }
 
@@ -272,6 +277,7 @@ class MacTools:
             "inspect_app_ui": self.inspect_app_ui,
             "wait_for_app_element": self.wait_for_app_element,
             "inspect_app_menu": self.inspect_app_menu,
+            "wait_for_app_menu_item": self.wait_for_app_menu_item,
             "click_app_menu_item": self.click_app_menu_item,
             "click_app_element": self.click_app_element,
             "select_app_popup_item": self.select_app_popup_item,
@@ -558,6 +564,20 @@ class MacTools:
             "osascript", "-e", INSPECT_MENU_SCRIPT,
             args["app"], args.get("menu", ""), args.get("submenu", ""),
         ], timeout=20)
+
+    def wait_for_app_menu_item(self, args: dict[str, Any]) -> str:
+        if not all(args[key].strip() for key in ("app", "menu", "item")):
+            raise ValueError("app, menu, and item must not be empty")
+        state = args.get("state", "enabled")
+        if state not in {"exists", "enabled"}:
+            raise ValueError("state must be exists or enabled")
+        timeout = args.get("timeout", "10")
+        if not timeout.isdecimal() or not 1 <= int(timeout) <= 30:
+            raise ValueError("timeout must be between 1 and 30 seconds")
+        return _run([
+            "osascript", "-e", WAIT_MENU_ITEM_SCRIPT,
+            args["app"], args["menu"], args["item"], args.get("submenu", ""), state, timeout,
+        ], timeout=int(timeout) + 5)
 
     def click_app_menu_item(self, args: dict[str, Any]) -> str:
         if not all(args[key].strip() for key in ("app", "menu", "item")):
