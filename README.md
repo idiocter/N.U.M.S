@@ -172,6 +172,7 @@ become enabled, or become disabled, which makes asynchronous workflows more reli
 Menu workflows can also wait for an exact item to appear or become enabled.
 Inspection shows disabled controls and menu items, plus exposed values for toggles,
 radio buttons, popup controls, sliders, disclosure controls, and steppers.
+Focused-control inspection reports which element currently receives keyboard input.
 For checkboxes and switches, `set_app_toggle` requests
 an explicit on or off state and checks the result.
 For example, ask `uv run nums "Inspect the front window of Safari"` before
@@ -184,7 +185,8 @@ Window titles are listed with indexes so repeated titles can be selected
 precisely. Keyboard actions support Home, End, Page Up, Page Down, Enter, and
 Forward Delete alongside the existing keys and modifiers.
 
-`list_running_apps`, `list_app_windows`, `wait_for_app_window`, `inspect_app_ui`, `wait_for_app_element`,
+`list_running_apps`, `list_app_windows`, `wait_for_app_window`, `inspect_app_ui`,
+`inspect_focused_app_element`, `wait_for_app_element`,
 and `inspect_app_menu` are available in read-only mode.
 Clicking, typing, and key presses require the default `unrestricted` mode.
 Popup selection also requires `unrestricted` mode and rejects ambiguous,

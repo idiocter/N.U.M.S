@@ -9,7 +9,8 @@ import pytest
 
 from nums.tools import MacTools, _run
 from nums.mac_ui import (
-    CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
+    CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT,
+    INSPECT_FOCUSED_ELEMENT_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
     NOTIFY_SCRIPT, SELECT_POPUP_ITEM_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT,
     WAIT_ELEMENT_SCRIPT, WAIT_MENU_ITEM_SCRIPT, WAIT_WINDOW_SCRIPT,
     key_script,
@@ -288,6 +289,14 @@ def test_app_inspection_reads_interactive_control_values() -> None:
         assert f'roleText is "{role}"' in INSPECT_APP_SCRIPT
 
 
+def test_focused_element_inspection_is_read_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "focused")
+    assert MacTools("read_only").execute("inspect_focused_app_element", {"app": "Notes"}) == "focused"
+    assert commands[0][-1] == "Notes"
+    assert "error" in json.loads(MacTools().execute("inspect_focused_app_element", {"app": ""}))
+
+
 def test_list_app_windows_is_read_only(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
@@ -539,7 +548,8 @@ def test_extended_navigation_keys_have_mac_key_codes() -> None:
 @pytest.mark.skipif(platform.system() != "Darwin", reason="AppleScript compiler requires macOS")
 def test_accessibility_scripts_compile_on_mac(tmp_path: Path) -> None:
     scripts = [
-        LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT, WAIT_WINDOW_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT,
+        LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT, WAIT_WINDOW_SCRIPT, FOCUS_WINDOW_SCRIPT,
+        INSPECT_APP_SCRIPT, INSPECT_FOCUSED_ELEMENT_SCRIPT, INSPECT_MENU_SCRIPT,
         CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, SELECT_POPUP_ITEM_SCRIPT, SET_TOGGLE_SCRIPT,
         TYPE_TEXT_SCRIPT, WAIT_ELEMENT_SCRIPT, WAIT_MENU_ITEM_SCRIPT, NOTIFY_SCRIPT,
         key_script("s", "command"), key_script("return"),

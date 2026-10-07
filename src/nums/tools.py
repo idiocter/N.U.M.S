@@ -13,7 +13,8 @@ from typing import Any, Callable
 from urllib.parse import urlparse
 
 from .mac_ui import (
-    CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
+    CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT,
+    INSPECT_FOCUSED_ELEMENT_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
     NOTIFY_SCRIPT, SELECT_POPUP_ITEM_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT,
     WAIT_ELEMENT_SCRIPT, WAIT_MENU_ITEM_SCRIPT, WAIT_WINDOW_SCRIPT,
     key_script,
@@ -99,6 +100,7 @@ TOOL_SCHEMAS = [
         "inspect_app_ui", "Inspect a page of front-window accessibility elements with availability and exposed control values; use offset and limit to page.",
         {"app": {"type": "string"}, "offset": {"type": "string"}, "limit": {"type": "string"}}, ["app"],
     ),
+    _schema("inspect_focused_app_element", "Inspect the role, label, description, and availability of the app's focused UI element.", {"app": {"type": "string"}}, ["app"]),
     _schema(
         "wait_for_app_element", "Wait for one exact labeled front-window element to exist, become enabled or disabled, or become absent. Timeout defaults to 10 seconds and is capped at 30.",
         {"app": {"type": "string"}, "window": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "state": {"type": "string"}, "timeout": {"type": "string"}},
@@ -231,7 +233,7 @@ def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
 
 
 UI_TOOLS = {
-    "list_running_apps", "list_app_windows", "wait_for_app_window", "focus_app_window", "inspect_app_ui", "wait_for_app_element", "inspect_app_menu", "wait_for_app_menu_item", "click_app_menu_item",
+    "list_running_apps", "list_app_windows", "wait_for_app_window", "focus_app_window", "inspect_app_ui", "inspect_focused_app_element", "wait_for_app_element", "inspect_app_menu", "wait_for_app_menu_item", "click_app_menu_item",
     "click_app_element", "select_app_popup_item", "set_app_toggle", "type_in_app", "press_app_key",
 }
 
@@ -275,6 +277,7 @@ class MacTools:
             "wait_for_app_window": self.wait_for_app_window,
             "focus_app_window": self.focus_app_window,
             "inspect_app_ui": self.inspect_app_ui,
+            "inspect_focused_app_element": self.inspect_focused_app_element,
             "wait_for_app_element": self.wait_for_app_element,
             "inspect_app_menu": self.inspect_app_menu,
             "wait_for_app_menu_item": self.wait_for_app_menu_item,
@@ -540,6 +543,11 @@ class MacTools:
         if not limit.isdecimal() or not 1 <= int(limit) <= 120:
             raise ValueError("limit must be between 1 and 120")
         return _run(["osascript", "-e", INSPECT_APP_SCRIPT, args["app"], offset, limit], timeout=20)
+
+    def inspect_focused_app_element(self, args: dict[str, Any]) -> str:
+        if not args["app"].strip():
+            raise ValueError("app must not be empty")
+        return _run(["osascript", "-e", INSPECT_FOCUSED_ELEMENT_SCRIPT, args["app"]], timeout=20)
 
     def wait_for_app_element(self, args: dict[str, Any]) -> str:
         if not all(args[key].strip() for key in ("app", "window", "role", "label")):

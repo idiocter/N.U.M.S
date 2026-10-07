@@ -6,7 +6,7 @@ from __future__ import annotations
 READ_ONLY_TOOLS = {
     "read_file", "read_lines", "list_directory", "find_files", "search_files",
     "git_status", "git_diff", "system_info",
-    "get_clipboard", "get_calendar_events", "list_running_apps", "inspect_app_ui",
+    "get_clipboard", "get_calendar_events", "list_running_apps", "inspect_app_ui", "inspect_focused_app_element",
     "wait_for_app_element", "inspect_app_menu", "wait_for_app_menu_item",
     "list_app_windows", "wait_for_app_window",
 }

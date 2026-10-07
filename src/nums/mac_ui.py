@@ -279,6 +279,39 @@ INSPECT_APP_SCRIPT = """on run argv
 end run"""
 
 
+INSPECT_FOCUSED_ELEMENT_SCRIPT = """on run argv
+    set appName to item 1 of argv
+    tell application "System Events"
+        if not (exists process appName) then error "App is not running: " & appName
+        tell process appName
+            set elementRef to value of attribute "AXFocusedUIElement"
+            if elementRef is missing value then error "No focused UI element"
+            set roleText to ""
+            set nameText to ""
+            set descriptionText to ""
+            set availability to "unknown"
+            try
+                set roleText to role of elementRef as text
+            end try
+            try
+                set nameText to name of elementRef as text
+            end try
+            try
+                set descriptionText to accessibility description of elementRef as text
+            end try
+            try
+                if enabled of elementRef then
+                    set availability to "enabled"
+                else
+                    set availability to "disabled"
+                end if
+            end try
+        end tell
+    end tell
+    return roleText & tab & nameText & tab & descriptionText & tab & availability
+end run"""
+
+
 WAIT_ELEMENT_SCRIPT = """on run argv
     set appName to item 1 of argv
     set targetWindow to item 2 of argv
