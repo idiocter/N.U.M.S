@@ -96,7 +96,7 @@ TOOL_SCHEMAS = [
     ),
     _schema("focus_app_window", "Raise one exact named window in a running Mac app; use inspected index if titles repeat.", {"app": {"type": "string"}, "window": {"type": "string"}, "index": {"type": "string"}}, ["app", "window"]),
     _schema(
-        "inspect_app_ui", "Inspect a page of front-window accessibility elements with availability and toggle state; use offset and limit to page.",
+        "inspect_app_ui", "Inspect a page of front-window accessibility elements with availability and exposed control values; use offset and limit to page.",
         {"app": {"type": "string"}, "offset": {"type": "string"}, "limit": {"type": "string"}}, ["app"],
     ),
     _schema(

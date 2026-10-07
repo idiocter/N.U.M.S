@@ -170,8 +170,9 @@ popup control, and press keys or shortcuts.
 It can wait up to 30 seconds for an exact labeled control to appear, disappear,
 become enabled, or become disabled, which makes asynchronous workflows more reliable.
 Menu workflows can also wait for an exact item to appear or become enabled.
-Inspection shows disabled controls and menu items, plus checkbox and radio state
-when the app exposes it. For checkboxes and switches, `set_app_toggle` requests
+Inspection shows disabled controls and menu items, plus exposed values for toggles,
+radio buttons, popup controls, sliders, disclosure controls, and steppers.
+For checkboxes and switches, `set_app_toggle` requests
 an explicit on or off state and checks the result.
 For example, ask `uv run nums "Inspect the front window of Safari"` before
 asking it to use a named control. Use the inspected element index when labels

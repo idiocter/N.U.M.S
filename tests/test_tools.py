@@ -283,6 +283,11 @@ def test_app_inspection_passes_page_offset(monkeypatch: pytest.MonkeyPatch) -> N
     assert "between 1 and 120" in invalid_limit["error"]
 
 
+def test_app_inspection_reads_interactive_control_values() -> None:
+    for role in ("AXRadioButton", "AXSlider", "AXPopUpButton", "AXDisclosureTriangle", "AXIncrementor"):
+        assert f'roleText is "{role}"' in INSPECT_APP_SCRIPT
+
+
 def test_list_app_windows_is_read_only(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")

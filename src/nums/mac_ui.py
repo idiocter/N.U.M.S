@@ -261,7 +261,7 @@ INSPECT_APP_SCRIPT = """on run argv
                             set availability to "disabled"
                         end if
                     end try
-                    if roleText is "AXCheckBox" or roleText is "AXRadioButton" or roleText is "AXSwitch" then
+                    if roleText is "AXCheckBox" or roleText is "AXRadioButton" or roleText is "AXSwitch" or roleText is "AXSlider" or roleText is "AXPopUpButton" or roleText is "AXDisclosureTriangle" or roleText is "AXIncrementor" then
                         try
                             set stateText to value of elementRef as text
                         end try

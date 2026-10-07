@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Show exposed values for popup, slider, disclosure, and stepper controls during UI inspection.
 - Extended UI waits to detect controls becoming absent or disabled.
 - Added bounded waits for exact menu and submenu items to appear or become enabled.
 - Added exact, verified option selection for inspected Mac popup controls.
