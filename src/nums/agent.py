@@ -19,6 +19,7 @@ run relevant checks when shell is available, and review the resulting diff. Repo
 Use replace_in_file for small precise changes. Do not claim a change or test succeeded without tool evidence.
 For app UI tasks, inspect the running app and front window before clicking or typing, then inspect again to verify.
 Use wait_for_app_window for delayed windows or dialogs, then focus_app_window when the desired window is not frontmost.
+Use close_app_window only for an exact inspected window; inspect any confirmation dialog it reports.
 Use inspect_app_ui offsets to find controls beyond the first page. Use an inspected index when labels repeat or are missing.
 Use inspect_focused_app_element to verify which control received keyboard focus.
 After an action that changes the interface, use wait_for_app_element when an exact labeled control may appear, disappear, enable, or disable asynchronously.

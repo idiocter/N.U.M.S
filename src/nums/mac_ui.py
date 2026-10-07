@@ -88,6 +88,47 @@ FOCUS_WINDOW_SCRIPT = """on run argv
 end run"""
 
 
+CLOSE_WINDOW_SCRIPT = """on run argv
+    set appName to item 1 of argv
+    set targetTitle to item 2 of argv
+    set selectedIndexText to item 3 of argv
+    set selectedIndex to 0
+    if selectedIndexText is not "" then set selectedIndex to selectedIndexText as integer
+    tell application "System Events"
+        if not (exists process appName) then error "App is not running: " & appName
+        tell process appName
+            set matches to {}
+            set titleMatchCount to 0
+            set allWindows to windows
+            repeat with windowIndex from 1 to count of allWindows
+                set windowRef to item windowIndex of allWindows
+                try
+                    if (name of windowRef as text) is targetTitle then
+                        set titleMatchCount to titleMatchCount + 1
+                        if selectedIndex is 0 or windowIndex is selectedIndex then set end of matches to contents of windowRef
+                    end if
+                end try
+            end repeat
+            if (count of matches) is not 1 then error "Expected one matching window; found " & (count of matches)
+            set targetWindow to item 1 of matches
+            set closeButton to value of attribute "AXCloseButton" of targetWindow
+            if closeButton is missing value then error "Window has no close control"
+            if not (enabled of closeButton) then error "Window close control is disabled"
+            perform action "AXPress" of closeButton
+            delay 0.2
+            set remainingCount to 0
+            repeat with windowRef in windows
+                try
+                    if (name of windowRef as text) is targetTitle then set remainingCount to remainingCount + 1
+                end try
+            end repeat
+            if remainingCount is greater than or equal to titleMatchCount then error "Window did not close; inspect for a confirmation dialog"
+        end tell
+    end tell
+    return "Closed window " & targetTitle
+end run"""
+
+
 INSPECT_MENU_SCRIPT = """on run argv
     set appName to item 1 of argv
     set menuName to item 2 of argv

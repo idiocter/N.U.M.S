@@ -13,7 +13,8 @@ from typing import Any, Callable
 from urllib.parse import urlparse
 
 from .mac_ui import (
-    ADJUST_CONTROL_SCRIPT, CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT,
+    ADJUST_CONTROL_SCRIPT, CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, CLOSE_WINDOW_SCRIPT,
+    FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT,
     INSPECT_FOCUSED_ELEMENT_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
     NOTIFY_SCRIPT, SELECT_POPUP_ITEM_SCRIPT, SELECT_RADIO_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT,
     WAIT_ELEMENT_SCRIPT, WAIT_MENU_ITEM_SCRIPT, WAIT_WINDOW_SCRIPT,
@@ -96,6 +97,7 @@ TOOL_SCHEMAS = [
         ["app", "window"],
     ),
     _schema("focus_app_window", "Raise one exact named window in a running Mac app; use inspected index if titles repeat.", {"app": {"type": "string"}, "window": {"type": "string"}, "index": {"type": "string"}}, ["app", "window"]),
+    _schema("close_app_window", "Close one exact named app window; use its listed index when titles repeat and inspect if a confirmation dialog blocks closing.", {"app": {"type": "string"}, "window": {"type": "string"}, "index": {"type": "string"}}, ["app", "window"]),
     _schema(
         "inspect_app_ui", "Inspect a page of front-window accessibility elements with availability and exposed control values; use offset and limit to page.",
         {"app": {"type": "string"}, "offset": {"type": "string"}, "limit": {"type": "string"}}, ["app"],
@@ -248,7 +250,7 @@ def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
 
 
 UI_TOOLS = {
-    "list_running_apps", "list_app_windows", "wait_for_app_window", "focus_app_window", "inspect_app_ui", "inspect_focused_app_element", "wait_for_app_element", "inspect_app_menu", "wait_for_app_menu_item", "click_app_menu_item",
+    "list_running_apps", "list_app_windows", "wait_for_app_window", "focus_app_window", "close_app_window", "inspect_app_ui", "inspect_focused_app_element", "wait_for_app_element", "inspect_app_menu", "wait_for_app_menu_item", "click_app_menu_item",
     "click_app_element", "select_app_popup_item", "set_app_toggle", "select_app_radio", "adjust_app_control", "type_in_app", "replace_app_text", "press_app_key",
 }
 
@@ -291,6 +293,7 @@ class MacTools:
             "list_app_windows": self.list_app_windows,
             "wait_for_app_window": self.wait_for_app_window,
             "focus_app_window": self.focus_app_window,
+            "close_app_window": self.close_app_window,
             "inspect_app_ui": self.inspect_app_ui,
             "inspect_focused_app_element": self.inspect_focused_app_element,
             "wait_for_app_element": self.wait_for_app_element,
@@ -552,6 +555,17 @@ class MacTools:
         if index and (not index.isdecimal() or int(index) < 1):
             raise ValueError("index must be a positive window number")
         return _run(["osascript", "-e", FOCUS_WINDOW_SCRIPT, args["app"], args["window"], index], timeout=20)
+
+    def close_app_window(self, args: dict[str, Any]) -> str:
+        if not args["app"].strip() or not args["window"].strip():
+            raise ValueError("app and window must not be empty")
+        index = args.get("index", "")
+        if index and (not index.isdecimal() or int(index) < 1):
+            raise ValueError("index must be a positive window number")
+        return _run([
+            "osascript", "-e", CLOSE_WINDOW_SCRIPT,
+            args["app"], args["window"], index,
+        ], timeout=20)
 
     def inspect_app_ui(self, args: dict[str, Any]) -> str:
         offset = args.get("offset", "0")

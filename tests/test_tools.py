@@ -9,7 +9,8 @@ import pytest
 
 from nums.tools import MacTools, _run
 from nums.mac_ui import (
-    ADJUST_CONTROL_SCRIPT, CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT,
+    ADJUST_CONTROL_SCRIPT, CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, CLOSE_WINDOW_SCRIPT,
+    FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT,
     INSPECT_FOCUSED_ELEMENT_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
     NOTIFY_SCRIPT, SELECT_POPUP_ITEM_SCRIPT, SELECT_RADIO_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT,
     WAIT_ELEMENT_SCRIPT, WAIT_MENU_ITEM_SCRIPT, WAIT_WINDOW_SCRIPT,
@@ -338,6 +339,18 @@ def test_focus_window_requires_unrestricted_mode(monkeypatch: pytest.MonkeyPatch
     assert blocked["action_mode"] == "standard"
 
 
+def test_close_window_targets_exact_title_and_optional_index(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
+    args = {"app": "Preview", "window": "Draft.pdf"}
+    assert MacTools().execute("close_app_window", args) == "ok"
+    assert commands[0][-3:] == ["Preview", "Draft.pdf", ""]
+    assert MacTools().execute("close_app_window", {**args, "index": "2"}) == "ok"
+    assert commands[1][-1] == "2"
+    assert "error" in json.loads(MacTools().execute("close_app_window", {**args, "index": "0"}))
+    assert json.loads(MacTools("standard").execute("close_app_window", args))["action_mode"] == "standard"
+
+
 def test_notification_passes_user_text_as_arguments(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
@@ -586,7 +599,8 @@ def test_extended_navigation_keys_have_mac_key_codes() -> None:
 @pytest.mark.skipif(platform.system() != "Darwin", reason="AppleScript compiler requires macOS")
 def test_accessibility_scripts_compile_on_mac(tmp_path: Path) -> None:
     scripts = [
-        ADJUST_CONTROL_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT, WAIT_WINDOW_SCRIPT, FOCUS_WINDOW_SCRIPT,
+        ADJUST_CONTROL_SCRIPT, CLOSE_WINDOW_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
+        WAIT_WINDOW_SCRIPT, FOCUS_WINDOW_SCRIPT,
         INSPECT_APP_SCRIPT, INSPECT_FOCUSED_ELEMENT_SCRIPT, INSPECT_MENU_SCRIPT,
         CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, SELECT_POPUP_ITEM_SCRIPT,
         SELECT_RADIO_SCRIPT, SET_TOGGLE_SCRIPT,

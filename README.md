@@ -163,7 +163,7 @@ been completed. Review important changes and their test results before use.
 ## App control
 
 Text and voice requests use the same Mac tools. NUMS can list running apps,
-wait for, list, and raise an exact named window, inspect pages of its accessibility roles and labels, inspect
+wait for, list, raise, and close an exact named window, inspect pages of its accessibility roles and labels, inspect
 menus and submenus, click an exact control or menu item, type into an inspected
 text field or the focused control, select an exact option from an inspected
 popup control, and press keys or shortcuts.
@@ -188,7 +188,8 @@ default; use `offset` for the next page or `limit` (up to 120) for a larger page
 Clicks fail when the front window changes or a target is ambiguous.
 Targeted typing also stops if the selected field does not receive focus.
 Window titles are listed with indexes so repeated titles can be selected
-precisely. Keyboard actions support Home, End, Page Up, Page Down, Enter, and
+precisely. Exact window closing verifies that the window disappeared and reports
+when a confirmation dialog blocks it. Keyboard actions support Home, End, Page Up, Page Down, Enter, and
 Forward Delete alongside the existing keys and modifiers.
 
 `list_running_apps`, `list_app_windows`, `wait_for_app_window`, `inspect_app_ui`,

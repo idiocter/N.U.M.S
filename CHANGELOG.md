@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added precise window closing with repeated-title indexes and confirmation-dialog detection.
 - Added bounded, verified adjustments for inspected Mac sliders and steppers.
 - Extended explicit state control to expandable Mac disclosure controls.
 - Added idempotent selection of exact Mac radio button options.
