@@ -13,7 +13,7 @@ from typing import Any, Callable
 from urllib.parse import urlparse
 
 from .mac_ui import (
-    CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT,
+    ADJUST_CONTROL_SCRIPT, CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT,
     INSPECT_FOCUSED_ELEMENT_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
     NOTIFY_SCRIPT, SELECT_POPUP_ITEM_SCRIPT, SELECT_RADIO_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT,
     WAIT_ELEMENT_SCRIPT, WAIT_MENU_ITEM_SCRIPT, WAIT_WINDOW_SCRIPT,
@@ -141,6 +141,11 @@ TOOL_SCHEMAS = [
         ["app", "window"],
     ),
     _schema(
+        "adjust_app_control", "Increase or decrease an inspected AXSlider or AXIncrementor by 1 to 20 accessibility steps.",
+        {"app": {"type": "string"}, "window": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "index": {"type": "string"}, "direction": {"type": "string"}, "steps": {"type": "string"}},
+        ["app", "window", "role", "direction"],
+    ),
+    _schema(
         "type_in_app", "Type into an inspected text field by role and label or index, or the currently focused control when no target is supplied.",
         {"app": {"type": "string"}, "window": {"type": "string"}, "text": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "index": {"type": "string"}},
         ["app", "window", "text"],
@@ -244,7 +249,7 @@ def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
 
 UI_TOOLS = {
     "list_running_apps", "list_app_windows", "wait_for_app_window", "focus_app_window", "inspect_app_ui", "inspect_focused_app_element", "wait_for_app_element", "inspect_app_menu", "wait_for_app_menu_item", "click_app_menu_item",
-    "click_app_element", "select_app_popup_item", "set_app_toggle", "select_app_radio", "type_in_app", "replace_app_text", "press_app_key",
+    "click_app_element", "select_app_popup_item", "set_app_toggle", "select_app_radio", "adjust_app_control", "type_in_app", "replace_app_text", "press_app_key",
 }
 
 
@@ -296,6 +301,7 @@ class MacTools:
             "select_app_popup_item": self.select_app_popup_item,
             "set_app_toggle": self.set_app_toggle,
             "select_app_radio": self.select_app_radio,
+            "adjust_app_control": self.adjust_app_control,
             "type_in_app": self.type_in_app,
             "replace_app_text": self.replace_app_text,
             "press_app_key": self.press_app_key,
@@ -694,6 +700,27 @@ class MacTools:
         return _run([
             "osascript", "-e", SELECT_RADIO_SCRIPT,
             args["app"], args["window"], label, index,
+        ], timeout=20)
+
+    def adjust_app_control(self, args: dict[str, Any]) -> str:
+        if not args["app"].strip() or not args["window"].strip():
+            raise ValueError("app and window must not be empty")
+        if args["role"] not in {"AXSlider", "AXIncrementor"}:
+            raise ValueError("role must be AXSlider or AXIncrementor")
+        if args["direction"] not in {"increase", "decrease"}:
+            raise ValueError("direction must be increase or decrease")
+        label, index = args.get("label", ""), args.get("index", "")
+        if index and (not index.isdecimal() or int(index) < 1):
+            raise ValueError("index must be a positive element number")
+        if not label and not index:
+            raise ValueError("label or inspected index is required")
+        steps = args.get("steps", "1")
+        if not steps.isdecimal() or not 1 <= int(steps) <= 20:
+            raise ValueError("steps must be between 1 and 20")
+        return _run([
+            "osascript", "-e", ADJUST_CONTROL_SCRIPT,
+            args["app"], args["window"], args["role"], label, index,
+            args["direction"], steps,
         ], timeout=20)
 
     def press_app_key(self, args: dict[str, Any]) -> str:

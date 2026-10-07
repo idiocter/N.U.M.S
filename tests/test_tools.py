@@ -9,7 +9,7 @@ import pytest
 
 from nums.tools import MacTools, _run
 from nums.mac_ui import (
-    CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT,
+    ADJUST_CONTROL_SCRIPT, CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT,
     INSPECT_FOCUSED_ELEMENT_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
     NOTIFY_SCRIPT, SELECT_POPUP_ITEM_SCRIPT, SELECT_RADIO_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT,
     WAIT_ELEMENT_SCRIPT, WAIT_MENU_ITEM_SCRIPT, WAIT_WINDOW_SCRIPT,
@@ -558,6 +558,17 @@ def test_select_radio_targets_label_or_index(monkeypatch: pytest.MonkeyPatch) ->
     assert json.loads(MacTools("standard").execute("select_app_radio", args))["action_mode"] == "standard"
 
 
+def test_adjust_control_validates_direction_role_and_steps(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
+    args = {"app": "System Settings", "window": "Sound", "role": "AXSlider", "label": "Output volume", "direction": "increase", "steps": "3"}
+    assert MacTools().execute("adjust_app_control", args) == "ok"
+    assert commands[0][-7:] == ["System Settings", "Sound", "AXSlider", "Output volume", "", "increase", "3"]
+    for update in ({"role": "AXButton"}, {"direction": "up"}, {"steps": "0"}, {"steps": "21"}, {"label": ""}):
+        assert "error" in json.loads(MacTools().execute("adjust_app_control", {**args, **update}))
+    assert json.loads(MacTools("standard").execute("adjust_app_control", args))["action_mode"] == "standard"
+
+
 def test_press_app_key_rejects_unknown_modifier() -> None:
     result = json.loads(MacTools().execute("press_app_key", {
         "app": "Finder", "window": "Documents", "key": "s", "modifiers": "super",
@@ -575,7 +586,7 @@ def test_extended_navigation_keys_have_mac_key_codes() -> None:
 @pytest.mark.skipif(platform.system() != "Darwin", reason="AppleScript compiler requires macOS")
 def test_accessibility_scripts_compile_on_mac(tmp_path: Path) -> None:
     scripts = [
-        LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT, WAIT_WINDOW_SCRIPT, FOCUS_WINDOW_SCRIPT,
+        ADJUST_CONTROL_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT, WAIT_WINDOW_SCRIPT, FOCUS_WINDOW_SCRIPT,
         INSPECT_APP_SCRIPT, INSPECT_FOCUSED_ELEMENT_SCRIPT, INSPECT_MENU_SCRIPT,
         CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, SELECT_POPUP_ITEM_SCRIPT,
         SELECT_RADIO_SCRIPT, SET_TOGGLE_SCRIPT,
