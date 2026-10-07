@@ -177,6 +177,8 @@ radio buttons, popup controls, sliders, disclosure controls, and steppers.
 Focused-control inspection reports which element currently receives keyboard input.
 For checkboxes and switches, `set_app_toggle` requests
 an explicit on or off state and checks the result.
+`select_app_radio` selects an exact radio option and leaves an already selected
+option unchanged.
 For example, ask `uv run nums "Inspect the front window of Safari"` before
 asking it to use a named control. Use the inspected element index when labels
 repeat or when a control has no label. UI inspection returns 40 elements by

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added idempotent selection of exact Mac radio button options.
 - Added exact text replacement and clearing for inspected Mac text controls.
 - Added read-only inspection of the currently focused Mac UI element.
 - Show exposed values for popup, slider, disclosure, and stepper controls during UI inspection.
