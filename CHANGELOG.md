@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Extended exact window waits to confirm that windows and dialogs disappeared.
 - Added precise window closing with repeated-title indexes and confirmation-dialog detection.
 - Added bounded, verified adjustments for inspected Mac sliders and steppers.
 - Extended explicit state control to expandable Mac disclosure controls.

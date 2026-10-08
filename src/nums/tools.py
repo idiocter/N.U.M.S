@@ -92,8 +92,8 @@ TOOL_SCHEMAS = [
     _schema("list_running_apps", "List running foreground Mac apps by process name.", {}, []),
     _schema("list_app_windows", "List window titles in a running Mac app.", {"app": {"type": "string"}}, ["app"]),
     _schema(
-        "wait_for_app_window", "Wait for one exact named window to appear. Timeout defaults to 10 seconds and is capped at 30.",
-        {"app": {"type": "string"}, "window": {"type": "string"}, "timeout": {"type": "string"}},
+        "wait_for_app_window", "Wait for one exact named window to appear or become absent. Timeout defaults to 10 seconds and is capped at 30.",
+        {"app": {"type": "string"}, "window": {"type": "string"}, "state": {"type": "string"}, "timeout": {"type": "string"}},
         ["app", "window"],
     ),
     _schema("focus_app_window", "Raise one exact named window in a running Mac app; use inspected index if titles repeat.", {"app": {"type": "string"}, "window": {"type": "string"}, "index": {"type": "string"}}, ["app", "window"]),
@@ -540,12 +540,15 @@ class MacTools:
     def wait_for_app_window(self, args: dict[str, Any]) -> str:
         if not args["app"].strip() or not args["window"].strip():
             raise ValueError("app and window must not be empty")
+        state = args.get("state", "exists")
+        if state not in {"exists", "absent"}:
+            raise ValueError("state must be exists or absent")
         timeout = args.get("timeout", "10")
         if not timeout.isdecimal() or not 1 <= int(timeout) <= 30:
             raise ValueError("timeout must be between 1 and 30 seconds")
         return _run([
             "osascript", "-e", WAIT_WINDOW_SCRIPT,
-            args["app"], args["window"], timeout,
+            args["app"], args["window"], state, timeout,
         ], timeout=int(timeout) + 5)
 
     def focus_app_window(self, args: dict[str, Any]) -> str:

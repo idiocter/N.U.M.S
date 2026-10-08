@@ -35,7 +35,8 @@ end run"""
 WAIT_WINDOW_SCRIPT = """on run argv
     set appName to item 1 of argv
     set targetTitle to item 2 of argv
-    set timeoutSeconds to item 3 of argv as integer
+    set desiredState to item 3 of argv
+    set timeoutSeconds to item 4 of argv as integer
     set deadline to (current date) + timeoutSeconds
     repeat
         set matchCount to 0
@@ -51,7 +52,8 @@ WAIT_WINDOW_SCRIPT = """on run argv
             end if
         end tell
         if matchCount > 1 then error "Expected one matching window; found " & matchCount
-        if matchCount is 1 then return "Window appeared: " & targetTitle
+        if matchCount is 1 and desiredState is "exists" then return "Window appeared: " & targetTitle
+        if matchCount is 0 and desiredState is "absent" then return "Window is absent: " & targetTitle
         if (current date) is greater than or equal to deadline then error "Timed out waiting for window: " & targetTitle
         delay 0.2
     end repeat

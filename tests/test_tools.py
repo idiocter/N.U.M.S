@@ -314,10 +314,11 @@ def test_wait_for_app_window_is_bounded_and_read_only(monkeypatch: pytest.Monkey
     args = {"app": "Preview", "window": "Export", "timeout": "8"}
 
     assert MacTools("read_only").execute("wait_for_app_window", args) == "ready"
-    assert calls[0][0][-3:] == ["Preview", "Export", "8"]
+    assert calls[0][0][-4:] == ["Preview", "Export", "exists", "8"]
     assert calls[0][1]["timeout"] == 13
+    assert MacTools("read_only").execute("wait_for_app_window", {**args, "state": "absent"}) == "ready"
 
-    for update in ({"timeout": "0"}, {"timeout": "31"}, {"window": ""}):
+    for update in ({"timeout": "0"}, {"timeout": "31"}, {"window": ""}, {"state": "closed"}):
         result = json.loads(MacTools("read_only").execute(
             "wait_for_app_window", {**args, **update},
         ))
