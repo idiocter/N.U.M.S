@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added exact window resizing with bounded dimensions and final-size checks.
 - Added exact window movement with bounded multi-display coordinates and final-position checks.
 - Added idempotent minimize and restore control for exact Mac windows.
 - Added exact activation of running Mac apps with foreground verification.

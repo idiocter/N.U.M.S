@@ -196,6 +196,7 @@ when a confirmation dialog blocks it. Keyboard actions support Home, End, Page U
 Forward Delete alongside the existing keys and modifiers.
 Exact windows can also be minimized or restored with post-action state checks.
 Window movement accepts bounded coordinates, including negative coordinates for secondary displays, and verifies the final position.
+Window resizing accepts bounded width and height values and verifies the final dimensions.
 
 `list_running_apps`, `list_app_windows`, `wait_for_app_window`, `inspect_app_ui`,
 `inspect_focused_app_element`, `wait_for_app_element`,

@@ -229,6 +229,39 @@ MOVE_WINDOW_SCRIPT = """on run argv
 end run"""
 
 
+RESIZE_WINDOW_SCRIPT = """on run argv
+    set appName to item 1 of argv
+    set targetTitle to item 2 of argv
+    set selectedIndexText to item 3 of argv
+    set targetWidth to item 4 of argv as integer
+    set targetHeight to item 5 of argv as integer
+    set selectedIndex to 0
+    if selectedIndexText is not "" then set selectedIndex to selectedIndexText as integer
+    tell application "System Events"
+        if not (exists process appName) then error "App is not running: " & appName
+        tell process appName
+            set matches to {}
+            set allWindows to windows
+            repeat with windowIndex from 1 to count of allWindows
+                if selectedIndex is 0 or windowIndex is selectedIndex then
+                    set windowRef to item windowIndex of allWindows
+                    try
+                        if (name of windowRef as text) is targetTitle then set end of matches to contents of windowRef
+                    end try
+                end if
+            end repeat
+            if (count of matches) is not 1 then error "Expected one matching window; found " & (count of matches)
+            set targetWindow to item 1 of matches
+            set size of targetWindow to {targetWidth, targetHeight}
+            delay 0.1
+            set finalSize to size of targetWindow
+            if (item 1 of finalSize as integer) is not targetWidth or (item 2 of finalSize as integer) is not targetHeight then error "Window did not reach requested size"
+        end tell
+    end tell
+    return "Resized window to " & targetWidth & "x" & targetHeight
+end run"""
+
+
 INSPECT_MENU_SCRIPT = """on run argv
     set appName to item 1 of argv
     set menuName to item 2 of argv

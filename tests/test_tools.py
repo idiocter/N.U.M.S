@@ -10,7 +10,7 @@ import pytest
 from nums.tools import MacTools, _run
 from nums.mac_ui import (
     ACTIVATE_APP_SCRIPT, ADJUST_CONTROL_SCRIPT, CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, CLOSE_WINDOW_SCRIPT,
-    FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, MOVE_WINDOW_SCRIPT,
+    FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, MOVE_WINDOW_SCRIPT, RESIZE_WINDOW_SCRIPT,
     INSPECT_FOCUSED_ELEMENT_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
     NOTIFY_SCRIPT, SELECT_POPUP_ITEM_SCRIPT, SELECT_RADIO_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT,
     SET_WINDOW_MINIMIZED_SCRIPT, WAIT_ELEMENT_SCRIPT, WAIT_MENU_ITEM_SCRIPT, WAIT_WINDOW_SCRIPT,
@@ -384,6 +384,16 @@ def test_move_window_accepts_bounded_signed_coordinates(monkeypatch: pytest.Monk
         assert "error" in json.loads(MacTools().execute("move_app_window", {**args, **update}))
 
 
+def test_resize_window_accepts_bounded_dimensions(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
+    args = {"app": "Preview", "window": "Draft.pdf", "width": "1200", "height": "800"}
+    assert MacTools().execute("resize_app_window", args) == "ok"
+    assert commands[0][-5:] == ["Preview", "Draft.pdf", "", "1200", "800"]
+    for update in ({"width": "wide"}, {"width": "99"}, {"height": "10001"}):
+        assert "error" in json.loads(MacTools().execute("resize_app_window", {**args, **update}))
+
+
 def test_notification_passes_user_text_as_arguments(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
@@ -635,7 +645,7 @@ def test_extended_navigation_keys_have_mac_key_codes() -> None:
 def test_accessibility_scripts_compile_on_mac(tmp_path: Path) -> None:
     scripts = [
         ACTIVATE_APP_SCRIPT, ADJUST_CONTROL_SCRIPT, CLOSE_WINDOW_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
-        MOVE_WINDOW_SCRIPT, SET_WINDOW_MINIMIZED_SCRIPT,
+        MOVE_WINDOW_SCRIPT, RESIZE_WINDOW_SCRIPT, SET_WINDOW_MINIMIZED_SCRIPT,
         WAIT_WINDOW_SCRIPT, FOCUS_WINDOW_SCRIPT,
         INSPECT_APP_SCRIPT, INSPECT_FOCUSED_ELEMENT_SCRIPT, INSPECT_MENU_SCRIPT,
         CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, SELECT_POPUP_ITEM_SCRIPT,
