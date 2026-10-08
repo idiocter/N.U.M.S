@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Expanded window listings with main/minimized state, position, and size.
 - Extended menu waits to confirm items becoming disabled or absent.
 - Extended exact window waits to confirm that windows and dialogs disappeared.
 - Added precise window closing with repeated-title indexes and confirmation-dialog detection.

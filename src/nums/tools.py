@@ -90,7 +90,7 @@ TOOL_SCHEMAS = [
     ),
     _schema("open_item", "Open an app, file, folder, or URL; set kind to app, path, or url when the target is ambiguous.", {"target": {"type": "string"}, "kind": {"type": "string"}}, ["target"]),
     _schema("list_running_apps", "List running foreground Mac apps by process name.", {}, []),
-    _schema("list_app_windows", "List window titles in a running Mac app.", {"app": {"type": "string"}}, ["app"]),
+    _schema("list_app_windows", "List window titles, indexes, main/minimized state, position, and size in a running Mac app.", {"app": {"type": "string"}}, ["app"]),
     _schema(
         "wait_for_app_window", "Wait for one exact named window to appear or become absent. Timeout defaults to 10 seconds and is capped at 30.",
         {"app": {"type": "string"}, "window": {"type": "string"}, "state": {"type": "string"}, "timeout": {"type": "string"}},

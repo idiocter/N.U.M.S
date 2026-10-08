@@ -189,7 +189,8 @@ default; use `offset` for the next page or `limit` (up to 120) for a larger page
 Clicks fail when the front window changes or a target is ambiguous.
 Targeted typing also stops if the selected field does not receive focus.
 Window titles are listed with indexes so repeated titles can be selected
-precisely. Exact window closing verifies that the window disappeared and reports
+precisely. Listings also show the main and minimized state, screen position,
+and window size. Exact window closing verifies that the window disappeared and reports
 when a confirmation dialog blocks it. Keyboard actions support Home, End, Page Up, Page Down, Enter, and
 Forward Delete alongside the existing keys and modifiers.
 

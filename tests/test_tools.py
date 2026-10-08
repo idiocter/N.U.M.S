@@ -303,6 +303,9 @@ def test_list_app_windows_is_read_only(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
     assert MacTools("read_only").execute("list_app_windows", {"app": "Finder"}) == "ok"
     assert commands[0][-1] == "Finder"
+    assert 'attribute "AXMinimized"' in LIST_WINDOWS_SCRIPT
+    assert "position of windowRef" in LIST_WINDOWS_SCRIPT
+    assert "size of windowRef" in LIST_WINDOWS_SCRIPT
 
 
 def test_wait_for_app_window_is_bounded_and_read_only(monkeypatch: pytest.MonkeyPatch) -> None:

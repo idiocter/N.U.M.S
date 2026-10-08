@@ -22,7 +22,26 @@ LIST_WINDOWS_SCRIPT = """on run argv
             set allWindows to windows
             repeat with windowIndex from 1 to count of allWindows
                 try
-                    set end of entries to (windowIndex as text) & tab & (name of item windowIndex of allWindows as text)
+                    set windowRef to item windowIndex of allWindows
+                    set mainState to "background"
+                    set minimizedState to "normal"
+                    set positionText to "unknown"
+                    set sizeText to "unknown"
+                    try
+                        if value of attribute "AXMain" of windowRef then set mainState to "main"
+                    end try
+                    try
+                        if value of attribute "AXMinimized" of windowRef then set minimizedState to "minimized"
+                    end try
+                    try
+                        set windowPosition to position of windowRef
+                        set positionText to (item 1 of windowPosition as text) & "," & (item 2 of windowPosition as text)
+                    end try
+                    try
+                        set windowSize to size of windowRef
+                        set sizeText to (item 1 of windowSize as text) & "x" & (item 2 of windowSize as text)
+                    end try
+                    set end of entries to (windowIndex as text) & tab & (name of windowRef as text) & tab & mainState & tab & minimizedState & tab & positionText & tab & sizeText
                 end try
             end repeat
         end tell
