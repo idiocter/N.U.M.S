@@ -113,7 +113,7 @@ TOOL_SCHEMAS = [
         {"app": {"type": "string"}, "menu": {"type": "string"}, "submenu": {"type": "string"}}, ["app"],
     ),
     _schema(
-        "wait_for_app_menu_item", "Wait for one exact menu or submenu item to appear or become enabled.",
+        "wait_for_app_menu_item", "Wait for one exact menu or submenu item to exist, enable, disable, or become absent.",
         {"app": {"type": "string"}, "menu": {"type": "string"}, "item": {"type": "string"}, "submenu": {"type": "string"}, "state": {"type": "string"}, "timeout": {"type": "string"}},
         ["app", "menu", "item"],
     ),
@@ -612,8 +612,8 @@ class MacTools:
         if not all(args[key].strip() for key in ("app", "menu", "item")):
             raise ValueError("app, menu, and item must not be empty")
         state = args.get("state", "enabled")
-        if state not in {"exists", "enabled"}:
-            raise ValueError("state must be exists or enabled")
+        if state not in {"exists", "enabled", "disabled", "absent"}:
+            raise ValueError("state must be exists, enabled, disabled, or absent")
         timeout = args.get("timeout", "10")
         if not timeout.isdecimal() or not 1 <= int(timeout) <= 30:
             raise ValueError("timeout must be between 1 and 30 seconds")

@@ -396,6 +396,8 @@ def test_wait_for_menu_item_is_bounded_and_read_only(monkeypatch: pytest.MonkeyP
     assert MacTools("read_only").execute("wait_for_app_menu_item", args) == "ready"
     assert calls[0][0][-6:] == ["Safari", "File", "Share", "", "enabled", "7"]
     assert calls[0][1]["timeout"] == 12
+    for state in ("exists", "disabled", "absent"):
+        assert MacTools("read_only").execute("wait_for_app_menu_item", {**args, "state": state}) == "ready"
     for update in ({"state": "visible"}, {"timeout": "0"}, {"item": ""}):
         assert "error" in json.loads(MacTools("read_only").execute(
             "wait_for_app_menu_item", {**args, **update},

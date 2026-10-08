@@ -215,9 +215,11 @@ WAIT_MENU_ITEM_SCRIPT = """on run argv
             end if
         end tell
         if matchCount > 1 then error "Expected one matching menu item; found " & matchCount
+        if matchCount is 0 and desiredState is "absent" then return "Menu item is absent: " & itemName
         if matchCount is 1 then
             if desiredState is "exists" then return "Menu item appeared: " & itemName
-            if matchEnabled then return "Menu item is enabled: " & itemName
+            if desiredState is "enabled" and matchEnabled then return "Menu item is enabled: " & itemName
+            if desiredState is "disabled" and not matchEnabled then return "Menu item is disabled: " & itemName
         end if
         if (current date) is greater than or equal to deadline then error "Timed out waiting for menu item: " & itemName
         delay 0.2

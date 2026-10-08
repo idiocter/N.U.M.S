@@ -171,7 +171,7 @@ It can replace or clear the complete value of an exact inspected text control
 instead of appending at an uncertain cursor position.
 It can wait up to 30 seconds for an exact labeled control to appear, disappear,
 become enabled, or become disabled, which makes asynchronous workflows more reliable.
-Menu workflows can also wait for an exact item to appear or become enabled.
+Menu workflows can also wait for an exact item to appear, disappear, enable, or disable.
 Window waits can confirm either appearance or disappearance.
 Inspection shows disabled controls and menu items, plus exposed values for toggles,
 radio buttons, popup controls, sliders, disclosure controls, and steppers.
