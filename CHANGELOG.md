@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added idempotent minimize and restore control for exact Mac windows.
 - Added exact activation of running Mac apps with foreground verification.
 - Expanded window listings with main/minimized state, position, and size.
 - Extended menu waits to confirm items becoming disabled or absent.

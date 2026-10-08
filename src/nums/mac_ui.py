@@ -164,6 +164,38 @@ CLOSE_WINDOW_SCRIPT = """on run argv
 end run"""
 
 
+SET_WINDOW_MINIMIZED_SCRIPT = """on run argv
+    set appName to item 1 of argv
+    set targetTitle to item 2 of argv
+    set selectedIndexText to item 3 of argv
+    set desiredState to item 4 of argv
+    set selectedIndex to 0
+    if selectedIndexText is not "" then set selectedIndex to selectedIndexText as integer
+    set desiredValue to desiredState is "on"
+    tell application "System Events"
+        if not (exists process appName) then error "App is not running: " & appName
+        tell process appName
+            set matches to {}
+            set allWindows to windows
+            repeat with windowIndex from 1 to count of allWindows
+                if selectedIndex is 0 or windowIndex is selectedIndex then
+                    set windowRef to item windowIndex of allWindows
+                    try
+                        if (name of windowRef as text) is targetTitle then set end of matches to contents of windowRef
+                    end try
+                end if
+            end repeat
+            if (count of matches) is not 1 then error "Expected one matching window; found " & (count of matches)
+            set targetWindow to item 1 of matches
+            set value of attribute "AXMinimized" of targetWindow to desiredValue
+            delay 0.1
+            if (value of attribute "AXMinimized" of targetWindow) is not desiredValue then error "Window did not reach requested minimized state"
+        end tell
+    end tell
+    return "Window minimized state is " & desiredState
+end run"""
+
+
 INSPECT_MENU_SCRIPT = """on run argv
     set appName to item 1 of argv
     set menuName to item 2 of argv
