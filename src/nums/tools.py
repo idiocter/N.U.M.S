@@ -18,7 +18,7 @@ from .mac_ui import (
     INSPECT_FOCUSED_ELEMENT_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT, MOVE_WINDOW_SCRIPT,
     NOTIFY_SCRIPT, RESIZE_WINDOW_SCRIPT, SELECT_POPUP_ITEM_SCRIPT, SELECT_RADIO_SCRIPT, SET_TOGGLE_SCRIPT,
     SET_WINDOW_FULLSCREEN_SCRIPT, SET_WINDOW_MINIMIZED_SCRIPT, TYPE_TEXT_SCRIPT,
-    WAIT_ELEMENT_SCRIPT, WAIT_MENU_ITEM_SCRIPT, WAIT_WINDOW_SCRIPT,
+    SHOW_ELEMENT_MENU_SCRIPT, WAIT_ELEMENT_SCRIPT, WAIT_MENU_ITEM_SCRIPT, WAIT_WINDOW_SCRIPT,
     key_script,
 )
 from .policy import tool_allowed
@@ -130,6 +130,11 @@ TOOL_SCHEMAS = [
     ),
     _schema(
         "click_app_element", "Click a front-window element by role and label, or by role and inspected index when unlabeled.",
+        {"app": {"type": "string"}, "window": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "index": {"type": "string"}},
+        ["app", "window", "role"],
+    ),
+    _schema(
+        "show_app_element_menu", "Open the accessibility context menu for one exact front-window element by label or inspected index.",
         {"app": {"type": "string"}, "window": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "index": {"type": "string"}},
         ["app", "window", "role"],
     ),
@@ -267,7 +272,7 @@ def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
 
 UI_TOOLS = {
     "list_running_apps", "activate_app", "list_app_windows", "wait_for_app_window", "focus_app_window", "close_app_window", "set_app_window_minimized", "set_app_window_fullscreen", "move_app_window", "resize_app_window", "inspect_app_ui", "inspect_focused_app_element", "wait_for_app_element", "inspect_app_menu", "wait_for_app_menu_item", "click_app_menu_item",
-    "click_app_element", "select_app_popup_item", "set_app_toggle", "select_app_radio", "adjust_app_control", "type_in_app", "replace_app_text", "press_app_key",
+    "click_app_element", "show_app_element_menu", "select_app_popup_item", "set_app_toggle", "select_app_radio", "adjust_app_control", "type_in_app", "replace_app_text", "press_app_key",
 }
 
 
@@ -322,6 +327,7 @@ class MacTools:
             "wait_for_app_menu_item": self.wait_for_app_menu_item,
             "click_app_menu_item": self.click_app_menu_item,
             "click_app_element": self.click_app_element,
+            "show_app_element_menu": self.show_app_element_menu,
             "select_app_popup_item": self.select_app_popup_item,
             "set_app_toggle": self.set_app_toggle,
             "select_app_radio": self.select_app_radio,
@@ -719,6 +725,19 @@ class MacTools:
             raise ValueError("label or inspected index is required")
         return _run([
             "osascript", "-e", CLICK_ELEMENT_SCRIPT,
+            args["app"], args["window"], args["role"], label, index,
+        ], timeout=20)
+
+    def show_app_element_menu(self, args: dict[str, Any]) -> str:
+        if not all(args[key].strip() for key in ("app", "window", "role")):
+            raise ValueError("app, window, and role must not be empty")
+        label, index = args.get("label", ""), args.get("index", "")
+        if index and (not index.isdecimal() or int(index) < 1):
+            raise ValueError("index must be a positive element number")
+        if not label and not index:
+            raise ValueError("label or inspected index is required")
+        return _run([
+            "osascript", "-e", SHOW_ELEMENT_MENU_SCRIPT,
             args["app"], args["window"], args["role"], label, index,
         ], timeout=20)
 

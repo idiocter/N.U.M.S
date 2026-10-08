@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added exact accessibility context-menu opening for inspected Mac UI elements.
 - Added verified full-screen state control for exact Mac windows that expose it.
 - Added exact window resizing with bounded dimensions and final-size checks.
 - Added exact window movement with bounded multi-display coordinates and final-position checks.

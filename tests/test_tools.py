@@ -14,7 +14,7 @@ from nums.mac_ui import (
     INSPECT_FOCUSED_ELEMENT_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
     NOTIFY_SCRIPT, SELECT_POPUP_ITEM_SCRIPT, SELECT_RADIO_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT,
     SET_WINDOW_FULLSCREEN_SCRIPT, SET_WINDOW_MINIMIZED_SCRIPT,
-    WAIT_ELEMENT_SCRIPT, WAIT_MENU_ITEM_SCRIPT, WAIT_WINDOW_SCRIPT,
+    SHOW_ELEMENT_MENU_SCRIPT, WAIT_ELEMENT_SCRIPT, WAIT_MENU_ITEM_SCRIPT, WAIT_WINDOW_SCRIPT,
     key_script,
 )
 
@@ -543,6 +543,16 @@ def test_indexed_click_passes_inspected_index_and_rejects_bad_values(
         assert "positive" in result["error"]
 
 
+def test_show_element_menu_requires_exact_target(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
+    args = {"app": "Finder", "window": "Documents", "role": "AXRow", "label": "report.pdf"}
+    assert MacTools().execute("show_app_element_menu", args) == "ok"
+    assert commands[0][-5:] == ["Finder", "Documents", "AXRow", "report.pdf", ""]
+    assert "error" in json.loads(MacTools().execute("show_app_element_menu", {**args, "label": ""}))
+    assert json.loads(MacTools("standard").execute("show_app_element_menu", args))["action_mode"] == "standard"
+
+
 def test_select_popup_item_uses_exact_target_and_requires_unrestricted_mode(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -659,7 +669,7 @@ def test_accessibility_scripts_compile_on_mac(tmp_path: Path) -> None:
         WAIT_WINDOW_SCRIPT, FOCUS_WINDOW_SCRIPT,
         INSPECT_APP_SCRIPT, INSPECT_FOCUSED_ELEMENT_SCRIPT, INSPECT_MENU_SCRIPT,
         CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, SELECT_POPUP_ITEM_SCRIPT,
-        SELECT_RADIO_SCRIPT, SET_TOGGLE_SCRIPT,
+        SELECT_RADIO_SCRIPT, SET_TOGGLE_SCRIPT, SHOW_ELEMENT_MENU_SCRIPT,
         TYPE_TEXT_SCRIPT, WAIT_ELEMENT_SCRIPT, WAIT_MENU_ITEM_SCRIPT, NOTIFY_SCRIPT,
         key_script("s", "command"), key_script("return"),
     ]
