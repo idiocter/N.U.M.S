@@ -13,7 +13,7 @@ from typing import Any, Callable
 from urllib.parse import urlparse
 
 from .mac_ui import (
-    ADJUST_CONTROL_SCRIPT, CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, CLOSE_WINDOW_SCRIPT,
+    ACTIVATE_APP_SCRIPT, ADJUST_CONTROL_SCRIPT, CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, CLOSE_WINDOW_SCRIPT,
     FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT,
     INSPECT_FOCUSED_ELEMENT_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
     NOTIFY_SCRIPT, SELECT_POPUP_ITEM_SCRIPT, SELECT_RADIO_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT,
@@ -90,6 +90,7 @@ TOOL_SCHEMAS = [
     ),
     _schema("open_item", "Open an app, file, folder, or URL; set kind to app, path, or url when the target is ambiguous.", {"target": {"type": "string"}, "kind": {"type": "string"}}, ["target"]),
     _schema("list_running_apps", "List running foreground Mac apps by process name.", {}, []),
+    _schema("activate_app", "Bring one exact running Mac app to the foreground without launching another app.", {"app": {"type": "string"}}, ["app"]),
     _schema("list_app_windows", "List window titles, indexes, main/minimized state, position, and size in a running Mac app.", {"app": {"type": "string"}}, ["app"]),
     _schema(
         "wait_for_app_window", "Wait for one exact named window to appear or become absent. Timeout defaults to 10 seconds and is capped at 30.",
@@ -250,7 +251,7 @@ def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
 
 
 UI_TOOLS = {
-    "list_running_apps", "list_app_windows", "wait_for_app_window", "focus_app_window", "close_app_window", "inspect_app_ui", "inspect_focused_app_element", "wait_for_app_element", "inspect_app_menu", "wait_for_app_menu_item", "click_app_menu_item",
+    "list_running_apps", "activate_app", "list_app_windows", "wait_for_app_window", "focus_app_window", "close_app_window", "inspect_app_ui", "inspect_focused_app_element", "wait_for_app_element", "inspect_app_menu", "wait_for_app_menu_item", "click_app_menu_item",
     "click_app_element", "select_app_popup_item", "set_app_toggle", "select_app_radio", "adjust_app_control", "type_in_app", "replace_app_text", "press_app_key",
 }
 
@@ -290,6 +291,7 @@ class MacTools:
             "shell": self.shell,
             "open_item": self.open_item,
             "list_running_apps": self.list_running_apps,
+            "activate_app": self.activate_app,
             "list_app_windows": self.list_app_windows,
             "wait_for_app_window": self.wait_for_app_window,
             "focus_app_window": self.focus_app_window,
@@ -531,6 +533,11 @@ class MacTools:
 
     def list_running_apps(self, args: dict[str, Any]) -> str:
         return _run(["osascript", "-e", LIST_APPS_SCRIPT], timeout=20)
+
+    def activate_app(self, args: dict[str, Any]) -> str:
+        if not args["app"].strip():
+            raise ValueError("app must not be empty")
+        return _run(["osascript", "-e", ACTIVATE_APP_SCRIPT, args["app"]], timeout=20)
 
     def list_app_windows(self, args: dict[str, Any]) -> str:
         if not args["app"].strip():

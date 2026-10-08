@@ -9,7 +9,7 @@ import pytest
 
 from nums.tools import MacTools, _run
 from nums.mac_ui import (
-    ADJUST_CONTROL_SCRIPT, CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, CLOSE_WINDOW_SCRIPT,
+    ACTIVATE_APP_SCRIPT, ADJUST_CONTROL_SCRIPT, CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, CLOSE_WINDOW_SCRIPT,
     FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT,
     INSPECT_FOCUSED_ELEMENT_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
     NOTIFY_SCRIPT, SELECT_POPUP_ITEM_SCRIPT, SELECT_RADIO_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT,
@@ -306,6 +306,15 @@ def test_list_app_windows_is_read_only(monkeypatch: pytest.MonkeyPatch) -> None:
     assert 'attribute "AXMinimized"' in LIST_WINDOWS_SCRIPT
     assert "position of windowRef" in LIST_WINDOWS_SCRIPT
     assert "size of windowRef" in LIST_WINDOWS_SCRIPT
+
+
+def test_activate_app_requires_unrestricted_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
+    assert MacTools().execute("activate_app", {"app": "Safari"}) == "ok"
+    assert commands[0][-1] == "Safari"
+    assert "error" in json.loads(MacTools().execute("activate_app", {"app": ""}))
+    assert json.loads(MacTools("standard").execute("activate_app", {"app": "Safari"}))["action_mode"] == "standard"
 
 
 def test_wait_for_app_window_is_bounded_and_read_only(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -605,7 +614,7 @@ def test_extended_navigation_keys_have_mac_key_codes() -> None:
 @pytest.mark.skipif(platform.system() != "Darwin", reason="AppleScript compiler requires macOS")
 def test_accessibility_scripts_compile_on_mac(tmp_path: Path) -> None:
     scripts = [
-        ADJUST_CONTROL_SCRIPT, CLOSE_WINDOW_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
+        ACTIVATE_APP_SCRIPT, ADJUST_CONTROL_SCRIPT, CLOSE_WINDOW_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
         WAIT_WINDOW_SCRIPT, FOCUS_WINDOW_SCRIPT,
         INSPECT_APP_SCRIPT, INSPECT_FOCUSED_ELEMENT_SCRIPT, INSPECT_MENU_SCRIPT,
         CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, SELECT_POPUP_ITEM_SCRIPT,

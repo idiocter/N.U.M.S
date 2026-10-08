@@ -8,6 +8,20 @@ LIST_APPS_SCRIPT = """tell application "System Events"
 end tell"""
 
 
+ACTIVATE_APP_SCRIPT = """on run argv
+    set appName to item 1 of argv
+    tell application "System Events"
+        if not (exists process appName) then error "App is not running: " & appName
+        tell process appName
+            set frontmost to true
+            delay 0.1
+            if not frontmost then error "App did not become frontmost: " & appName
+        end tell
+    end tell
+    return "Activated app " & appName
+end run"""
+
+
 NOTIFY_SCRIPT = """on run argv
     display notification (item 1 of argv) with title (item 2 of argv)
 end run"""

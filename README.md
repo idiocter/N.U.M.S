@@ -167,6 +167,7 @@ wait for, list, raise, and close an exact named window, inspect pages of its acc
 menus and submenus, click an exact control or menu item, type into an inspected
 text field or the focused control, select an exact option from an inspected
 popup control, and press keys or shortcuts.
+It can activate an exact running app without accidentally launching a different app.
 It can replace or clear the complete value of an exact inspected text control
 instead of appending at an uncertain cursor position.
 It can wait up to 30 seconds for an exact labeled control to appear, disappear,

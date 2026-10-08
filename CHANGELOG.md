@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added exact activation of running Mac apps with foreground verification.
 - Expanded window listings with main/minimized state, position, and size.
 - Extended menu waits to confirm items becoming disabled or absent.
 - Extended exact window waits to confirm that windows and dialogs disappeared.
