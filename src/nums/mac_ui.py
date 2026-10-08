@@ -196,6 +196,39 @@ SET_WINDOW_MINIMIZED_SCRIPT = """on run argv
 end run"""
 
 
+SET_WINDOW_FULLSCREEN_SCRIPT = """on run argv
+    set appName to item 1 of argv
+    set targetTitle to item 2 of argv
+    set selectedIndexText to item 3 of argv
+    set desiredState to item 4 of argv
+    set selectedIndex to 0
+    if selectedIndexText is not "" then set selectedIndex to selectedIndexText as integer
+    set desiredValue to desiredState is "on"
+    tell application "System Events"
+        if not (exists process appName) then error "App is not running: " & appName
+        tell process appName
+            set matches to {}
+            set allWindows to windows
+            repeat with windowIndex from 1 to count of allWindows
+                if selectedIndex is 0 or windowIndex is selectedIndex then
+                    set windowRef to item windowIndex of allWindows
+                    try
+                        if (name of windowRef as text) is targetTitle then set end of matches to contents of windowRef
+                    end try
+                end if
+            end repeat
+            if (count of matches) is not 1 then error "Expected one matching window; found " & (count of matches)
+            set targetWindow to item 1 of matches
+            if not (exists attribute "AXFullScreen" of targetWindow) then error "Window does not expose full-screen control"
+            set value of attribute "AXFullScreen" of targetWindow to desiredValue
+            delay 0.5
+            if (value of attribute "AXFullScreen" of targetWindow) is not desiredValue then error "Window did not reach requested full-screen state"
+        end tell
+    end tell
+    return "Window full-screen state is " & desiredState
+end run"""
+
+
 MOVE_WINDOW_SCRIPT = """on run argv
     set appName to item 1 of argv
     set targetTitle to item 2 of argv

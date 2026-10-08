@@ -13,7 +13,8 @@ from nums.mac_ui import (
     FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, MOVE_WINDOW_SCRIPT, RESIZE_WINDOW_SCRIPT,
     INSPECT_FOCUSED_ELEMENT_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
     NOTIFY_SCRIPT, SELECT_POPUP_ITEM_SCRIPT, SELECT_RADIO_SCRIPT, SET_TOGGLE_SCRIPT, TYPE_TEXT_SCRIPT,
-    SET_WINDOW_MINIMIZED_SCRIPT, WAIT_ELEMENT_SCRIPT, WAIT_MENU_ITEM_SCRIPT, WAIT_WINDOW_SCRIPT,
+    SET_WINDOW_FULLSCREEN_SCRIPT, SET_WINDOW_MINIMIZED_SCRIPT,
+    WAIT_ELEMENT_SCRIPT, WAIT_MENU_ITEM_SCRIPT, WAIT_WINDOW_SCRIPT,
     key_script,
 )
 
@@ -374,6 +375,15 @@ def test_set_window_minimized_validates_state_and_index(monkeypatch: pytest.Monk
     assert "error" in json.loads(MacTools().execute("set_app_window_minimized", {**args, "index": "0"}))
 
 
+def test_set_window_fullscreen_validates_state(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
+    args = {"app": "Safari", "window": "Downloads", "state": "on"}
+    assert MacTools().execute("set_app_window_fullscreen", args) == "ok"
+    assert commands[0][-4:] == ["Safari", "Downloads", "", "on"]
+    assert "error" in json.loads(MacTools().execute("set_app_window_fullscreen", {**args, "state": "toggle"}))
+
+
 def test_move_window_accepts_bounded_signed_coordinates(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
@@ -645,7 +655,7 @@ def test_extended_navigation_keys_have_mac_key_codes() -> None:
 def test_accessibility_scripts_compile_on_mac(tmp_path: Path) -> None:
     scripts = [
         ACTIVATE_APP_SCRIPT, ADJUST_CONTROL_SCRIPT, CLOSE_WINDOW_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
-        MOVE_WINDOW_SCRIPT, RESIZE_WINDOW_SCRIPT, SET_WINDOW_MINIMIZED_SCRIPT,
+        MOVE_WINDOW_SCRIPT, RESIZE_WINDOW_SCRIPT, SET_WINDOW_FULLSCREEN_SCRIPT, SET_WINDOW_MINIMIZED_SCRIPT,
         WAIT_WINDOW_SCRIPT, FOCUS_WINDOW_SCRIPT,
         INSPECT_APP_SCRIPT, INSPECT_FOCUSED_ELEMENT_SCRIPT, INSPECT_MENU_SCRIPT,
         CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, SELECT_POPUP_ITEM_SCRIPT,

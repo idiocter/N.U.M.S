@@ -195,6 +195,7 @@ and window size. Exact window closing verifies that the window disappeared and r
 when a confirmation dialog blocks it. Keyboard actions support Home, End, Page Up, Page Down, Enter, and
 Forward Delete alongside the existing keys and modifiers.
 Exact windows can also be minimized or restored with post-action state checks.
+Windows that expose the macOS full-screen attribute can enter or leave full screen with state verification.
 Window movement accepts bounded coordinates, including negative coordinates for secondary displays, and verifies the final position.
 Window resizing accepts bounded width and height values and verifies the final dimensions.
 

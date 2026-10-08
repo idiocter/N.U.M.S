@@ -22,6 +22,7 @@ Use activate_app to bring an exact running app forward without launching a new p
 Use wait_for_app_window for windows or dialogs that may appear or disappear, then focus_app_window when the desired window is not frontmost.
 Use close_app_window only for an exact inspected window; inspect any confirmation dialog it reports.
 Use set_app_window_minimized for explicit minimize or restore requests.
+Use set_app_window_fullscreen for an exact window only when it exposes full-screen control.
 Use move_app_window only with coordinates from an inspected window listing or an explicit request.
 Use resize_app_window only with dimensions from an inspected window listing or an explicit request.
 Use inspect_app_ui offsets to find controls beyond the first page. Use an inspected index when labels repeat or are missing.

@@ -17,7 +17,7 @@ from .mac_ui import (
     FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT,
     INSPECT_FOCUSED_ELEMENT_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT, MOVE_WINDOW_SCRIPT,
     NOTIFY_SCRIPT, RESIZE_WINDOW_SCRIPT, SELECT_POPUP_ITEM_SCRIPT, SELECT_RADIO_SCRIPT, SET_TOGGLE_SCRIPT,
-    SET_WINDOW_MINIMIZED_SCRIPT, TYPE_TEXT_SCRIPT,
+    SET_WINDOW_FULLSCREEN_SCRIPT, SET_WINDOW_MINIMIZED_SCRIPT, TYPE_TEXT_SCRIPT,
     WAIT_ELEMENT_SCRIPT, WAIT_MENU_ITEM_SCRIPT, WAIT_WINDOW_SCRIPT,
     key_script,
 )
@@ -101,6 +101,7 @@ TOOL_SCHEMAS = [
     _schema("focus_app_window", "Raise one exact named window in a running Mac app; use inspected index if titles repeat.", {"app": {"type": "string"}, "window": {"type": "string"}, "index": {"type": "string"}}, ["app", "window"]),
     _schema("close_app_window", "Close one exact named app window; use its listed index when titles repeat and inspect if a confirmation dialog blocks closing.", {"app": {"type": "string"}, "window": {"type": "string"}, "index": {"type": "string"}}, ["app", "window"]),
     _schema("set_app_window_minimized", "Set one exact named window's minimized state on or off; use its listed index when titles repeat.", {"app": {"type": "string"}, "window": {"type": "string"}, "index": {"type": "string"}, "state": {"type": "string"}}, ["app", "window", "state"]),
+    _schema("set_app_window_fullscreen", "Set one exact named window's full-screen state on or off when the app exposes it.", {"app": {"type": "string"}, "window": {"type": "string"}, "index": {"type": "string"}, "state": {"type": "string"}}, ["app", "window", "state"]),
     _schema("move_app_window", "Move one exact named window to bounded screen coordinates; use its listed index when titles repeat.", {"app": {"type": "string"}, "window": {"type": "string"}, "index": {"type": "string"}, "x": {"type": "string"}, "y": {"type": "string"}}, ["app", "window", "x", "y"]),
     _schema("resize_app_window", "Resize one exact named window to bounded dimensions; use its listed index when titles repeat.", {"app": {"type": "string"}, "window": {"type": "string"}, "index": {"type": "string"}, "width": {"type": "string"}, "height": {"type": "string"}}, ["app", "window", "width", "height"]),
     _schema(
@@ -265,7 +266,7 @@ def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
 
 
 UI_TOOLS = {
-    "list_running_apps", "activate_app", "list_app_windows", "wait_for_app_window", "focus_app_window", "close_app_window", "set_app_window_minimized", "move_app_window", "resize_app_window", "inspect_app_ui", "inspect_focused_app_element", "wait_for_app_element", "inspect_app_menu", "wait_for_app_menu_item", "click_app_menu_item",
+    "list_running_apps", "activate_app", "list_app_windows", "wait_for_app_window", "focus_app_window", "close_app_window", "set_app_window_minimized", "set_app_window_fullscreen", "move_app_window", "resize_app_window", "inspect_app_ui", "inspect_focused_app_element", "wait_for_app_element", "inspect_app_menu", "wait_for_app_menu_item", "click_app_menu_item",
     "click_app_element", "select_app_popup_item", "set_app_toggle", "select_app_radio", "adjust_app_control", "type_in_app", "replace_app_text", "press_app_key",
 }
 
@@ -311,6 +312,7 @@ class MacTools:
             "focus_app_window": self.focus_app_window,
             "close_app_window": self.close_app_window,
             "set_app_window_minimized": self.set_app_window_minimized,
+            "set_app_window_fullscreen": self.set_app_window_fullscreen,
             "move_app_window": self.move_app_window,
             "resize_app_window": self.resize_app_window,
             "inspect_app_ui": self.inspect_app_ui,
@@ -604,6 +606,19 @@ class MacTools:
             raise ValueError("index must be a positive window number")
         return _run([
             "osascript", "-e", SET_WINDOW_MINIMIZED_SCRIPT,
+            args["app"], args["window"], index, args["state"],
+        ], timeout=20)
+
+    def set_app_window_fullscreen(self, args: dict[str, Any]) -> str:
+        if not args["app"].strip() or not args["window"].strip():
+            raise ValueError("app and window must not be empty")
+        if args["state"] not in {"on", "off"}:
+            raise ValueError("state must be on or off")
+        index = args.get("index", "")
+        if index and (not index.isdecimal() or int(index) < 1):
+            raise ValueError("index must be a positive window number")
+        return _run([
+            "osascript", "-e", SET_WINDOW_FULLSCREEN_SCRIPT,
             args["app"], args["window"], index, args["state"],
         ], timeout=20)
 
