@@ -196,6 +196,39 @@ SET_WINDOW_MINIMIZED_SCRIPT = """on run argv
 end run"""
 
 
+MOVE_WINDOW_SCRIPT = """on run argv
+    set appName to item 1 of argv
+    set targetTitle to item 2 of argv
+    set selectedIndexText to item 3 of argv
+    set targetX to item 4 of argv as integer
+    set targetY to item 5 of argv as integer
+    set selectedIndex to 0
+    if selectedIndexText is not "" then set selectedIndex to selectedIndexText as integer
+    tell application "System Events"
+        if not (exists process appName) then error "App is not running: " & appName
+        tell process appName
+            set matches to {}
+            set allWindows to windows
+            repeat with windowIndex from 1 to count of allWindows
+                if selectedIndex is 0 or windowIndex is selectedIndex then
+                    set windowRef to item windowIndex of allWindows
+                    try
+                        if (name of windowRef as text) is targetTitle then set end of matches to contents of windowRef
+                    end try
+                end if
+            end repeat
+            if (count of matches) is not 1 then error "Expected one matching window; found " & (count of matches)
+            set targetWindow to item 1 of matches
+            set position of targetWindow to {targetX, targetY}
+            delay 0.1
+            set finalPosition to position of targetWindow
+            if (item 1 of finalPosition as integer) is not targetX or (item 2 of finalPosition as integer) is not targetY then error "Window did not reach requested position"
+        end tell
+    end tell
+    return "Moved window to " & targetX & "," & targetY
+end run"""
+
+
 INSPECT_MENU_SCRIPT = """on run argv
     set appName to item 1 of argv
     set menuName to item 2 of argv

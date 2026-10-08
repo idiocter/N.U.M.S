@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 from .mac_ui import (
     ACTIVATE_APP_SCRIPT, ADJUST_CONTROL_SCRIPT, CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, CLOSE_WINDOW_SCRIPT,
     FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT,
-    INSPECT_FOCUSED_ELEMENT_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT,
+    INSPECT_FOCUSED_ELEMENT_SCRIPT, INSPECT_MENU_SCRIPT, LIST_APPS_SCRIPT, LIST_WINDOWS_SCRIPT, MOVE_WINDOW_SCRIPT,
     NOTIFY_SCRIPT, SELECT_POPUP_ITEM_SCRIPT, SELECT_RADIO_SCRIPT, SET_TOGGLE_SCRIPT,
     SET_WINDOW_MINIMIZED_SCRIPT, TYPE_TEXT_SCRIPT,
     WAIT_ELEMENT_SCRIPT, WAIT_MENU_ITEM_SCRIPT, WAIT_WINDOW_SCRIPT,
@@ -101,6 +101,7 @@ TOOL_SCHEMAS = [
     _schema("focus_app_window", "Raise one exact named window in a running Mac app; use inspected index if titles repeat.", {"app": {"type": "string"}, "window": {"type": "string"}, "index": {"type": "string"}}, ["app", "window"]),
     _schema("close_app_window", "Close one exact named app window; use its listed index when titles repeat and inspect if a confirmation dialog blocks closing.", {"app": {"type": "string"}, "window": {"type": "string"}, "index": {"type": "string"}}, ["app", "window"]),
     _schema("set_app_window_minimized", "Set one exact named window's minimized state on or off; use its listed index when titles repeat.", {"app": {"type": "string"}, "window": {"type": "string"}, "index": {"type": "string"}, "state": {"type": "string"}}, ["app", "window", "state"]),
+    _schema("move_app_window", "Move one exact named window to bounded screen coordinates; use its listed index when titles repeat.", {"app": {"type": "string"}, "window": {"type": "string"}, "index": {"type": "string"}, "x": {"type": "string"}, "y": {"type": "string"}}, ["app", "window", "x", "y"]),
     _schema(
         "inspect_app_ui", "Inspect a page of front-window accessibility elements with availability and exposed control values; use offset and limit to page.",
         {"app": {"type": "string"}, "offset": {"type": "string"}, "limit": {"type": "string"}}, ["app"],
@@ -219,6 +220,16 @@ def validate_tool_arguments(name: str, args: Any) -> str | None:
     return None
 
 
+def _bounded_integer(raw: str, name: str, minimum: int, maximum: int) -> int:
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be an integer") from exc
+    if not minimum <= value <= maximum:
+        raise ValueError(f"{name} must be between {minimum} and {maximum}")
+    return value
+
+
 def _bounded_output(output: str) -> tuple[str, bool]:
     if len(output) <= 12000:
         return output, False
@@ -253,7 +264,7 @@ def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
 
 
 UI_TOOLS = {
-    "list_running_apps", "activate_app", "list_app_windows", "wait_for_app_window", "focus_app_window", "close_app_window", "set_app_window_minimized", "inspect_app_ui", "inspect_focused_app_element", "wait_for_app_element", "inspect_app_menu", "wait_for_app_menu_item", "click_app_menu_item",
+    "list_running_apps", "activate_app", "list_app_windows", "wait_for_app_window", "focus_app_window", "close_app_window", "set_app_window_minimized", "move_app_window", "inspect_app_ui", "inspect_focused_app_element", "wait_for_app_element", "inspect_app_menu", "wait_for_app_menu_item", "click_app_menu_item",
     "click_app_element", "select_app_popup_item", "set_app_toggle", "select_app_radio", "adjust_app_control", "type_in_app", "replace_app_text", "press_app_key",
 }
 
@@ -299,6 +310,7 @@ class MacTools:
             "focus_app_window": self.focus_app_window,
             "close_app_window": self.close_app_window,
             "set_app_window_minimized": self.set_app_window_minimized,
+            "move_app_window": self.move_app_window,
             "inspect_app_ui": self.inspect_app_ui,
             "inspect_focused_app_element": self.inspect_focused_app_element,
             "wait_for_app_element": self.wait_for_app_element,
@@ -591,6 +603,19 @@ class MacTools:
         return _run([
             "osascript", "-e", SET_WINDOW_MINIMIZED_SCRIPT,
             args["app"], args["window"], index, args["state"],
+        ], timeout=20)
+
+    def move_app_window(self, args: dict[str, Any]) -> str:
+        if not args["app"].strip() or not args["window"].strip():
+            raise ValueError("app and window must not be empty")
+        index = args.get("index", "")
+        if index and (not index.isdecimal() or int(index) < 1):
+            raise ValueError("index must be a positive window number")
+        x = _bounded_integer(args["x"], "x", -10000, 10000)
+        y = _bounded_integer(args["y"], "y", -10000, 10000)
+        return _run([
+            "osascript", "-e", MOVE_WINDOW_SCRIPT,
+            args["app"], args["window"], index, str(x), str(y),
         ], timeout=20)
 
     def inspect_app_ui(self, args: dict[str, Any]) -> str:
