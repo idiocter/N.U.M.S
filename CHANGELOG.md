@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added non-overwriting file, directory, and symlink copies with recursive-copy protection.
 - Added idempotent directory creation with parent creation and symlink refusal.
 - Added read-only path metadata inspection with explicit symlink reporting.
 - Added exact accessibility context-menu opening for inspected Mac UI elements.

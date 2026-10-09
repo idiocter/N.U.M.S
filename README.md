@@ -150,6 +150,8 @@ the project and Git state without editing. Its coding instructions call for
 reporting which checks ran and which were skipped.
 `create_directory` creates missing parent directories idempotently and is
 available with the other file-editing tools in `standard` mode.
+`copy_path` copies files, directory trees, or symlinks while refusing existing
+destinations and recursive copies into the source tree.
 
 `find_files` discovers project files recursively, honors Git ignore rules, and
 supports a glob and result pages. `read_lines` returns numbered code lines and

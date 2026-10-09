@@ -211,6 +211,26 @@ def test_create_directory_is_idempotent_and_standard_mode_safe(tmp_path: Path) -
     assert not blocked.exists()
 
 
+def test_copy_path_preserves_files_trees_and_symlinks_without_overwrite(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "note.txt").write_text("hello")
+    (source / "link.txt").symlink_to("note.txt")
+    destination = tmp_path / "copies" / "source"
+    result = json.loads(MacTools("standard").execute("copy_path", {
+        "source": str(source), "destination": str(destination),
+    }))
+    assert result["type"] == "directory"
+    assert (destination / "note.txt").read_text() == "hello"
+    assert (destination / "link.txt").is_symlink()
+    assert "error" in json.loads(MacTools().execute("copy_path", {
+        "source": str(source), "destination": str(destination),
+    }))
+    assert "error" in json.loads(MacTools().execute("copy_path", {
+        "source": str(source), "destination": str(source / "nested"),
+    }))
+
+
 def test_failed_replace_keeps_previous_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     path = tmp_path / "note.txt"
     path.write_text("before")
