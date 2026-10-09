@@ -73,6 +73,10 @@ TOOL_SCHEMAS = [
         {"repo": {"type": "string"}, "file": {"type": "string"}}, ["repo"],
     ),
     _schema(
+        "git_log", "Show 1 to 100 recent commits with hash, date, refs, and subject; optionally follow history affecting one path.",
+        {"repo": {"type": "string"}, "count": {"type": "string"}, "file": {"type": "string"}}, ["repo"],
+    ),
+    _schema(
         "write_file",
         "Write UTF-8 text to a file, creating parent folders.",
         {"path": {"type": "string"}, "content": {"type": "string"}},
@@ -311,6 +315,7 @@ class MacTools:
             "search_files": self.search_files,
             "git_status": self.git_status,
             "git_diff": self.git_diff,
+            "git_log": self.git_log,
             "write_file": self.write_file,
             "create_directory": self.create_directory,
             "copy_path": self.copy_path,
@@ -520,6 +525,22 @@ class MacTools:
             if not args["file"].strip():
                 raise ValueError("file must not be empty")
             command.append(args["file"])
+        return _run(command)
+
+    def git_log(self, args: dict[str, Any]) -> str:
+        count = args.get("count", "20")
+        if not count.isdecimal() or not 1 <= int(count) <= 100:
+            raise ValueError("count must be between 1 and 100")
+        repo = str(Path(args["repo"]).expanduser())
+        command = [
+            "git", "-C", repo, "log", "--no-color", "--decorate=short",
+            f"--max-count={count}", "--date=short",
+            "--format=%h%x09%ad%x09%d%x09%s",
+        ]
+        if "file" in args:
+            if not args["file"].strip():
+                raise ValueError("file must not be empty")
+            command.extend(["--", args["file"]])
         return _run(command)
 
     def _atomic_write(self, requested: Path, content: str) -> None:

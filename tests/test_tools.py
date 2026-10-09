@@ -319,6 +319,17 @@ def test_standard_mode_blocks_shell() -> None:
     assert result["action_mode"] == "standard"
 
 
+def test_git_log_is_bounded_read_only_and_path_scoped(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
+    args = {"repo": "/project", "count": "12", "file": "src/main.py"}
+    assert MacTools("read_only").execute("git_log", args) == "ok"
+    assert "--max-count=12" in commands[0]
+    assert commands[0][-2:] == ["--", "src/main.py"]
+    for update in ({"count": "0"}, {"count": "101"}, {"file": ""}):
+        assert "error" in json.loads(MacTools("read_only").execute("git_log", {**args, **update}))
+
+
 def test_app_inspection_is_read_only_but_ui_actions_require_unrestricted() -> None:
     tools = MacTools("standard")
     click = json.loads(tools.execute("click_app_element", {
