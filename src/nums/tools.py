@@ -52,6 +52,7 @@ TOOL_SCHEMAS = [
         "list_directory", "List up to 500 files and folders; use offset for later pages.",
         {"path": {"type": "string"}, "offset": {"type": "string"}}, ["path"],
     ),
+    _schema("path_info", "Inspect a path's type, byte size, permissions, modification time, and symlink target without following the final symlink.", {"path": {"type": "string"}}, ["path"]),
     _schema(
         "find_files", "Find project files recursively, respecting Git ignores; use glob and offset to narrow or page results.",
         {"path": {"type": "string"}, "glob": {"type": "string"}, "offset": {"type": "string"}},
@@ -302,6 +303,7 @@ class MacTools:
             "read_file": self.read_file,
             "read_lines": self.read_lines,
             "list_directory": self.list_directory,
+            "path_info": self.path_info,
             "find_files": self.find_files,
             "search_files": self.search_files,
             "git_status": self.git_status,
@@ -430,6 +432,28 @@ class MacTools:
         }
         if response["truncated"]:
             response["next_offset"] = offset + 500
+        return json.dumps(response)
+
+    def path_info(self, args: dict[str, Any]) -> str:
+        path = Path(args["path"]).expanduser()
+        if not path.exists() and not path.is_symlink():
+            raise FileNotFoundError(f"Path does not exist: {path}")
+        details = path.lstat()
+        if path.is_symlink():
+            kind = "symlink"
+        elif path.is_dir():
+            kind = "directory"
+        elif path.is_file():
+            kind = "file"
+        else:
+            kind = "other"
+        response: dict[str, Any] = {
+            "path": str(path), "type": kind, "bytes": details.st_size,
+            "permissions": oct(stat.S_IMODE(details.st_mode)),
+            "modified_ns": details.st_mtime_ns,
+        }
+        if kind == "symlink":
+            response["target"] = os.readlink(path)
         return json.dumps(response)
 
     def find_files(self, args: dict[str, Any]) -> str:

@@ -61,6 +61,23 @@ def test_directory_list_rejects_negative_offset(tmp_path: Path) -> None:
     assert "nonnegative" in result["error"]
 
 
+def test_path_info_reports_metadata_without_following_symlink(tmp_path: Path) -> None:
+    target = tmp_path / "target.txt"
+    target.write_text("hello")
+    target.chmod(0o640)
+    link = tmp_path / "link.txt"
+    link.symlink_to("target.txt")
+
+    file_info = json.loads(MacTools("read_only").execute("path_info", {"path": str(target)}))
+    link_info = json.loads(MacTools("read_only").execute("path_info", {"path": str(link)}))
+    assert file_info["type"] == "file"
+    assert file_info["bytes"] == 5
+    assert file_info["permissions"] == "0o640"
+    assert link_info["type"] == "symlink"
+    assert link_info["target"] == "target.txt"
+    assert "error" in json.loads(MacTools().execute("path_info", {"path": str(tmp_path / "missing")}))
+
+
 def test_find_files_recurses_respects_ignores_and_globs(tmp_path: Path) -> None:
     (tmp_path / ".gitignore").write_text("ignored.py\n")
     nested = tmp_path / "src"
