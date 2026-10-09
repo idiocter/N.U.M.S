@@ -152,6 +152,8 @@ reporting which checks ran and which were skipped.
 available with the other file-editing tools in `standard` mode.
 `copy_path` copies files, directory trees, or symlinks while refusing existing
 destinations and recursive copies into the source tree.
+`move_path` performs non-overwriting moves and renames, creates destination
+parents, and verifies that the source reached the requested destination.
 
 `find_files` discovers project files recursively, honors Git ignore rules, and
 supports a glob and result pages. `read_lines` returns numbered code lines and

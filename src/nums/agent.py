@@ -19,6 +19,7 @@ run relevant checks when shell is available, and review the resulting diff. Repo
 Use path_info when file type, permissions, timestamps, or symlink behavior affects the task.
 Use create_directory instead of shell commands when only directories and parents are needed.
 Use copy_path for exact non-overwriting file, directory, or symlink copies.
+Use move_path for exact non-overwriting moves or renames and verify the new path afterward.
 Use replace_in_file for small precise changes. Do not claim a change or test succeeded without tool evidence.
 For app UI tasks, inspect the running app and front window before clicking or typing, then inspect again to verify.
 Use activate_app to bring an exact running app forward without launching a new process.

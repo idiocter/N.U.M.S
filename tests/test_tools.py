@@ -231,6 +231,24 @@ def test_copy_path_preserves_files_trees_and_symlinks_without_overwrite(tmp_path
     }))
 
 
+def test_move_path_renames_without_overwriting(tmp_path: Path) -> None:
+    source = tmp_path / "draft.txt"
+    source.write_text("draft")
+    destination = tmp_path / "archive" / "final.txt"
+    result = json.loads(MacTools("standard").execute("move_path", {
+        "source": str(source), "destination": str(destination),
+    }))
+    assert result == {"moved": str(source), "destination": str(destination)}
+    assert not source.exists()
+    assert destination.read_text() == "draft"
+    other = tmp_path / "other.txt"
+    other.write_text("other")
+    assert "error" in json.loads(MacTools().execute("move_path", {
+        "source": str(other), "destination": str(destination),
+    }))
+    assert other.read_text() == "other"
+
+
 def test_failed_replace_keeps_previous_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     path = tmp_path / "note.txt"
     path.write_text("before")

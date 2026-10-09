@@ -80,6 +80,7 @@ TOOL_SCHEMAS = [
     ),
     _schema("create_directory", "Create a directory and missing parents; succeeds without changes when the exact directory already exists.", {"path": {"type": "string"}}, ["path"]),
     _schema("copy_path", "Copy one file, directory tree, or symlink to a new destination without overwriting an existing path.", {"source": {"type": "string"}, "destination": {"type": "string"}}, ["source", "destination"]),
+    _schema("move_path", "Move or rename one file, directory tree, or symlink to a new destination without overwriting an existing path.", {"source": {"type": "string"}, "destination": {"type": "string"}}, ["source", "destination"]),
     _schema(
         "replace_in_file",
         "Replace one exact, unique UTF-8 text span in an existing file. Fails if the old text is missing or repeated.",
@@ -313,6 +314,7 @@ class MacTools:
             "write_file": self.write_file,
             "create_directory": self.create_directory,
             "copy_path": self.copy_path,
+            "move_path": self.move_path,
             "replace_in_file": self.replace_in_file,
             "shell": self.shell,
             "open_item": self.open_item,
@@ -587,6 +589,24 @@ class MacTools:
                 shutil.rmtree(destination)
             raise
         return json.dumps({"copied": str(source), "destination": str(destination), "type": kind})
+
+    def move_path(self, args: dict[str, Any]) -> str:
+        source = Path(args["source"]).expanduser()
+        destination = Path(args["destination"]).expanduser()
+        if not source.exists() and not source.is_symlink():
+            raise FileNotFoundError(f"Source does not exist: {source}")
+        if destination.exists() or destination.is_symlink():
+            raise FileExistsError(f"Destination already exists: {destination}")
+        if source.is_dir() and not source.is_symlink():
+            resolved_source = source.resolve()
+            resolved_destination = destination.resolve(strict=False)
+            if resolved_destination == resolved_source or resolved_source in resolved_destination.parents:
+                raise ValueError("destination must not be inside the source directory")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(source), str(destination))
+        if source.exists() or source.is_symlink() or not (destination.exists() or destination.is_symlink()):
+            raise OSError("move did not reach the requested destination")
+        return json.dumps({"moved": str(source), "destination": str(destination)})
 
     def replace_in_file(self, args: dict[str, Any]) -> str:
         requested = Path(args["path"]).expanduser()
