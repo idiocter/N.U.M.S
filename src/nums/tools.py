@@ -78,6 +78,7 @@ TOOL_SCHEMAS = [
         {"path": {"type": "string"}, "content": {"type": "string"}},
         ["path", "content"],
     ),
+    _schema("create_directory", "Create a directory and missing parents; succeeds without changes when the exact directory already exists.", {"path": {"type": "string"}}, ["path"]),
     _schema(
         "replace_in_file",
         "Replace one exact, unique UTF-8 text span in an existing file. Fails if the old text is missing or repeated.",
@@ -309,6 +310,7 @@ class MacTools:
             "git_status": self.git_status,
             "git_diff": self.git_diff,
             "write_file": self.write_file,
+            "create_directory": self.create_directory,
             "replace_in_file": self.replace_in_file,
             "shell": self.shell,
             "open_item": self.open_item,
@@ -540,6 +542,16 @@ class MacTools:
         requested = Path(args["path"]).expanduser()
         self._atomic_write(requested, args["content"])
         return json.dumps({"written": str(requested), "bytes": len(args["content"].encode())})
+
+    def create_directory(self, args: dict[str, Any]) -> str:
+        path = Path(args["path"]).expanduser()
+        if path.is_symlink():
+            raise ValueError("directory path must not be a symlink")
+        existed = path.exists()
+        if existed and not path.is_dir():
+            raise FileExistsError(f"A non-directory already exists at {path}")
+        path.mkdir(parents=True, exist_ok=True)
+        return json.dumps({"directory": str(path), "created": not existed})
 
     def replace_in_file(self, args: dict[str, Any]) -> str:
         requested = Path(args["path"]).expanduser()

@@ -11,7 +11,7 @@ READ_ONLY_TOOLS = {
     "list_app_windows", "wait_for_app_window",
 }
 STANDARD_TOOLS = READ_ONLY_TOOLS | {
-    "write_file", "replace_in_file", "open_item", "speak", "notify", "set_clipboard", "create_reminder",
+    "write_file", "create_directory", "replace_in_file", "open_item", "speak", "notify", "set_clipboard", "create_reminder",
 }
 VALID_MODES = {"read_only", "standard", "unrestricted"}
 

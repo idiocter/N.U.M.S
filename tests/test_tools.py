@@ -198,6 +198,19 @@ def test_write_replaces_content_and_preserves_permissions(tmp_path: Path) -> Non
     assert stat.S_IMODE(path.stat().st_mode) == 0o640
 
 
+def test_create_directory_is_idempotent_and_standard_mode_safe(tmp_path: Path) -> None:
+    path = tmp_path / "parent" / "child"
+    first = json.loads(MacTools("standard").execute("create_directory", {"path": str(path)}))
+    second = json.loads(MacTools("standard").execute("create_directory", {"path": str(path)}))
+    assert first == {"directory": str(path), "created": True}
+    assert second == {"directory": str(path), "created": False}
+    assert path.is_dir()
+    blocked = tmp_path / "blocked"
+    result = json.loads(MacTools("read_only").execute("create_directory", {"path": str(blocked)}))
+    assert result["action_mode"] == "read_only"
+    assert not blocked.exists()
+
+
 def test_failed_replace_keeps_previous_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     path = tmp_path / "note.txt"
     path.write_text("before")

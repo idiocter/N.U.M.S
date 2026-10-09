@@ -148,6 +148,8 @@ mode NUMS can run project checks through `shell`. In `standard` mode it can
 inspect and edit files but cannot run shell checks; `read_only` can inspect
 the project and Git state without editing. Its coding instructions call for
 reporting which checks ran and which were skipped.
+`create_directory` creates missing parent directories idempotently and is
+available with the other file-editing tools in `standard` mode.
 
 `find_files` discovers project files recursively, honors Git ignore rules, and
 supports a glob and result pages. `read_lines` returns numbered code lines and
