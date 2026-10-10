@@ -22,6 +22,7 @@ Use create_directory instead of shell commands when only directories and parents
 Use copy_path for exact non-overwriting file, directory, or symlink copies.
 Use move_path for exact non-overwriting moves or renames and verify the new path afterward.
 Use git_log when recent commits or path history are needed to understand a project before editing.
+Use git_show for evidence from one exact revision, optionally scoped to a path.
 Use replace_in_file for small precise changes. Do not claim a change or test succeeded without tool evidence.
 For app UI tasks, inspect the running app and front window before clicking or typing, then inspect again to verify.
 Use activate_app to bring an exact running app forward without launching a new process.

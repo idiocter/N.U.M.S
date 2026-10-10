@@ -79,6 +79,10 @@ TOOL_SCHEMAS = [
         {"repo": {"type": "string"}, "count": {"type": "string"}, "file": {"type": "string"}}, ["repo"],
     ),
     _schema(
+        "git_show", "Show one exact Git revision and its patch, optionally limited to one path; defaults to HEAD.",
+        {"repo": {"type": "string"}, "revision": {"type": "string"}, "file": {"type": "string"}}, ["repo"],
+    ),
+    _schema(
         "write_file",
         "Write UTF-8 text to a file, creating parent folders.",
         {"path": {"type": "string"}, "content": {"type": "string"}},
@@ -247,6 +251,13 @@ def _bounded_integer(raw: str, name: str, minimum: int, maximum: int) -> int:
     return value
 
 
+def _validated_git_revision(raw: str) -> str:
+    allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_./@{}~^-")
+    if not raw or raw.startswith("-") or ".." in raw or any(char not in allowed for char in raw):
+        raise ValueError("revision must name one Git commit or ref")
+    return raw
+
+
 def _bounded_output(output: str) -> tuple[str, bool]:
     if len(output) <= 12000:
         return output, False
@@ -319,6 +330,7 @@ class MacTools:
             "git_status": self.git_status,
             "git_diff": self.git_diff,
             "git_log": self.git_log,
+            "git_show": self.git_show,
             "write_file": self.write_file,
             "create_directory": self.create_directory,
             "copy_path": self.copy_path,
@@ -556,6 +568,19 @@ class MacTools:
             if not args["file"].strip():
                 raise ValueError("file must not be empty")
             command.extend(["--", args["file"]])
+        return _run(command)
+
+    def git_show(self, args: dict[str, Any]) -> str:
+        repo = str(Path(args["repo"]).expanduser())
+        revision = _validated_git_revision(args.get("revision", "HEAD"))
+        command = [
+            "git", "-C", repo, "show", "--no-ext-diff", "--no-color",
+            "--decorate=short", "--format=fuller", revision, "--",
+        ]
+        if "file" in args:
+            if not args["file"].strip():
+                raise ValueError("file must not be empty")
+            command.append(args["file"])
         return _run(command)
 
     def _atomic_write(self, requested: Path, content: str) -> None:

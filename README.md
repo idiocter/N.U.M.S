@@ -144,7 +144,8 @@ uv run nums "In /absolute/path/to/project, fix the failing parser test, run that
 For a focused edit, `replace_in_file` replaces one exact text span and refuses
 missing or repeated matches. `git_status` shows changed and untracked files;
 `git_diff` shows tracked changes against `HEAD`; `git_log` shows bounded recent
-history for a repository or one path. In the default `unrestricted`
+history for a repository or one path; `git_show` inspects one validated revision
+and its patch. In the default `unrestricted`
 mode NUMS can run project checks through `shell`. In `standard` mode it can
 inspect and edit files but cannot run shell checks; `read_only` can inspect
 the project and Git state without editing. Its coding instructions call for

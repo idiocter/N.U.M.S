@@ -342,6 +342,18 @@ def test_git_log_is_bounded_read_only_and_path_scoped(monkeypatch: pytest.Monkey
         assert "error" in json.loads(MacTools("read_only").execute("git_log", {**args, **update}))
 
 
+def test_git_show_validates_one_revision_and_optional_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
+    args = {"repo": "/project", "revision": "HEAD~1", "file": "src/main.py"}
+    assert MacTools("read_only").execute("git_show", args) == "ok"
+    assert commands[0][-3:] == ["HEAD~1", "--", "src/main.py"]
+    for revision in ("--help", "HEAD..main", "HEAD:secret", "bad ref"):
+        assert "error" in json.loads(MacTools().execute("git_show", {
+            "repo": "/project", "revision": revision,
+        }))
+
+
 def test_app_inspection_is_read_only_but_ui_actions_require_unrestricted() -> None:
     tools = MacTools("standard")
     click = json.loads(tools.execute("click_app_element", {
