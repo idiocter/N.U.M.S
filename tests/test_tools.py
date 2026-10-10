@@ -354,6 +354,14 @@ def test_git_show_validates_one_revision_and_optional_path(monkeypatch: pytest.M
         }))
 
 
+def test_git_branches_is_read_only_and_includes_local_and_remote_refs(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
+    assert MacTools("read_only").execute("git_branches", {"repo": "/project"}) == "ok"
+    assert commands[0][-2:] == ["refs/heads", "refs/remotes"]
+    assert any("%(upstream:short)" in argument for argument in commands[0])
+
+
 def test_app_inspection_is_read_only_but_ui_actions_require_unrestricted() -> None:
     tools = MacTools("standard")
     click = json.loads(tools.execute("click_app_element", {

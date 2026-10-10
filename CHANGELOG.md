@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added read-only local and remote Git branch inspection with upstream details.
 - Added read-only inspection of one validated Git revision and optional path patch.
 - Added bounded-memory SHA-256 file hashing in read-only mode.
 - Added bounded read-only Git history inspection with optional path scoping.

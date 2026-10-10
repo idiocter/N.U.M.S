@@ -82,6 +82,7 @@ TOOL_SCHEMAS = [
         "git_show", "Show one exact Git revision and its patch, optionally limited to one path; defaults to HEAD.",
         {"repo": {"type": "string"}, "revision": {"type": "string"}, "file": {"type": "string"}}, ["repo"],
     ),
+    _schema("git_branches", "List local and remote Git branches by recent commit with hashes, upstreams, dates, and subjects.", {"repo": {"type": "string"}}, ["repo"]),
     _schema(
         "write_file",
         "Write UTF-8 text to a file, creating parent folders.",
@@ -331,6 +332,7 @@ class MacTools:
             "git_diff": self.git_diff,
             "git_log": self.git_log,
             "git_show": self.git_show,
+            "git_branches": self.git_branches,
             "write_file": self.write_file,
             "create_directory": self.create_directory,
             "copy_path": self.copy_path,
@@ -582,6 +584,14 @@ class MacTools:
                 raise ValueError("file must not be empty")
             command.append(args["file"])
         return _run(command)
+
+    def git_branches(self, args: dict[str, Any]) -> str:
+        repo = str(Path(args["repo"]).expanduser())
+        return _run([
+            "git", "-C", repo, "for-each-ref", "--sort=-committerdate",
+            "--format=%(refname:short)%09%(objectname:short)%09%(upstream:short)%09%(committerdate:short)%09%(subject)",
+            "refs/heads", "refs/remotes",
+        ])
 
     def _atomic_write(self, requested: Path, content: str) -> None:
         path = requested.resolve() if requested.is_symlink() else requested
