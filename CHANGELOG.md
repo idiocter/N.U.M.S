@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added verified standard permission changes with strict octal validation and symlink refusal.
 - Added exact UTF-8 file appends with parent creation and explicit disk flushes.
 - Added bounded line-level Git blame with validated revision targeting.
 - Added read-only local and remote Git branch inspection with upstream details.

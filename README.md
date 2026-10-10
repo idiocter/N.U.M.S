@@ -159,6 +159,8 @@ preserving all existing file content.
 destinations and recursive copies into the source tree.
 `move_path` performs non-overwriting moves and renames, creates destination
 parents, and verifies that the source reached the requested destination.
+`set_path_permissions` applies and verifies a three-digit octal mode while
+refusing symlinks and special permission bits.
 
 `find_files` discovers project files recursively, honors Git ignore rules, and
 supports a glob and result pages. `read_lines` returns numbered code lines and

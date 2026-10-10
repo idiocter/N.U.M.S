@@ -278,6 +278,24 @@ def test_move_path_renames_without_overwriting(tmp_path: Path) -> None:
     assert other.read_text() == "other"
 
 
+def test_set_path_permissions_is_verified_and_refuses_symlinks(tmp_path: Path) -> None:
+    path = tmp_path / "script.sh"
+    path.write_text("#!/bin/sh\n")
+    path.chmod(0o600)
+    result = json.loads(MacTools("standard").execute("set_path_permissions", {
+        "path": str(path), "mode": "755",
+    }))
+    assert result == {"path": str(path), "previous": "0o600", "permissions": "0o755"}
+    link = tmp_path / "script-link"
+    link.symlink_to(path)
+    assert "error" in json.loads(MacTools().execute("set_path_permissions", {
+        "path": str(link), "mode": "644",
+    }))
+    assert "error" in json.loads(MacTools().execute("set_path_permissions", {
+        "path": str(path), "mode": "u+x",
+    }))
+
+
 def test_failed_replace_keeps_previous_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     path = tmp_path / "note.txt"
     path.write_text("before")

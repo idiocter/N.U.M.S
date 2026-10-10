@@ -98,6 +98,7 @@ TOOL_SCHEMAS = [
     _schema("create_directory", "Create a directory and missing parents; succeeds without changes when the exact directory already exists.", {"path": {"type": "string"}}, ["path"]),
     _schema("copy_path", "Copy one file, directory tree, or symlink to a new destination without overwriting an existing path.", {"source": {"type": "string"}, "destination": {"type": "string"}}, ["source", "destination"]),
     _schema("move_path", "Move or rename one file, directory tree, or symlink to a new destination without overwriting an existing path.", {"source": {"type": "string"}, "destination": {"type": "string"}}, ["source", "destination"]),
+    _schema("set_path_permissions", "Set standard owner/group/other permissions on an existing non-symlink path using a three-digit octal mode.", {"path": {"type": "string"}, "mode": {"type": "string"}}, ["path", "mode"]),
     _schema(
         "replace_in_file",
         "Replace one exact, unique UTF-8 text span in an existing file. Fails if the old text is missing or repeated.",
@@ -345,6 +346,7 @@ class MacTools:
             "create_directory": self.create_directory,
             "copy_path": self.copy_path,
             "move_path": self.move_path,
+            "set_path_permissions": self.set_path_permissions,
             "replace_in_file": self.replace_in_file,
             "shell": self.shell,
             "open_item": self.open_item,
@@ -718,6 +720,25 @@ class MacTools:
         if source.exists() or source.is_symlink() or not (destination.exists() or destination.is_symlink()):
             raise OSError("move did not reach the requested destination")
         return json.dumps({"moved": str(source), "destination": str(destination)})
+
+    def set_path_permissions(self, args: dict[str, Any]) -> str:
+        path = Path(args["path"]).expanduser()
+        if not path.exists() and not path.is_symlink():
+            raise FileNotFoundError(f"Path does not exist: {path}")
+        if path.is_symlink():
+            raise ValueError("permission changes on symlinks are not supported")
+        raw_mode = args["mode"]
+        if len(raw_mode) == 4 and raw_mode.startswith("0"):
+            raw_mode = raw_mode[1:]
+        if len(raw_mode) != 3 or any(character not in "01234567" for character in raw_mode):
+            raise ValueError("mode must be a three-digit octal value such as 755")
+        previous = stat.S_IMODE(path.stat().st_mode)
+        requested = int(raw_mode, 8)
+        path.chmod(requested)
+        actual = stat.S_IMODE(path.stat().st_mode)
+        if actual != requested:
+            raise OSError("path did not reach requested permissions")
+        return json.dumps({"path": str(path), "previous": oct(previous), "permissions": oct(actual)})
 
     def replace_in_file(self, args: dict[str, Any]) -> str:
         requested = Path(args["path"]).expanduser()
