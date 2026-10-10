@@ -296,6 +296,25 @@ def test_set_path_permissions_is_verified_and_refuses_symlinks(tmp_path: Path) -
     }))
 
 
+def test_create_symlink_preserves_relative_target_and_refuses_overwrite(tmp_path: Path) -> None:
+    link = tmp_path / "nested" / "current"
+    result = json.loads(MacTools("standard").execute("create_symlink", {
+        "target": "../releases/v1", "link": str(link),
+    }))
+    assert result == {"link": str(link), "target": "../releases/v1"}
+    assert link.is_symlink()
+    assert link.readlink() == Path("../releases/v1")
+    assert "error" in json.loads(MacTools().execute("create_symlink", {
+        "target": "elsewhere", "link": str(link),
+    }))
+    blocked_link = tmp_path / "blocked"
+    blocked = json.loads(MacTools("read_only").execute("create_symlink", {
+        "target": "target", "link": str(blocked_link),
+    }))
+    assert blocked["action_mode"] == "read_only"
+    assert not blocked_link.exists()
+
+
 def test_failed_replace_keeps_previous_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     path = tmp_path / "note.txt"
     path.write_text("before")

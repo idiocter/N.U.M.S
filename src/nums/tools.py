@@ -99,6 +99,7 @@ TOOL_SCHEMAS = [
     _schema("copy_path", "Copy one file, directory tree, or symlink to a new destination without overwriting an existing path.", {"source": {"type": "string"}, "destination": {"type": "string"}}, ["source", "destination"]),
     _schema("move_path", "Move or rename one file, directory tree, or symlink to a new destination without overwriting an existing path.", {"source": {"type": "string"}, "destination": {"type": "string"}}, ["source", "destination"]),
     _schema("set_path_permissions", "Set standard owner/group/other permissions on an existing non-symlink path using a three-digit octal mode.", {"path": {"type": "string"}, "mode": {"type": "string"}}, ["path", "mode"]),
+    _schema("create_symlink", "Create one symbolic link with an exact target string, creating link parent directories and refusing existing destinations.", {"target": {"type": "string"}, "link": {"type": "string"}}, ["target", "link"]),
     _schema(
         "replace_in_file",
         "Replace one exact, unique UTF-8 text span in an existing file. Fails if the old text is missing or repeated.",
@@ -347,6 +348,7 @@ class MacTools:
             "copy_path": self.copy_path,
             "move_path": self.move_path,
             "set_path_permissions": self.set_path_permissions,
+            "create_symlink": self.create_symlink,
             "replace_in_file": self.replace_in_file,
             "shell": self.shell,
             "open_item": self.open_item,
@@ -739,6 +741,19 @@ class MacTools:
         if actual != requested:
             raise OSError("path did not reach requested permissions")
         return json.dumps({"path": str(path), "previous": oct(previous), "permissions": oct(actual)})
+
+    def create_symlink(self, args: dict[str, Any]) -> str:
+        target = args["target"]
+        link = Path(args["link"]).expanduser()
+        if not target:
+            raise ValueError("target must not be empty")
+        if link.exists() or link.is_symlink():
+            raise FileExistsError(f"Link destination already exists: {link}")
+        link.parent.mkdir(parents=True, exist_ok=True)
+        link.symlink_to(target)
+        if not link.is_symlink() or os.readlink(link) != target:
+            raise OSError("symbolic link did not reach requested target")
+        return json.dumps({"link": str(link), "target": target})
 
     def replace_in_file(self, args: dict[str, Any]) -> str:
         requested = Path(args["path"]).expanduser()
