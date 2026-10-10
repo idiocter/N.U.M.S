@@ -94,6 +94,7 @@ TOOL_SCHEMAS = [
         {"path": {"type": "string"}, "content": {"type": "string"}},
         ["path", "content"],
     ),
+    _schema("append_file", "Append exact UTF-8 text to a file with fsync, creating its parent directories and file when needed.", {"path": {"type": "string"}, "content": {"type": "string"}}, ["path", "content"]),
     _schema("create_directory", "Create a directory and missing parents; succeeds without changes when the exact directory already exists.", {"path": {"type": "string"}}, ["path"]),
     _schema("copy_path", "Copy one file, directory tree, or symlink to a new destination without overwriting an existing path.", {"source": {"type": "string"}, "destination": {"type": "string"}}, ["source", "destination"]),
     _schema("move_path", "Move or rename one file, directory tree, or symlink to a new destination without overwriting an existing path.", {"source": {"type": "string"}, "destination": {"type": "string"}}, ["source", "destination"]),
@@ -340,6 +341,7 @@ class MacTools:
             "git_branches": self.git_branches,
             "git_blame": self.git_blame,
             "write_file": self.write_file,
+            "append_file": self.append_file,
             "create_directory": self.create_directory,
             "copy_path": self.copy_path,
             "move_path": self.move_path,
@@ -639,6 +641,22 @@ class MacTools:
         requested = Path(args["path"]).expanduser()
         self._atomic_write(requested, args["content"])
         return json.dumps({"written": str(requested), "bytes": len(args["content"].encode())})
+
+    def append_file(self, args: dict[str, Any]) -> str:
+        requested = Path(args["path"]).expanduser()
+        path = requested.resolve() if requested.is_symlink() else requested
+        path.parent.mkdir(parents=True, exist_ok=True)
+        data = args["content"].encode("utf-8")
+        descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+        try:
+            view = memoryview(data)
+            while view:
+                written = os.write(descriptor, view)
+                view = view[written:]
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+        return json.dumps({"appended": str(requested), "bytes": len(data)})
 
     def create_directory(self, args: dict[str, Any]) -> str:
         path = Path(args["path"]).expanduser()

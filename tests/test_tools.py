@@ -210,6 +210,23 @@ def test_write_replaces_content_and_preserves_permissions(tmp_path: Path) -> Non
     assert stat.S_IMODE(path.stat().st_mode) == 0o640
 
 
+def test_append_file_preserves_existing_content_and_supports_unicode(tmp_path: Path) -> None:
+    path = tmp_path / "logs" / "notes.txt"
+    first = json.loads(MacTools("standard").execute("append_file", {
+        "path": str(path), "content": "first\n",
+    }))
+    second = json.loads(MacTools("standard").execute("append_file", {
+        "path": str(path), "content": "café\n",
+    }))
+    assert first["bytes"] == 6
+    assert second["bytes"] == 6
+    assert path.read_text() == "first\ncafé\n"
+    blocked = json.loads(MacTools("read_only").execute("append_file", {
+        "path": str(path), "content": "blocked",
+    }))
+    assert blocked["action_mode"] == "read_only"
+
+
 def test_create_directory_is_idempotent_and_standard_mode_safe(tmp_path: Path) -> None:
     path = tmp_path / "parent" / "child"
     first = json.loads(MacTools("standard").execute("create_directory", {"path": str(path)}))

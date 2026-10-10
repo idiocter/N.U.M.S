@@ -153,6 +153,8 @@ the project and Git state without editing. Its coding instructions call for
 reporting which checks ran and which were skipped.
 `create_directory` creates missing parent directories idempotently and is
 available with the other file-editing tools in `standard` mode.
+`append_file` adds exact UTF-8 content with an explicit disk flush while
+preserving all existing file content.
 `copy_path` copies files, directory trees, or symlinks while refusing existing
 destinations and recursive copies into the source tree.
 `move_path` performs non-overwriting moves and renames, creates destination
