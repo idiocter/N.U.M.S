@@ -145,7 +145,8 @@ For a focused edit, `replace_in_file` replaces one exact text span and refuses
 missing or repeated matches. `git_status` shows changed and untracked files;
 `git_diff` shows tracked changes against `HEAD`; `git_log` shows bounded recent
 history for a repository or one path; `git_show` inspects one validated revision
-and its patch; `git_branches` lists local and remote tips with upstreams. In the default `unrestricted`
+and its patch; `git_branches` lists local and remote tips with upstreams;
+`git_blame` provides bounded line attribution. In the default `unrestricted`
 mode NUMS can run project checks through `shell`. In `standard` mode it can
 inspect and edit files but cannot run shell checks; `read_only` can inspect
 the project and Git state without editing. Its coding instructions call for

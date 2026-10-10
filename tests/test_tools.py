@@ -362,6 +362,16 @@ def test_git_branches_is_read_only_and_includes_local_and_remote_refs(monkeypatc
     assert any("%(upstream:short)" in argument for argument in commands[0])
 
 
+def test_git_blame_is_line_bounded_and_revision_validated(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
+    args = {"repo": "/project", "file": "src/main.py", "start_line": "10", "count": "25", "revision": "main"}
+    assert MacTools("read_only").execute("git_blame", args) == "ok"
+    assert commands[0][-5:] == ["-L", "10,+25", "main", "--", "src/main.py"]
+    for update in ({"start_line": "0"}, {"count": "201"}, {"file": ""}, {"revision": "HEAD..main"}):
+        assert "error" in json.loads(MacTools().execute("git_blame", {**args, **update}))
+
+
 def test_app_inspection_is_read_only_but_ui_actions_require_unrestricted() -> None:
     tools = MacTools("standard")
     click = json.loads(tools.execute("click_app_element", {

@@ -84,6 +84,11 @@ TOOL_SCHEMAS = [
     ),
     _schema("git_branches", "List local and remote Git branches by recent commit with hashes, upstreams, dates, and subjects.", {"repo": {"type": "string"}}, ["repo"]),
     _schema(
+        "git_blame", "Show detailed Git attribution for 1 to 200 lines of one file at an optional exact revision.",
+        {"repo": {"type": "string"}, "file": {"type": "string"}, "start_line": {"type": "string"}, "count": {"type": "string"}, "revision": {"type": "string"}},
+        ["repo", "file"],
+    ),
+    _schema(
         "write_file",
         "Write UTF-8 text to a file, creating parent folders.",
         {"path": {"type": "string"}, "content": {"type": "string"}},
@@ -333,6 +338,7 @@ class MacTools:
             "git_log": self.git_log,
             "git_show": self.git_show,
             "git_branches": self.git_branches,
+            "git_blame": self.git_blame,
             "write_file": self.write_file,
             "create_directory": self.create_directory,
             "copy_path": self.copy_path,
@@ -591,6 +597,22 @@ class MacTools:
             "git", "-C", repo, "for-each-ref", "--sort=-committerdate",
             "--format=%(refname:short)%09%(objectname:short)%09%(upstream:short)%09%(committerdate:short)%09%(subject)",
             "refs/heads", "refs/remotes",
+        ])
+
+    def git_blame(self, args: dict[str, Any]) -> str:
+        if not args["file"].strip():
+            raise ValueError("file must not be empty")
+        start = args.get("start_line", "1")
+        count = args.get("count", "40")
+        if not start.isdecimal() or int(start) < 1:
+            raise ValueError("start_line must be a positive line number")
+        if not count.isdecimal() or not 1 <= int(count) <= 200:
+            raise ValueError("count must be between 1 and 200")
+        revision = _validated_git_revision(args.get("revision", "HEAD"))
+        repo = str(Path(args["repo"]).expanduser())
+        return _run([
+            "git", "-C", repo, "blame", "--line-porcelain",
+            "-L", f"{start},+{count}", revision, "--", args["file"],
         ])
 
     def _atomic_write(self, requested: Path, content: str) -> None:
