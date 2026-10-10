@@ -163,6 +163,7 @@ a next line for longer files. Long individual lines are clipped; use
 results retain both the start and end, where failure details often appear.
 `path_info` reports type, size, permissions, modification time, and symlink
 targets without following the final symlink.
+`hash_file` computes SHA-256 with bounded memory for file identity and integrity checks.
 
 These tools support coding workflows, but the bundled 1.5B model has not been
 validated as a reliable autonomous coding agent. The tool-use training fixtures

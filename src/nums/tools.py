@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from fnmatch import fnmatchcase
 import os
@@ -53,6 +54,7 @@ TOOL_SCHEMAS = [
         {"path": {"type": "string"}, "offset": {"type": "string"}}, ["path"],
     ),
     _schema("path_info", "Inspect a path's type, byte size, permissions, modification time, and symlink target without following the final symlink.", {"path": {"type": "string"}}, ["path"]),
+    _schema("hash_file", "Calculate the SHA-256 digest and byte count of one file using bounded-memory reads.", {"path": {"type": "string"}}, ["path"]),
     _schema(
         "find_files", "Find project files recursively, respecting Git ignores; use glob and offset to narrow or page results.",
         {"path": {"type": "string"}, "glob": {"type": "string"}, "offset": {"type": "string"}},
@@ -311,6 +313,7 @@ class MacTools:
             "read_lines": self.read_lines,
             "list_directory": self.list_directory,
             "path_info": self.path_info,
+            "hash_file": self.hash_file,
             "find_files": self.find_files,
             "search_files": self.search_files,
             "git_status": self.git_status,
@@ -466,6 +469,18 @@ class MacTools:
         if kind == "symlink":
             response["target"] = os.readlink(path)
         return json.dumps(response)
+
+    def hash_file(self, args: dict[str, Any]) -> str:
+        path = Path(args["path"]).expanduser()
+        if not path.is_file():
+            raise ValueError("path must be a file")
+        digest = hashlib.sha256()
+        byte_count = 0
+        with path.open("rb") as handle:
+            while chunk := handle.read(1024 * 1024):
+                digest.update(chunk)
+                byte_count += len(chunk)
+        return json.dumps({"path": str(path), "sha256": digest.hexdigest(), "bytes": byte_count})
 
     def find_files(self, args: dict[str, Any]) -> str:
         raw_offset = args.get("offset", "0")

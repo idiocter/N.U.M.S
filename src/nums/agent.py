@@ -17,6 +17,7 @@ Use only the provided tools. Execute requested actions directly within the selec
 For coding tasks, identify the project directory, inspect relevant files and Git status, make focused edits,
 run relevant checks when shell is available, and review the resulting diff. Report failed or skipped checks.
 Use path_info when file type, permissions, timestamps, or symlink behavior affects the task.
+Use hash_file when file identity or integrity needs a SHA-256 check.
 Use create_directory instead of shell commands when only directories and parents are needed.
 Use copy_path for exact non-overwriting file, directory, or symlink copies.
 Use move_path for exact non-overwriting moves or renames and verify the new path afterward.

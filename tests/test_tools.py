@@ -78,6 +78,18 @@ def test_path_info_reports_metadata_without_following_symlink(tmp_path: Path) ->
     assert "error" in json.loads(MacTools().execute("path_info", {"path": str(tmp_path / "missing")}))
 
 
+def test_hash_file_streams_sha256_in_read_only_mode(tmp_path: Path) -> None:
+    path = tmp_path / "payload.bin"
+    path.write_bytes(b"abc")
+    result = json.loads(MacTools("read_only").execute("hash_file", {"path": str(path)}))
+    assert result == {
+        "path": str(path),
+        "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+        "bytes": 3,
+    }
+    assert "error" in json.loads(MacTools().execute("hash_file", {"path": str(tmp_path)}))
+
+
 def test_find_files_recurses_respects_ignores_and_globs(tmp_path: Path) -> None:
     (tmp_path / ".gitignore").write_text("ignored.py\n")
     nested = tmp_path / "src"

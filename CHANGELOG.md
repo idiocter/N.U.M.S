@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added bounded-memory SHA-256 file hashing in read-only mode.
 - Added bounded read-only Git history inspection with optional path scoping.
 - Added verified non-overwriting moves and renames for files, directories, and symlinks.
 - Added non-overwriting file, directory, and symlink copies with recursive-copy protection.
