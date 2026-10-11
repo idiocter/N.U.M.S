@@ -88,3 +88,25 @@
 {"id":"app-replace-02","user":"Clear inspected text area 18 in TextEdit's Untitled window","tool":"replace_app_text","arguments":{"app":"TextEdit","window":"Untitled","text":"","role":"AXTextArea","index":"18"}}
 {"id":"key-press-01","user":"Press Command Shift S in Preview's report.pdf window","tool":"press_app_key","arguments":{"app":"Preview","window":"report.pdf","key":"s","modifiers":"command,shift"}}
 {"id":"key-press-02","user":"Press Page Down in Safari's Documentation window","tool":"press_app_key","arguments":{"app":"Safari","window":"Documentation","key":"page_down"}}
+{"id":"lines-read-01","user":"Show lines 40 through 59 of /tmp/nums-demo/src/parser.py","tool":"read_lines","arguments":{"path":"/tmp/nums-demo/src/parser.py","start_line":"40","count":"20"}}
+{"id":"lines-read-02","user":"Read the first 80 numbered lines in /tmp/nums-demo/app.py","tool":"read_lines","arguments":{"path":"/tmp/nums-demo/app.py"}}
+{"id":"path-info-01","user":"Tell me the type, size, and permissions of /tmp/nums-demo/run.sh","tool":"path_info","arguments":{"path":"/tmp/nums-demo/run.sh"}}
+{"id":"path-info-02","user":"Inspect whether /tmp/nums-demo/current is a symbolic link","tool":"path_info","arguments":{"path":"/tmp/nums-demo/current"}}
+{"id":"hash-file-01","user":"Calculate the SHA-256 checksum of /tmp/nums-demo/release.zip","tool":"hash_file","arguments":{"path":"/tmp/nums-demo/release.zip"}}
+{"id":"hash-file-02","user":"Hash /tmp/nums-demo/model.bin and report its byte count","tool":"hash_file","arguments":{"path":"/tmp/nums-demo/model.bin"}}
+{"id":"find-files-01","user":"Find every Python file under /tmp/nums-demo/project","tool":"find_files","arguments":{"path":"/tmp/nums-demo/project","glob":"*.py"}}
+{"id":"find-files-02","user":"List project files recursively beneath /tmp/nums-demo/site","tool":"find_files","arguments":{"path":"/tmp/nums-demo/site"}}
+{"id":"append-file-01","user":"Append a newline and done to /tmp/nums-demo/build.log","tool":"append_file","arguments":{"path":"/tmp/nums-demo/build.log","content":"\ndone"}}
+{"id":"append-file-02","user":"Add the exact text export DEBUG=1 followed by a newline to /tmp/nums-demo/.env","tool":"append_file","arguments":{"path":"/tmp/nums-demo/.env","content":"export DEBUG=1\n"}}
+{"id":"directory-create-01","user":"Create /tmp/nums-demo/output/assets including missing parent folders","tool":"create_directory","arguments":{"path":"/tmp/nums-demo/output/assets"}}
+{"id":"directory-create-02","user":"Make the directory tree /tmp/nums-demo/src/generated/api","tool":"create_directory","arguments":{"path":"/tmp/nums-demo/src/generated/api"}}
+{"id":"path-copy-01","user":"Copy /tmp/nums-demo/config.toml to /tmp/nums-demo/backup/config.toml without overwriting","tool":"copy_path","arguments":{"source":"/tmp/nums-demo/config.toml","destination":"/tmp/nums-demo/backup/config.toml"}}
+{"id":"path-copy-02","user":"Duplicate the directory /tmp/nums-demo/templates as /tmp/nums-demo/templates-copy","tool":"copy_path","arguments":{"source":"/tmp/nums-demo/templates","destination":"/tmp/nums-demo/templates-copy"}}
+{"id":"path-move-01","user":"Rename /tmp/nums-demo/draft.md to /tmp/nums-demo/final.md","tool":"move_path","arguments":{"source":"/tmp/nums-demo/draft.md","destination":"/tmp/nums-demo/final.md"}}
+{"id":"path-move-02","user":"Move /tmp/nums-demo/cache into /tmp/nums-demo/archive/cache","tool":"move_path","arguments":{"source":"/tmp/nums-demo/cache","destination":"/tmp/nums-demo/archive/cache"}}
+{"id":"permissions-set-01","user":"Make /tmp/nums-demo/run.sh executable with mode 755","tool":"set_path_permissions","arguments":{"path":"/tmp/nums-demo/run.sh","mode":"755"}}
+{"id":"permissions-set-02","user":"Set /tmp/nums-demo/secrets.txt permissions to 600","tool":"set_path_permissions","arguments":{"path":"/tmp/nums-demo/secrets.txt","mode":"600"}}
+{"id":"symlink-create-01","user":"Create /tmp/nums-demo/current as a symlink to releases/v2","tool":"create_symlink","arguments":{"target":"releases/v2","link":"/tmp/nums-demo/current"}}
+{"id":"symlink-create-02","user":"Link /tmp/nums-demo/bin/tool to ../build/tool","tool":"create_symlink","arguments":{"target":"../build/tool","link":"/tmp/nums-demo/bin/tool"}}
+{"id":"replace-file-01","user":"In /tmp/nums-demo/settings.py replace DEBUG = False with DEBUG = True","tool":"replace_in_file","arguments":{"path":"/tmp/nums-demo/settings.py","old_text":"DEBUG = False","new_text":"DEBUG = True"}}
+{"id":"replace-file-02","user":"Replace the unique heading Draft with Final in /tmp/nums-demo/report.md","tool":"replace_in_file","arguments":{"path":"/tmp/nums-demo/report.md","old_text":"# Draft","new_text":"# Final"}}
