@@ -6,6 +6,17 @@ The seed set includes varied Mac inspection, waiting, action, coding, and Git
 requests so new tools participate in pipeline tests. These labels remain
 synthetic and must be supplemented with reviewed real-world traces.
 
+Audit seed coverage whenever runtime tools or labels change:
+
+```bash
+PYTHONPATH=src:. .venv/bin/python training/coverage.py \
+  training/seed_examples.jsonl --minimum-per-tool 2 --require-complete
+```
+
+The command reports per-tool counts and fails when any runtime tool is missing
+or below the requested minimum. Complete synthetic coverage checks plumbing and
+does not replace representative held-out requests.
+
 See [BASELINE.md](BASELINE.md) for the current starter-set result.
 
 ## Collect labels

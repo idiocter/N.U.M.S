@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from training.build_dataset import build, load_examples
+from training.coverage import summarize
 
 
 SOURCE = Path(__file__).resolve().parents[1] / "training" / "seed_examples.jsonl"
@@ -72,3 +73,12 @@ def test_adding_labels_keeps_existing_split_assignments(tmp_path: Path) -> None:
     assert sum(counts.values()) == original_count + 1
     assert {identifier: updated[identifier] for identifier in original} == original
     assert updated["new-real-case"] in {"train", "valid", "test"}
+
+
+def test_seed_examples_cover_every_runtime_tool_at_least_twice() -> None:
+    report = summarize(SOURCE, minimum_per_tool=2)
+    assert report["examples"] == 138
+    assert report["runtime_tools"] == 57
+    assert report["no_tool_examples"] == 10
+    assert report["missing"] == []
+    assert report["underrepresented"] == []

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added a training coverage audit and a test requiring at least two labels for every runtime tool.
 - Expanded model-adaptation labels for Git, clipboard, reminders, calendar, and no-action contrasts.
 - Expanded model-adaptation labels for project inspection and safe file operations.
 - Expanded model-adaptation labels for exact Mac menus, controls, text, and keyboard actions.
