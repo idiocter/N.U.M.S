@@ -110,3 +110,29 @@
 {"id":"symlink-create-02","user":"Link /tmp/nums-demo/bin/tool to ../build/tool","tool":"create_symlink","arguments":{"target":"../build/tool","link":"/tmp/nums-demo/bin/tool"}}
 {"id":"replace-file-01","user":"In /tmp/nums-demo/settings.py replace DEBUG = False with DEBUG = True","tool":"replace_in_file","arguments":{"path":"/tmp/nums-demo/settings.py","old_text":"DEBUG = False","new_text":"DEBUG = True"}}
 {"id":"replace-file-02","user":"Replace the unique heading Draft with Final in /tmp/nums-demo/report.md","tool":"replace_in_file","arguments":{"path":"/tmp/nums-demo/report.md","old_text":"# Draft","new_text":"# Final"}}
+{"id":"git-status-01","user":"Show the Git status of /tmp/nums-demo/project","tool":"git_status","arguments":{"repo":"/tmp/nums-demo/project"}}
+{"id":"git-status-02","user":"Which branch and changed files are in /tmp/nums-demo/site?","tool":"git_status","arguments":{"repo":"/tmp/nums-demo/site"}}
+{"id":"git-diff-01","user":"Show all tracked changes against HEAD in /tmp/nums-demo/project","tool":"git_diff","arguments":{"repo":"/tmp/nums-demo/project"}}
+{"id":"git-diff-02","user":"Show the HEAD diff for src/parser.py in /tmp/nums-demo/project","tool":"git_diff","arguments":{"repo":"/tmp/nums-demo/project","file":"src/parser.py"}}
+{"id":"git-log-01","user":"Show the 15 most recent commits in /tmp/nums-demo/project","tool":"git_log","arguments":{"repo":"/tmp/nums-demo/project","count":"15"}}
+{"id":"git-log-02","user":"Show recent history affecting README.md in /tmp/nums-demo/project","tool":"git_log","arguments":{"repo":"/tmp/nums-demo/project","file":"README.md"}}
+{"id":"git-show-01","user":"Inspect commit HEAD~1 in /tmp/nums-demo/project","tool":"git_show","arguments":{"repo":"/tmp/nums-demo/project","revision":"HEAD~1"}}
+{"id":"git-show-02","user":"Show src/main.py as changed by revision v1.2.0 in /tmp/nums-demo/project","tool":"git_show","arguments":{"repo":"/tmp/nums-demo/project","revision":"v1.2.0","file":"src/main.py"}}
+{"id":"git-branches-01","user":"List local and remote branches in /tmp/nums-demo/project with upstreams","tool":"git_branches","arguments":{"repo":"/tmp/nums-demo/project"}}
+{"id":"git-branches-02","user":"Inspect branch tips and tracking relationships for /tmp/nums-demo/site","tool":"git_branches","arguments":{"repo":"/tmp/nums-demo/site"}}
+{"id":"git-blame-01","user":"Blame lines 20 through 39 of src/parser.py in /tmp/nums-demo/project","tool":"git_blame","arguments":{"repo":"/tmp/nums-demo/project","file":"src/parser.py","start_line":"20","count":"20"}}
+{"id":"git-blame-02","user":"Show attribution for the first 50 lines of README.md at main in /tmp/nums-demo/project","tool":"git_blame","arguments":{"repo":"/tmp/nums-demo/project","file":"README.md","start_line":"1","count":"50","revision":"main"}}
+{"id":"clipboard-get-01","user":"What text is currently on my clipboard?","tool":"get_clipboard","arguments":{}}
+{"id":"clipboard-get-02","user":"Read the Mac clipboard contents","tool":"get_clipboard","arguments":{}}
+{"id":"clipboard-set-01","user":"Put release candidate on my clipboard","tool":"set_clipboard","arguments":{"text":"release candidate"}}
+{"id":"clipboard-set-02","user":"Replace the clipboard with https://example.com/docs","tool":"set_clipboard","arguments":{"text":"https://example.com/docs"}}
+{"id":"reminder-create-01","user":"Create a reminder titled Submit expense report","tool":"create_reminder","arguments":{"title":"Submit expense report"}}
+{"id":"reminder-create-02","user":"Remind me to Call Sam with note Ask about the launch","tool":"create_reminder","arguments":{"title":"Call Sam","notes":"Ask about the launch"}}
+{"id":"calendar-read-01","user":"What events are on my calendar today?","tool":"get_calendar_events","arguments":{}}
+{"id":"calendar-read-02","user":"List today's Mac Calendar appointments","tool":"get_calendar_events","arguments":{}}
+{"id":"none-05","user":"Explain how renaming a file works without changing anything","tool":"none","arguments":{},"answer":"Renaming changes a file's name or path while preserving its contents."}
+{"id":"none-06","user":"What would Command-Q normally do on a Mac? Do not press it","tool":"none","arguments":{},"answer":"Command-Q normally quits the active application."}
+{"id":"none-07","user":"Draft a three-item code review checklist without inspecting files","tool":"none","arguments":{},"answer":"1. Check correctness. 2. Review tests. 3. Assess readability."}
+{"id":"none-08","user":"Should I delete old build files? Just explain the tradeoff","tool":"none","arguments":{},"answer":"Deleting old build files can free space, but they may be useful for debugging or rollback."}
+{"id":"none-09","user":"Summarize your Mac capabilities without taking any action","tool":"none","arguments":{},"answer":"I can inspect and edit files, examine Git projects, and control accessible Mac apps when requested."}
+{"id":"none-10","user":"What is a SHA-256 hash?","tool":"none","arguments":{},"answer":"SHA-256 is a cryptographic digest used to identify data and detect changes."}

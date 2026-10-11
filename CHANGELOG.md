@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Expanded model-adaptation labels for Git, clipboard, reminders, calendar, and no-action contrasts.
 - Expanded model-adaptation labels for project inspection and safe file operations.
 - Expanded model-adaptation labels for exact Mac menus, controls, text, and keyboard actions.
 - Expanded model-adaptation labels for exact Mac app activation and window management.
