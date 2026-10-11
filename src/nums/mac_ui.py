@@ -22,8 +22,13 @@ ACTIVATE_APP_SCRIPT = """on run argv
 end run"""
 
 
-NOTIFY_SCRIPT = """on run argv
-    display notification (item 1 of argv) with title (item 2 of argv)
+NOTIFY_SCRIPT = """use framework "Foundation"
+
+on run argv
+    set notification to current application's NSUserNotification's alloc()'s init()
+    notification's setInformativeText:(item 1 of argv)
+    notification's setTitle:(item 2 of argv)
+    current application's NSUserNotificationCenter's defaultUserNotificationCenter()'s deliverNotification:notification
 end run"""
 
 
@@ -69,9 +74,9 @@ WAIT_WINDOW_SCRIPT = """on run argv
     set appName to item 1 of argv
     set targetTitle to item 2 of argv
     set desiredState to item 3 of argv
-    set timeoutSeconds to item 4 of argv as integer
-    set deadline to (current date) + timeoutSeconds
-    repeat
+    set waitLimit to item 4 of argv as integer
+    set maxAttempts to waitLimit * 5
+    repeat with attemptNumber from 0 to maxAttempts
         set matchCount to 0
         tell application "System Events"
             if exists process appName then
@@ -87,7 +92,7 @@ WAIT_WINDOW_SCRIPT = """on run argv
         if matchCount > 1 then error "Expected one matching window; found " & matchCount
         if matchCount is 1 and desiredState is "exists" then return "Window appeared: " & targetTitle
         if matchCount is 0 and desiredState is "absent" then return "Window is absent: " & targetTitle
-        if (current date) is greater than or equal to deadline then error "Timed out waiting for window: " & targetTitle
+        if attemptNumber is maxAttempts then error "Timed out waiting for window: " & targetTitle
         delay 0.2
     end repeat
 end run"""
@@ -351,8 +356,8 @@ WAIT_MENU_ITEM_SCRIPT = """on run argv
     set submenuName to item 4 of argv
     set desiredState to item 5 of argv
     set timeoutSeconds to item 6 of argv as integer
-    set deadline to (current date) + timeoutSeconds
-    repeat
+    set maxAttempts to timeoutSeconds * 5
+    repeat with attemptNumber from 0 to maxAttempts
         set matchCount to 0
         set matchEnabled to false
         tell application "System Events"
@@ -385,7 +390,7 @@ WAIT_MENU_ITEM_SCRIPT = """on run argv
             if desiredState is "enabled" and matchEnabled then return "Menu item is enabled: " & itemName
             if desiredState is "disabled" and not matchEnabled then return "Menu item is disabled: " & itemName
         end if
-        if (current date) is greater than or equal to deadline then error "Timed out waiting for menu item: " & itemName
+        if attemptNumber is maxAttempts then error "Timed out waiting for menu item: " & itemName
         delay 0.2
     end repeat
 end run"""
@@ -528,8 +533,8 @@ WAIT_ELEMENT_SCRIPT = """on run argv
     set targetLabel to item 4 of argv
     set desiredState to item 5 of argv
     set timeoutSeconds to item 6 of argv as integer
-    set deadline to (current date) + timeoutSeconds
-    repeat
+    set maxAttempts to timeoutSeconds * 5
+    repeat with attemptNumber from 0 to maxAttempts
         set matchCount to 0
         set matchEnabled to false
         tell application "System Events"
@@ -570,9 +575,9 @@ WAIT_ELEMENT_SCRIPT = """on run argv
         if matchCount is 1 then
             if desiredState is "exists" then return "UI element appeared: " & targetRole & " " & targetLabel
             if desiredState is "enabled" and matchEnabled then return "UI element is enabled: " & targetRole & " " & targetLabel
-            if desiredState is "disabled" then return "UI element is disabled: " & targetRole & " " & targetLabel
+            if desiredState is "disabled" and not matchEnabled then return "UI element is disabled: " & targetRole & " " & targetLabel
         end if
-        if (current date) is greater than or equal to deadline then error "Timed out waiting for UI element: " & targetRole & " " & targetLabel
+        if attemptNumber is maxAttempts then error "Timed out waiting for UI element: " & targetRole & " " & targetLabel
         delay 0.2
     end repeat
 end run"""
@@ -711,9 +716,9 @@ SELECT_POPUP_ITEM_SCRIPT = """on run argv
             set targetElement to item 1 of matches
             if not (enabled of targetElement) then error "Popup is disabled"
             click targetElement
-            set menuDeadline to (current date) + 2
-            repeat until exists menu 1 of targetElement
-                if (current date) is greater than or equal to menuDeadline then error "Popup menu did not appear"
+            repeat with attemptNumber from 1 to 20
+                if exists menu 1 of targetElement then exit repeat
+                if attemptNumber is 20 then error "Popup menu did not appear"
                 delay 0.1
             end repeat
             set itemMatches to {}

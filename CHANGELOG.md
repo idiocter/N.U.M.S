@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed macOS wait scripts to compile without scripting additions, corrected disabled-control waits, and made notifications self-contained.
 - Added a training coverage audit and a test requiring at least two labels for every runtime tool.
 - Expanded model-adaptation labels for Git, clipboard, reminders, calendar, and no-action contrasts.
 - Expanded model-adaptation labels for project inspection and safe file operations.
