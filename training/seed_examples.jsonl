@@ -54,3 +54,17 @@
 {"id":"element-wait-02","user":"Wait 20 seconds for the Progress indicator to disappear from Safari's Downloads window","tool":"wait_for_app_element","arguments":{"app":"Safari","window":"Downloads","role":"AXProgressIndicator","label":"Progress","state":"absent","timeout":"20"}}
 {"id":"menu-wait-01","user":"Wait until Safari's File menu item Save As becomes enabled","tool":"wait_for_app_menu_item","arguments":{"app":"Safari","menu":"File","item":"Save As…","state":"enabled"}}
 {"id":"menu-wait-02","user":"Wait for the Share item to disappear from Preview's File menu","tool":"wait_for_app_menu_item","arguments":{"app":"Preview","menu":"File","item":"Share","state":"absent"}}
+{"id":"app-activate-01","user":"Bring Safari to the foreground without opening another copy","tool":"activate_app","arguments":{"app":"Safari"}}
+{"id":"app-activate-02","user":"Activate the running Notes app","tool":"activate_app","arguments":{"app":"Notes"}}
+{"id":"window-focus-01","user":"Raise Safari's Downloads window","tool":"focus_app_window","arguments":{"app":"Safari","window":"Downloads"}}
+{"id":"window-focus-02","user":"Focus the second Preview window titled report.pdf","tool":"focus_app_window","arguments":{"app":"Preview","window":"report.pdf","index":"2"}}
+{"id":"window-close-01","user":"Close the Preview window named old-report.pdf","tool":"close_app_window","arguments":{"app":"Preview","window":"old-report.pdf"}}
+{"id":"window-close-02","user":"Close window 3 titled Untitled in TextEdit","tool":"close_app_window","arguments":{"app":"TextEdit","window":"Untitled","index":"3"}}
+{"id":"window-minimize-01","user":"Minimize Safari's Downloads window","tool":"set_app_window_minimized","arguments":{"app":"Safari","window":"Downloads","state":"on"}}
+{"id":"window-minimize-02","user":"Restore Preview's report.pdf window from the Dock","tool":"set_app_window_minimized","arguments":{"app":"Preview","window":"report.pdf","state":"off"}}
+{"id":"window-fullscreen-01","user":"Put the Safari window titled Documentation into full screen","tool":"set_app_window_fullscreen","arguments":{"app":"Safari","window":"Documentation","state":"on"}}
+{"id":"window-fullscreen-02","user":"Take Preview's Slides.pdf window out of full screen","tool":"set_app_window_fullscreen","arguments":{"app":"Preview","window":"Slides.pdf","state":"off"}}
+{"id":"window-move-01","user":"Move the Notes window to screen position 120,80","tool":"move_app_window","arguments":{"app":"Notes","window":"Notes","x":"120","y":"80"}}
+{"id":"window-move-02","user":"Move Preview's report.pdf window to -900,40 on my left display","tool":"move_app_window","arguments":{"app":"Preview","window":"report.pdf","x":"-900","y":"40"}}
+{"id":"window-resize-01","user":"Resize Safari's Documentation window to 1200 by 800","tool":"resize_app_window","arguments":{"app":"Safari","window":"Documentation","width":"1200","height":"800"}}
+{"id":"window-resize-02","user":"Make the Notes window 900 pixels wide and 700 pixels high","tool":"resize_app_window","arguments":{"app":"Notes","window":"Notes","width":"900","height":"700"}}

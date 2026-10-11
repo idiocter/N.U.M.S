@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Expanded model-adaptation labels for exact Mac app activation and window management.
 - Expanded model-adaptation labels for Mac app discovery, inspection, and asynchronous waits.
 - Added verified, non-overwriting symbolic link creation with exact relative-target preservation.
 - Added verified standard permission changes with strict octal validation and symlink refusal.
