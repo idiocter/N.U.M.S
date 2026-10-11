@@ -68,3 +68,23 @@
 {"id":"window-move-02","user":"Move Preview's report.pdf window to -900,40 on my left display","tool":"move_app_window","arguments":{"app":"Preview","window":"report.pdf","x":"-900","y":"40"}}
 {"id":"window-resize-01","user":"Resize Safari's Documentation window to 1200 by 800","tool":"resize_app_window","arguments":{"app":"Safari","window":"Documentation","width":"1200","height":"800"}}
 {"id":"window-resize-02","user":"Make the Notes window 900 pixels wide and 700 pixels high","tool":"resize_app_window","arguments":{"app":"Notes","window":"Notes","width":"900","height":"700"}}
+{"id":"menu-click-01","user":"Choose New Window from Safari's File menu","tool":"click_app_menu_item","arguments":{"app":"Safari","menu":"File","item":"New Window"}}
+{"id":"menu-click-02","user":"Click Email This Page under File then Share in Safari","tool":"click_app_menu_item","arguments":{"app":"Safari","menu":"File","item":"Email This Page","submenu":"Share"}}
+{"id":"element-click-01","user":"Click the Back button in Finder's Documents window","tool":"click_app_element","arguments":{"app":"Finder","window":"Documents","role":"AXButton","label":"Back"}}
+{"id":"element-click-02","user":"Click inspected AXRow 17 in Finder's Downloads window","tool":"click_app_element","arguments":{"app":"Finder","window":"Downloads","role":"AXRow","index":"17"}}
+{"id":"context-menu-01","user":"Open the context menu for the report.pdf row in Finder's Documents window","tool":"show_app_element_menu","arguments":{"app":"Finder","window":"Documents","role":"AXRow","label":"report.pdf"}}
+{"id":"context-menu-02","user":"Show the context menu for inspected AXImage element 22 in Photos","tool":"show_app_element_menu","arguments":{"app":"Photos","window":"Photos","role":"AXImage","index":"22"}}
+{"id":"popup-select-01","user":"Set the Refresh Rate popup in Displays settings to 60 Hertz","tool":"select_app_popup_item","arguments":{"app":"System Settings","window":"Displays","label":"Refresh Rate","item":"60 Hertz"}}
+{"id":"popup-select-02","user":"Select A4 from inspected popup element 12 in Preview's Print window","tool":"select_app_popup_item","arguments":{"app":"Preview","window":"Print","index":"12","item":"A4"}}
+{"id":"toggle-set-01","user":"Turn on the Wi-Fi switch in System Settings","tool":"set_app_toggle","arguments":{"app":"System Settings","window":"Wi-Fi","role":"AXSwitch","label":"Wi-Fi","state":"on"}}
+{"id":"toggle-set-02","user":"Uncheck the Reopen windows checkbox in the logout dialog","tool":"set_app_toggle","arguments":{"app":"loginwindow","window":"Log Out","role":"AXCheckBox","label":"Reopen windows when logging back in","state":"off"}}
+{"id":"radio-select-01","user":"Select MacBook Speakers in the Sound output radio options","tool":"select_app_radio","arguments":{"app":"System Settings","window":"Sound","label":"MacBook Speakers"}}
+{"id":"radio-select-02","user":"Select inspected radio button 9 in the Print dialog","tool":"select_app_radio","arguments":{"app":"Preview","window":"Print","index":"9"}}
+{"id":"control-adjust-01","user":"Increase the Output volume slider by 3 steps","tool":"adjust_app_control","arguments":{"app":"System Settings","window":"Sound","role":"AXSlider","label":"Output volume","direction":"increase","steps":"3"}}
+{"id":"control-adjust-02","user":"Decrease inspected AXIncrementor 14 by one step in Calendar","tool":"adjust_app_control","arguments":{"app":"Calendar","window":"New Event","role":"AXIncrementor","index":"14","direction":"decrease","steps":"1"}}
+{"id":"app-type-01","user":"Type quarterly review into the Search field in Notes","tool":"type_in_app","arguments":{"app":"Notes","window":"Notes","text":"quarterly review","role":"AXTextField","label":"Search"}}
+{"id":"app-type-02","user":"Type hello into the currently focused control in TextEdit's Untitled window","tool":"type_in_app","arguments":{"app":"TextEdit","window":"Untitled","text":"hello"}}
+{"id":"app-replace-01","user":"Replace the entire Title field in Notes with Project Atlas","tool":"replace_app_text","arguments":{"app":"Notes","window":"Notes","text":"Project Atlas","role":"AXTextField","label":"Title"}}
+{"id":"app-replace-02","user":"Clear inspected text area 18 in TextEdit's Untitled window","tool":"replace_app_text","arguments":{"app":"TextEdit","window":"Untitled","text":"","role":"AXTextArea","index":"18"}}
+{"id":"key-press-01","user":"Press Command Shift S in Preview's report.pdf window","tool":"press_app_key","arguments":{"app":"Preview","window":"report.pdf","key":"s","modifiers":"command,shift"}}
+{"id":"key-press-02","user":"Press Page Down in Safari's Documentation window","tool":"press_app_key","arguments":{"app":"Safari","window":"Documentation","key":"page_down"}}

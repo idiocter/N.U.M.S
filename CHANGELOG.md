@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Expanded model-adaptation labels for exact Mac menus, controls, text, and keyboard actions.
 - Expanded model-adaptation labels for exact Mac app activation and window management.
 - Expanded model-adaptation labels for Mac app discovery, inspection, and asynchronous waits.
 - Added verified, non-overwriting symbolic link creation with exact relative-target preservation.
