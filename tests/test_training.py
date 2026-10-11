@@ -52,7 +52,14 @@ def test_adding_labels_keeps_existing_split_assignments(tmp_path: Path) -> None:
     source = tmp_path / "examples.jsonl"
     source.write_text(SOURCE.read_text())
     destination = tmp_path / "splits"
-    assert build(source, destination) == {"train": 24, "valid": 8, "test": 8}
+    original_count = len(load_examples(source))
+    train_end = original_count * 6 // 10
+    valid_end = original_count * 8 // 10
+    assert build(source, destination) == {
+        "train": train_end,
+        "valid": valid_end - train_end,
+        "test": original_count - valid_end,
+    }
     original = json.loads((destination / "split_manifest.json").read_text())
     source.write_text(SOURCE.read_text() + json.dumps({
         "id": "new-real-case", "user": "Show local machine architecture",
@@ -62,6 +69,6 @@ def test_adding_labels_keeps_existing_split_assignments(tmp_path: Path) -> None:
     counts = build(source, destination)
     updated = json.loads((destination / "split_manifest.json").read_text())
 
-    assert sum(counts.values()) == 41
+    assert sum(counts.values()) == original_count + 1
     assert {identifier: updated[identifier] for identifier in original} == original
     assert updated["new-real-case"] in {"train", "valid", "test"}

@@ -1,6 +1,10 @@
 # NUMS tool-use fine tuning
 
-NUMS currently uses `qwen2.5:1.5b-instruct` through Ollama. This folder provides a small, synthetic **starter** dataset, a deterministic train/validation/test split, and a read-only tool-call evaluator. The starter examples are for checking the pipeline; they do not establish that a fine-tuned model is better.
+NUMS currently uses `qwen2.5:1.5b-instruct` through Ollama. This folder provides a synthetic **starter** dataset, a deterministic train/validation/test split, and a read-only tool-call evaluator. The starter examples are for checking the pipeline; they do not establish that a fine-tuned model is better.
+
+The seed set includes varied Mac inspection, waiting, action, coding, and Git
+requests so new tools participate in pipeline tests. These labels remain
+synthetic and must be supplemented with reviewed real-world traces.
 
 See [BASELINE.md](BASELINE.md) for the current starter-set result.
 

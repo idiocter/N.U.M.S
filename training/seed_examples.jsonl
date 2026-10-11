@@ -38,3 +38,19 @@
 {"id":"none-02","user":"Say hello in your response, without speaking aloud","tool":"none","arguments":{},"answer":"Hello!"}
 {"id":"none-03","user":"What can you help me do on this Mac?","tool":"none","arguments":{},"answer":"I can inspect files, search, run commands, open apps, speak, show notifications, and automate apps."}
 {"id":"none-04","user":"Explain what a folder is in one sentence","tool":"none","arguments":{},"answer":"A folder organizes files and other folders."}
+{"id":"apps-list-01","user":"Which foreground Mac apps are running right now?","tool":"list_running_apps","arguments":{}}
+{"id":"apps-list-02","user":"List the currently running desktop applications","tool":"list_running_apps","arguments":{}}
+{"id":"windows-list-01","user":"List every open window in Safari","tool":"list_app_windows","arguments":{"app":"Safari"}}
+{"id":"windows-list-02","user":"Show the window titles, positions, and sizes for Preview","tool":"list_app_windows","arguments":{"app":"Preview"}}
+{"id":"ui-inspect-01","user":"Inspect the controls in Finder's front window","tool":"inspect_app_ui","arguments":{"app":"Finder"}}
+{"id":"ui-inspect-02","user":"Show the first 80 accessibility elements in the front Notes window","tool":"inspect_app_ui","arguments":{"app":"Notes","limit":"80"}}
+{"id":"focus-inspect-01","user":"Which control currently has keyboard focus in Safari?","tool":"inspect_focused_app_element","arguments":{"app":"Safari"}}
+{"id":"focus-inspect-02","user":"Inspect the focused UI element in TextEdit","tool":"inspect_focused_app_element","arguments":{"app":"TextEdit"}}
+{"id":"menu-inspect-01","user":"List the menus exposed by Preview","tool":"inspect_app_menu","arguments":{"app":"Preview"}}
+{"id":"menu-inspect-02","user":"Inspect the items under Safari's File menu","tool":"inspect_app_menu","arguments":{"app":"Safari","menu":"File"}}
+{"id":"window-wait-01","user":"Wait up to 12 seconds for Preview's Export window to appear","tool":"wait_for_app_window","arguments":{"app":"Preview","window":"Export","state":"exists","timeout":"12"}}
+{"id":"window-wait-02","user":"Wait until Safari's Downloads window disappears","tool":"wait_for_app_window","arguments":{"app":"Safari","window":"Downloads","state":"absent"}}
+{"id":"element-wait-01","user":"Wait for the Save button in TextEdit's Untitled window to become enabled","tool":"wait_for_app_element","arguments":{"app":"TextEdit","window":"Untitled","role":"AXButton","label":"Save","state":"enabled"}}
+{"id":"element-wait-02","user":"Wait 20 seconds for the Progress indicator to disappear from Safari's Downloads window","tool":"wait_for_app_element","arguments":{"app":"Safari","window":"Downloads","role":"AXProgressIndicator","label":"Progress","state":"absent","timeout":"20"}}
+{"id":"menu-wait-01","user":"Wait until Safari's File menu item Save As becomes enabled","tool":"wait_for_app_menu_item","arguments":{"app":"Safari","menu":"File","item":"Save As…","state":"enabled"}}
+{"id":"menu-wait-02","user":"Wait for the Share item to disappear from Preview's File menu","tool":"wait_for_app_menu_item","arguments":{"app":"Preview","menu":"File","item":"Share","state":"absent"}}
