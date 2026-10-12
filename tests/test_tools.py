@@ -28,6 +28,21 @@ def test_paging_and_git_schemas_expose_value_constraints() -> None:
     assert schemas["git_show"]["parameters"]["properties"]["revision"]["pattern"]
 
 
+def test_window_schemas_expose_exact_states_and_bounds() -> None:
+    schemas = {item["function"]["name"]: item["function"] for item in TOOL_SCHEMAS}
+
+    assert schemas["open_item"]["parameters"]["properties"]["kind"]["enum"] == [
+        "auto", "app", "path", "url",
+    ]
+    assert schemas["wait_for_app_window"]["parameters"]["properties"]["state"]["enum"] == [
+        "exists", "absent",
+    ]
+    assert schemas["set_app_window_minimized"]["parameters"]["properties"]["state"]["enum"] == [
+        "on", "off",
+    ]
+    assert schemas["resize_app_window"]["parameters"]["properties"]["width"]["pattern"]
+
+
 def test_read_and_list(tmp_path: Path) -> None:
     file = tmp_path / "hello.txt"
     file.write_text("hello NUMS")
