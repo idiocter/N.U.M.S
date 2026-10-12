@@ -5,6 +5,7 @@ import json
 from fnmatch import fnmatchcase
 import os
 import platform
+import re
 import shutil
 import stat
 import subprocess
@@ -333,6 +334,15 @@ def validate_tool_arguments(name: str, args: Any) -> str | None:
         return f"{name} has unexpected arguments: {', '.join(sorted(unexpected))}"
     if wrong_type:
         return f"{name} arguments must be strings: {', '.join(sorted(wrong_type))}"
+    for key, value in args.items():
+        specification = parameters["properties"][key]
+        if "minLength" in specification and len(value) < specification["minLength"]:
+            return f"{name}.{key} must not be empty"
+        if "enum" in specification and value not in specification["enum"]:
+            choices = ", ".join(specification["enum"])
+            return f"{name}.{key} must be one of: {choices}"
+        if "pattern" in specification and re.fullmatch(specification["pattern"], value) is None:
+            return f"{name}.{key} has an invalid format"
     return None
 
 

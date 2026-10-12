@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 
 from nums.agent import SYSTEM_PROMPT
-from nums.tools import TOOL_SCHEMAS
+from nums.tools import TOOL_SCHEMAS, validate_tool_arguments
 
 
 SCHEMAS = {item["function"]["name"]: item["function"] for item in TOOL_SCHEMAS}
@@ -43,12 +43,10 @@ def load_examples(path: Path, minimum: int = 15) -> list[dict]:
                 raise ValueError("invalid tool or arguments")
             if name == "none" and not (isinstance(item.get("answer"), str) and item["answer"].strip()):
                 raise ValueError("a no-tool example needs a nonempty answer")
-            required = set(SCHEMAS[name]["parameters"]["required"]) if name != "none" else set()
-            allowed = set(SCHEMAS[name]["parameters"]["properties"]) if name != "none" else set()
-            if not required <= arguments.keys() or not arguments.keys() <= allowed:
-                raise ValueError("missing or unexpected argument")
-            if not all(isinstance(value, str) for value in arguments.values()):
-                raise ValueError("arguments must be strings")
+            if name != "none":
+                argument_error = validate_tool_arguments(name, arguments)
+                if argument_error:
+                    raise ValueError(argument_error)
         except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
             raise ValueError(f"{path}:{number}: {exc}") from exc
         seen.add(identifier)

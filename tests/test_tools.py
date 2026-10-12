@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from nums.tools import MacTools, TOOL_SCHEMAS, _run
+from nums.tools import MacTools, TOOL_SCHEMAS, _run, validate_tool_arguments
 from nums.mac_ui import (
     ACTIVATE_APP_SCRIPT, ADJUST_CONTROL_SCRIPT, CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, CLOSE_WINDOW_SCRIPT,
     FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, MOVE_WINDOW_SCRIPT, RESIZE_WINDOW_SCRIPT,
@@ -56,6 +56,18 @@ def test_ui_schemas_expose_roles_states_and_shortcut_format() -> None:
         "increase", "decrease",
     ]
     assert schemas["press_app_key"]["parameters"]["properties"]["modifiers"]["pattern"]
+
+
+def test_shared_argument_validation_enforces_schema_values() -> None:
+    assert validate_tool_arguments("read_lines", {"path": "/tmp/a", "count": "101"}) == (
+        "read_lines.count has an invalid format"
+    )
+    assert validate_tool_arguments("open_item", {"target": "Safari", "kind": "program"}) == (
+        "open_item.kind must be one of: auto, app, path, url"
+    )
+    assert validate_tool_arguments("wait_for_app_window", {"app": "", "window": "Save"}) == (
+        "wait_for_app_window.app must not be empty"
+    )
 
 
 def test_read_and_list(tmp_path: Path) -> None:

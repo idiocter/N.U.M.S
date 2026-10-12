@@ -37,6 +37,17 @@ def test_unknown_tool_is_rejected(tmp_path: Path) -> None:
         load_examples(source)
 
 
+def test_training_labels_must_satisfy_tool_value_constraints(tmp_path: Path) -> None:
+    source = tmp_path / "bad-value.jsonl"
+    source.write_text(json.dumps({
+        "id": "bad-value", "user": "wait for a save window", "tool": "wait_for_app_window",
+        "arguments": {"app": "TextEdit", "window": "Save", "state": "visible"},
+    }) + "\n")
+
+    with pytest.raises(ValueError, match="state must be one of"):
+        load_examples(source, minimum=1)
+
+
 def test_duplicate_prompts_cannot_leak_across_data_splits(tmp_path: Path) -> None:
     source = tmp_path / "duplicates.jsonl"
     rows = [
