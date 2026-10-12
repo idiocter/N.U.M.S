@@ -1,5 +1,6 @@
 import json
 import stat
+import urllib.error
 from contextlib import nullcontext
 
 from training.evaluate import evaluate, write_report
@@ -72,6 +73,56 @@ def test_malformed_model_response_scores_wrong_and_keeps_next_case(monkeypatch, 
     assert report["tool_correct"] == 1
     assert "missing assistant message" in report["cases"][0]["error"]
     assert report["cases"][1]["tool_correct"] is True
+
+
+def test_request_failure_scores_wrong_and_keeps_next_case(monkeypatch, tmp_path) -> None:
+    examples = [
+        {"id": "offline", "messages": [{"role": "user"}, {"role": "assistant"}],
+         "tools": [], "expected_tool": "none", "expected_arguments": {}},
+        {"id": "valid", "messages": [{"role": "user"}, {"role": "assistant"}],
+         "tools": [], "expected_tool": "none", "expected_arguments": {}},
+    ]
+    data = tmp_path / "test.jsonl"
+    data.write_text("\n".join(json.dumps(item) for item in examples))
+    responses = iter([urllib.error.URLError("Ollama unavailable"), _JsonResponse({
+        "message": {"content": "hello"},
+    })])
+
+    def open_next(*args, **kwargs):
+        response = next(responses)
+        if isinstance(response, Exception):
+            raise response
+        return nullcontext(response)
+
+    monkeypatch.setattr("training.evaluate.urllib.request.urlopen", open_next)
+
+    report = evaluate(data, "test-model", "http://ollama.test")
+
+    assert report["total"] == 2
+    assert report["tool_correct"] == 1
+    assert "Evaluation request failed" in report["cases"][0]["error"]
+    assert report["cases"][1]["tool_correct"] is True
+
+
+def test_non_object_tool_arguments_are_a_model_response_error(monkeypatch, tmp_path) -> None:
+    example = {
+        "id": "list-args", "messages": [{"role": "user"}, {"role": "assistant"}],
+        "tools": [], "expected_tool": "system_info", "expected_arguments": {},
+    }
+    data = tmp_path / "test.jsonl"
+    data.write_text(json.dumps(example) + "\n")
+    response = _JsonResponse({"message": {"tool_calls": [{
+        "function": {"name": "system_info", "arguments": "[]"},
+    }]}})
+    monkeypatch.setattr(
+        "training.evaluate.urllib.request.urlopen",
+        lambda *args, **kwargs: nullcontext(response),
+    )
+
+    report = evaluate(data, "test-model", "http://ollama.test")
+
+    assert report["tool_correct"] == 0
+    assert "not a JSON object" in report["cases"][0]["error"]
 
 
 def test_evaluation_report_is_private(tmp_path) -> None:

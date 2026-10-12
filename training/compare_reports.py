@@ -49,6 +49,10 @@ def compare(baseline: dict[str, Any], candidate: dict[str, Any]) -> tuple[bool, 
         reasons.append("full tool and argument accuracy did not improve")
     if after_choice < before_choice:
         reasons.append("tool choice accuracy regressed")
+    before_errors = sum(bool(row.get("error")) for row in before.values())
+    after_errors = sum(bool(row.get("error")) for row in after.values())
+    if after_errors > before_errors:
+        reasons.append("evaluation response errors increased")
 
     per_tool_before: defaultdict[str, int] = defaultdict(int)
     per_tool_after: defaultdict[str, int] = defaultdict(int)

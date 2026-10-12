@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import tempfile
+import urllib.error
 import urllib.request
 from collections import defaultdict
 from pathlib import Path
@@ -30,8 +31,8 @@ def evaluate(data: Path, model: str, url: str) -> dict[str, Any]:
             data=payload,
             headers={"Content-Type": "application/json"},
         )
-        with urllib.request.urlopen(request, timeout=180) as response:
-            try:
+        try:
+            with urllib.request.urlopen(request, timeout=180) as response:
                 result = json.load(response)
                 if not isinstance(result, dict) or not isinstance(result.get("message"), dict):
                     raise ValueError("missing assistant message")
@@ -45,12 +46,19 @@ def evaluate(data: Path, model: str, url: str) -> dict[str, Any]:
                 actual = function.get("arguments", {})
                 if isinstance(actual, str):
                     actual = json.loads(actual)
+                if not isinstance(actual, dict):
+                    raise ValueError("tool arguments are not a JSON object")
                 error = None
-            except (ValueError, TypeError) as exc:
-                calls = []
-                function = {}
-                actual = None
-                error = f"Invalid model response: {exc}"
+        except (ValueError, TypeError, json.JSONDecodeError) as exc:
+            calls = []
+            function = {}
+            actual = None
+            error = f"Invalid model response: {exc}"
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            calls = []
+            function = {}
+            actual = None
+            error = f"Evaluation request failed: {type(exc).__name__}: {exc}"
         if error:
             name_ok = args_ok = False
         elif item["expected_tool"] == "none":

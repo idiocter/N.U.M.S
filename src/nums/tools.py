@@ -54,7 +54,7 @@ TOOL_SCHEMAS = [
         "read_file", "Read up to 12000 characters from a UTF-8 file; use offset for later chunks.",
         {
             "path": _text("File path to read.", minLength=1),
-            "offset": _text("Zero-based character offset; defaults to 0.", pattern=NONNEGATIVE_INTEGER),
+            "offset": _text("Nonnegative character offset; defaults to 0.", pattern=NONNEGATIVE_INTEGER),
         }, ["path"],
     ),
     _schema(
@@ -62,7 +62,7 @@ TOOL_SCHEMAS = [
         {
             "path": _text("File path to read.", minLength=1),
             "start_line": _text("One-based first line; defaults to 1.", pattern=POSITIVE_INTEGER),
-            "count": _text("Number of lines from 1 through 100; defaults to 80.", pattern=r"^(?:[1-9]|[1-9][0-9]|100)$"),
+            "count": _text("Number of lines between 1 and 100; defaults to 80.", pattern=r"^(?:[1-9]|[1-9][0-9]|100)$"),
         },
         ["path"],
     ),
@@ -70,7 +70,7 @@ TOOL_SCHEMAS = [
         "list_directory", "List up to 500 files and folders; use offset for later pages.",
         {
             "path": _text("Directory path to list.", minLength=1),
-            "offset": _text("Zero-based item offset; defaults to 0.", pattern=NONNEGATIVE_INTEGER),
+            "offset": _text("Nonnegative item offset; defaults to 0.", pattern=NONNEGATIVE_INTEGER),
         }, ["path"],
     ),
     _schema("path_info", "Inspect a path's type, byte size, permissions, modification time, and symlink target without following the final symlink.", {"path": {"type": "string"}}, ["path"]),
@@ -80,7 +80,7 @@ TOOL_SCHEMAS = [
         {
             "path": _text("Root directory to search.", minLength=1),
             "glob": _text("Optional nonempty path glob such as **/*.py.", minLength=1),
-            "offset": _text("Zero-based result offset; defaults to 0.", pattern=NONNEGATIVE_INTEGER),
+            "offset": _text("Nonnegative result offset; defaults to 0.", pattern=NONNEGATIVE_INTEGER),
         },
         ["path"],
     ),
@@ -102,7 +102,7 @@ TOOL_SCHEMAS = [
         "git_log", "Show 1 to 100 recent commits with hash, date, refs, and subject; optionally follow history affecting one path.",
         {
             "repo": _text("Git repository path.", minLength=1),
-            "count": _text("Commit count from 1 through 100; defaults to 20.", pattern=r"^(?:[1-9]|[1-9][0-9]|100)$"),
+            "count": _text("Commit count between 1 and 100; defaults to 20.", pattern=r"^(?:[1-9]|[1-9][0-9]|100)$"),
             "file": _text("Optional nonempty repository-relative path.", minLength=1),
         }, ["repo"],
     ),
@@ -121,7 +121,7 @@ TOOL_SCHEMAS = [
             "repo": _text("Git repository path.", minLength=1),
             "file": _text("Nonempty repository-relative file path.", minLength=1),
             "start_line": _text("One-based first line; defaults to 1.", pattern=POSITIVE_INTEGER),
-            "count": _text("Line count from 1 through 200; defaults to 40.", pattern=r"^(?:[1-9]|[1-9][0-9]|1[0-9]{2}|200)$"),
+            "count": _text("Line count between 1 and 200; defaults to 40.", pattern=r"^(?:[1-9]|[1-9][0-9]|1[0-9]{2}|200)$"),
             "revision": _text("Exact commit or ref; defaults to HEAD.", pattern=r"^(?!-)(?!.*\.\.)[A-Za-z0-9_./@{}~^-]+$"),
         },
         ["repo", "file"],
@@ -166,7 +166,7 @@ TOOL_SCHEMAS = [
             "app": _text("Exact running process name.", minLength=1),
             "window": _text("Exact window title.", minLength=1),
             "state": _text("Condition to wait for; defaults to exists.", enum=["exists", "absent"]),
-            "timeout": _text("Timeout from 1 through 30 seconds; defaults to 10.", pattern=r"^(?:[1-9]|[12][0-9]|30)$"),
+            "timeout": _text("Timeout between 1 and 30 seconds; defaults to 10.", pattern=r"^(?:[1-9]|[12][0-9]|30)$"),
         },
         ["app", "window"],
     ),
@@ -174,14 +174,14 @@ TOOL_SCHEMAS = [
     _schema("close_app_window", "Close one exact named app window; use its listed index when titles repeat and inspect if a confirmation dialog blocks closing.", {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact window title.", minLength=1), "index": _text("Optional positive index from list_app_windows.", pattern=POSITIVE_INTEGER)}, ["app", "window"]),
     _schema("set_app_window_minimized", "Set one exact named window's minimized state on or off; use its listed index when titles repeat.", {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact window title.", minLength=1), "index": _text("Optional positive index from list_app_windows.", pattern=POSITIVE_INTEGER), "state": _text("Requested minimized state.", enum=["on", "off"])}, ["app", "window", "state"]),
     _schema("set_app_window_fullscreen", "Set one exact named window's full-screen state on or off when the app exposes it.", {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact window title.", minLength=1), "index": _text("Optional positive index from list_app_windows.", pattern=POSITIVE_INTEGER), "state": _text("Requested full-screen state.", enum=["on", "off"])}, ["app", "window", "state"]),
-    _schema("move_app_window", "Move one exact named window to bounded screen coordinates; use its listed index when titles repeat.", {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact window title.", minLength=1), "index": _text("Optional positive index from list_app_windows.", pattern=POSITIVE_INTEGER), "x": _text("Horizontal coordinate from -10000 through 10000.", pattern=r"^-?(?:[0-9]|[1-9][0-9]{1,3}|10000)$"), "y": _text("Vertical coordinate from -10000 through 10000.", pattern=r"^-?(?:[0-9]|[1-9][0-9]{1,3}|10000)$")}, ["app", "window", "x", "y"]),
-    _schema("resize_app_window", "Resize one exact named window to bounded dimensions; use its listed index when titles repeat.", {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact window title.", minLength=1), "index": _text("Optional positive index from list_app_windows.", pattern=POSITIVE_INTEGER), "width": _text("Width from 100 through 10000 pixels.", pattern=r"^(?:[1-9][0-9]{2,3}|10000)$"), "height": _text("Height from 100 through 10000 pixels.", pattern=r"^(?:[1-9][0-9]{2,3}|10000)$")}, ["app", "window", "width", "height"]),
+    _schema("move_app_window", "Move one exact named window to bounded screen coordinates; use its listed index when titles repeat.", {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact window title.", minLength=1), "index": _text("Optional positive index from list_app_windows.", pattern=POSITIVE_INTEGER), "x": _text("Horizontal coordinate between -10000 and 10000.", pattern=r"^-?(?:[0-9]|[1-9][0-9]{1,3}|10000)$"), "y": _text("Vertical coordinate between -10000 and 10000.", pattern=r"^-?(?:[0-9]|[1-9][0-9]{1,3}|10000)$")}, ["app", "window", "x", "y"]),
+    _schema("resize_app_window", "Resize one exact named window to bounded dimensions; use its listed index when titles repeat.", {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact window title.", minLength=1), "index": _text("Optional positive index from list_app_windows.", pattern=POSITIVE_INTEGER), "width": _text("Width between 100 and 10000 pixels.", pattern=r"^(?:[1-9][0-9]{2,3}|10000)$"), "height": _text("Height between 100 and 10000 pixels.", pattern=r"^(?:[1-9][0-9]{2,3}|10000)$")}, ["app", "window", "width", "height"]),
     _schema(
         "inspect_app_ui", "Inspect a page of front-window accessibility elements with availability and exposed control values; use offset and limit to page.",
         {
             "app": _text("Exact running process name.", minLength=1),
-            "offset": _text("Zero-based element offset; defaults to 0.", pattern=NONNEGATIVE_INTEGER),
-            "limit": _text("Element count from 1 through 120; defaults to 40.", pattern=r"^(?:[1-9]|[1-9][0-9]|1[01][0-9]|120)$"),
+            "offset": _text("Nonnegative element offset; defaults to 0.", pattern=NONNEGATIVE_INTEGER),
+            "limit": _text("Element count between 1 and 120; defaults to 40.", pattern=r"^(?:[1-9]|[1-9][0-9]|1[01][0-9]|120)$"),
         }, ["app"],
     ),
     _schema("inspect_focused_app_element", "Inspect the role, label, description, and availability of the app's focused UI element.", {"app": _text("Exact running process name.", minLength=1)}, ["app"]),
@@ -193,7 +193,7 @@ TOOL_SCHEMAS = [
             "role": _text("Exact inspected accessibility role such as AXButton.", minLength=1),
             "label": _text("Exact inspected name or accessibility description.", minLength=1),
             "state": _text("Condition to wait for; defaults to enabled.", enum=["exists", "enabled", "disabled", "absent"]),
-            "timeout": _text("Timeout from 1 through 30 seconds; defaults to 10.", pattern=r"^(?:[1-9]|[12][0-9]|30)$"),
+            "timeout": _text("Timeout between 1 and 30 seconds; defaults to 10.", pattern=r"^(?:[1-9]|[12][0-9]|30)$"),
         },
         ["app", "window", "role", "label"],
     ),
@@ -209,7 +209,7 @@ TOOL_SCHEMAS = [
             "item": _text("Exact menu item name.", minLength=1),
             "submenu": _text("Optional exact parent submenu name.", minLength=1),
             "state": _text("Condition to wait for; defaults to enabled.", enum=["exists", "enabled", "disabled", "absent"]),
-            "timeout": _text("Timeout from 1 through 30 seconds; defaults to 10.", pattern=r"^(?:[1-9]|[12][0-9]|30)$"),
+            "timeout": _text("Timeout between 1 and 30 seconds; defaults to 10.", pattern=r"^(?:[1-9]|[12][0-9]|30)$"),
         },
         ["app", "menu", "item"],
     ),
@@ -259,7 +259,7 @@ TOOL_SCHEMAS = [
             "label": _text("Exact inspected name or description; omit when using index.", minLength=1),
             "index": _text("Optional positive index from inspect_app_ui.", pattern=POSITIVE_INTEGER),
             "direction": _text("Adjustment direction.", enum=["increase", "decrease"]),
-            "steps": _text("Number of accessibility steps from 1 through 20; defaults to 1.", pattern=r"^(?:[1-9]|1[0-9]|20)$"),
+            "steps": _text("Number of accessibility steps between 1 and 20; defaults to 1.", pattern=r"^(?:[1-9]|1[0-9]|20)$"),
         },
         ["app", "window", "role", "direction"],
     ),
@@ -342,7 +342,9 @@ def validate_tool_arguments(name: str, args: Any) -> str | None:
             choices = ", ".join(specification["enum"])
             return f"{name}.{key} must be one of: {choices}"
         if "pattern" in specification and re.fullmatch(specification["pattern"], value) is None:
-            return f"{name}.{key} has an invalid format"
+            guidance = specification.get("description", "a valid format").rstrip(".")
+            guidance = guidance[:1].lower() + guidance[1:]
+            return f"{name}.{key} must be {guidance}"
     return None
 
 

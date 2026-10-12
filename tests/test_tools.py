@@ -59,9 +59,8 @@ def test_ui_schemas_expose_roles_states_and_shortcut_format() -> None:
 
 
 def test_shared_argument_validation_enforces_schema_values() -> None:
-    assert validate_tool_arguments("read_lines", {"path": "/tmp/a", "count": "101"}) == (
-        "read_lines.count has an invalid format"
-    )
+    count_error = validate_tool_arguments("read_lines", {"path": "/tmp/a", "count": "101"})
+    assert count_error is not None and "between 1 and 100" in count_error
     assert validate_tool_arguments("open_item", {"target": "Safari", "kind": "program"}) == (
         "open_item.kind must be one of: auto, app, path, url"
     )

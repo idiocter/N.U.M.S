@@ -41,3 +41,19 @@ def test_comparison_rejects_changed_labels() -> None:
 
     with pytest.raises(ValueError, match="label changed"):
         compare(baseline, candidate)
+
+
+def test_new_evaluation_response_errors_block_candidate() -> None:
+    baseline = {"cases": [
+        _case("a", "read_file", False),
+        _case("b", "open_item", False),
+    ]}
+    candidate = {"cases": [
+        _case("a", "read_file", True),
+        {**_case("b", "open_item", False), "error": "Evaluation request failed"},
+    ]}
+
+    eligible, reasons = compare(baseline, candidate)
+
+    assert not eligible
+    assert "evaluation response errors increased" in reasons
