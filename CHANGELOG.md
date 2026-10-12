@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added accessibility roles, wait states, text targets, and shortcut formats to Mac UI tool schemas.
 - Added exact states, ranges, and index guidance to Mac app and window tool schemas.
 - Added model-facing value constraints for file paging and bounded Git inspection arguments.
 - Fixed macOS wait scripts to compile without scripting additions, corrected disabled-control waits, and made notifications self-contained.

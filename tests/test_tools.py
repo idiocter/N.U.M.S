@@ -43,6 +43,21 @@ def test_window_schemas_expose_exact_states_and_bounds() -> None:
     assert schemas["resize_app_window"]["parameters"]["properties"]["width"]["pattern"]
 
 
+def test_ui_schemas_expose_roles_states_and_shortcut_format() -> None:
+    schemas = {item["function"]["name"]: item["function"] for item in TOOL_SCHEMAS}
+
+    assert schemas["wait_for_app_element"]["parameters"]["properties"]["state"]["enum"] == [
+        "exists", "enabled", "disabled", "absent",
+    ]
+    assert schemas["set_app_toggle"]["parameters"]["properties"]["role"]["enum"] == [
+        "AXCheckBox", "AXSwitch", "AXDisclosureTriangle",
+    ]
+    assert schemas["adjust_app_control"]["parameters"]["properties"]["direction"]["enum"] == [
+        "increase", "decrease",
+    ]
+    assert schemas["press_app_key"]["parameters"]["properties"]["modifiers"]["pattern"]
+
+
 def test_read_and_list(tmp_path: Path) -> None:
     file = tmp_path / "hello.txt"
     file.write_text("hello NUMS")

@@ -183,10 +183,17 @@ TOOL_SCHEMAS = [
             "limit": _text("Element count from 1 through 120; defaults to 40.", pattern=r"^(?:[1-9]|[1-9][0-9]|1[01][0-9]|120)$"),
         }, ["app"],
     ),
-    _schema("inspect_focused_app_element", "Inspect the role, label, description, and availability of the app's focused UI element.", {"app": {"type": "string"}}, ["app"]),
+    _schema("inspect_focused_app_element", "Inspect the role, label, description, and availability of the app's focused UI element.", {"app": _text("Exact running process name.", minLength=1)}, ["app"]),
     _schema(
         "wait_for_app_element", "Wait for one exact labeled front-window element to exist, become enabled or disabled, or become absent. Timeout defaults to 10 seconds and is capped at 30.",
-        {"app": {"type": "string"}, "window": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "state": {"type": "string"}, "timeout": {"type": "string"}},
+        {
+            "app": _text("Exact running process name.", minLength=1),
+            "window": _text("Exact front-window title.", minLength=1),
+            "role": _text("Exact inspected accessibility role such as AXButton.", minLength=1),
+            "label": _text("Exact inspected name or accessibility description.", minLength=1),
+            "state": _text("Condition to wait for; defaults to enabled.", enum=["exists", "enabled", "disabled", "absent"]),
+            "timeout": _text("Timeout from 1 through 30 seconds; defaults to 10.", pattern=r"^(?:[1-9]|[12][0-9]|30)$"),
+        },
         ["app", "window", "role", "label"],
     ),
     _schema(
@@ -195,7 +202,14 @@ TOOL_SCHEMAS = [
     ),
     _schema(
         "wait_for_app_menu_item", "Wait for one exact menu or submenu item to exist, enable, disable, or become absent.",
-        {"app": {"type": "string"}, "menu": {"type": "string"}, "item": {"type": "string"}, "submenu": {"type": "string"}, "state": {"type": "string"}, "timeout": {"type": "string"}},
+        {
+            "app": _text("Exact running process name.", minLength=1),
+            "menu": _text("Exact top-level menu name.", minLength=1),
+            "item": _text("Exact menu item name.", minLength=1),
+            "submenu": _text("Optional exact parent submenu name.", minLength=1),
+            "state": _text("Condition to wait for; defaults to enabled.", enum=["exists", "enabled", "disabled", "absent"]),
+            "timeout": _text("Timeout from 1 through 30 seconds; defaults to 10.", pattern=r"^(?:[1-9]|[12][0-9]|30)$"),
+        },
         ["app", "menu", "item"],
     ),
     _schema(
@@ -220,7 +234,14 @@ TOOL_SCHEMAS = [
     ),
     _schema(
         "set_app_toggle", "Set an inspected checkbox, switch, or disclosure triangle on or off; does nothing if already in the requested state.",
-        {"app": {"type": "string"}, "window": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "index": {"type": "string"}, "state": {"type": "string"}},
+        {
+            "app": _text("Exact running process name.", minLength=1),
+            "window": _text("Exact front-window title.", minLength=1),
+            "role": _text("Inspected toggle role.", enum=["AXCheckBox", "AXSwitch", "AXDisclosureTriangle"]),
+            "label": _text("Exact inspected name or description; omit when using index.", minLength=1),
+            "index": _text("Optional positive index from inspect_app_ui.", pattern=POSITIVE_INTEGER),
+            "state": _text("Requested toggle state.", enum=["on", "off"]),
+        },
         ["app", "window", "role", "state"],
     ),
     _schema(
@@ -230,22 +251,35 @@ TOOL_SCHEMAS = [
     ),
     _schema(
         "adjust_app_control", "Increase or decrease an inspected AXSlider or AXIncrementor by 1 to 20 accessibility steps.",
-        {"app": {"type": "string"}, "window": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "index": {"type": "string"}, "direction": {"type": "string"}, "steps": {"type": "string"}},
+        {
+            "app": _text("Exact running process name.", minLength=1),
+            "window": _text("Exact front-window title.", minLength=1),
+            "role": _text("Inspected adjustable role.", enum=["AXSlider", "AXIncrementor"]),
+            "label": _text("Exact inspected name or description; omit when using index.", minLength=1),
+            "index": _text("Optional positive index from inspect_app_ui.", pattern=POSITIVE_INTEGER),
+            "direction": _text("Adjustment direction.", enum=["increase", "decrease"]),
+            "steps": _text("Number of accessibility steps from 1 through 20; defaults to 1.", pattern=r"^(?:[1-9]|1[0-9]|20)$"),
+        },
         ["app", "window", "role", "direction"],
     ),
     _schema(
         "type_in_app", "Type into an inspected text field by role and label or index, or the currently focused control when no target is supplied.",
-        {"app": {"type": "string"}, "window": {"type": "string"}, "text": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "index": {"type": "string"}},
+        {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact front-window title.", minLength=1), "text": _text("Nonempty text to append.", minLength=1), "role": _text("Optional inspected text role.", enum=["AXTextField", "AXTextArea", "AXComboBox"]), "label": _text("Exact inspected name or description; requires role.", minLength=1), "index": _text("Optional positive index from inspect_app_ui; requires role.", pattern=POSITIVE_INTEGER)},
         ["app", "window", "text"],
     ),
     _schema(
         "replace_app_text", "Replace all text in one inspected text field, text area, or combo box; an empty value clears it.",
-        {"app": {"type": "string"}, "window": {"type": "string"}, "text": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "index": {"type": "string"}},
+        {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact front-window title.", minLength=1), "text": _text("Replacement text; empty clears the control."), "role": _text("Inspected text role.", enum=["AXTextField", "AXTextArea", "AXComboBox"]), "label": _text("Exact inspected name or description; omit when using index.", minLength=1), "index": _text("Optional positive index from inspect_app_ui.", pattern=POSITIVE_INTEGER)},
         ["app", "window", "text", "role"],
     ),
     _schema(
         "press_app_key", "Press one key or shortcut in the named app and front window. Named keys include arrows, home, end, page_up, page_down, enter, return, delete, forward_delete, tab, space, escape. Modifiers: command, option, control, shift.",
-        {"app": {"type": "string"}, "window": {"type": "string"}, "key": {"type": "string"}, "modifiers": {"type": "string"}},
+        {
+            "app": _text("Exact running process name.", minLength=1),
+            "window": _text("Exact front-window title.", minLength=1),
+            "key": _text("One character or supported named key.", pattern=r"^(?:.|left|right|up|down|home|end|page_up|page_down|enter|return|delete|forward_delete|tab|space|escape)$"),
+            "modifiers": _text("Optional comma-separated unique names: command, option, control, shift.", pattern=r"^(?:(?:command|option|control|shift)(?:,(?:command|option|control|shift))*)$"),
+        },
         ["app", "window", "key"],
     ),
     _schema("speak", "Speak text using the macOS voice.", {"text": {"type": "string"}}, ["text"]),
