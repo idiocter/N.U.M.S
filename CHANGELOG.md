@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fingerprinted split assignments so prompt or label edits cannot silently rewrite held-out cases.
 - Enforced model-facing enum, pattern, and nonempty constraints in both runtime calls and training labels.
 - Added accessibility roles, wait states, text targets, and shortcut formats to Mac UI tool schemas.
 - Added exact states, ranges, and index guidance to Mac app and window tool schemas.

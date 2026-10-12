@@ -72,18 +72,46 @@ def test_adding_labels_keeps_existing_split_assignments(tmp_path: Path) -> None:
         "valid": valid_end - train_end,
         "test": original_count - valid_end,
     }
-    original = json.loads((destination / "split_manifest.json").read_text())
+    original = json.loads((destination / "split_manifest.json").read_text())["assignments"]
     source.write_text(SOURCE.read_text() + json.dumps({
         "id": "new-real-case", "user": "Show local machine architecture",
         "tool": "system_info", "arguments": {},
     }) + "\n")
 
     counts = build(source, destination)
-    updated = json.loads((destination / "split_manifest.json").read_text())
+    updated = json.loads((destination / "split_manifest.json").read_text())["assignments"]
 
     assert sum(counts.values()) == original_count + 1
     assert {identifier: updated[identifier] for identifier in original} == original
-    assert updated["new-real-case"] in {"train", "valid", "test"}
+    assert updated["new-real-case"]["split"] in {"train", "valid", "test"}
+
+
+def test_assigned_example_cannot_change_prompt_or_label(tmp_path: Path) -> None:
+    source = tmp_path / "examples.jsonl"
+    source.write_text(SOURCE.read_text())
+    destination = tmp_path / "splits"
+    build(source, destination)
+    rows = [json.loads(line) for line in source.read_text().splitlines()]
+    rows[0]["arguments"] = {"path": "/tmp/changed"}
+    source.write_text("".join(json.dumps(row) + "\n" for row in rows))
+
+    with pytest.raises(ValueError, match="changed after assignment.*use a new id"):
+        build(source, destination)
+
+
+def test_legacy_split_manifest_is_upgraded(tmp_path: Path) -> None:
+    destination = tmp_path / "splits"
+    destination.mkdir()
+    destination.joinpath("split_manifest.json").write_text(json.dumps({
+        "read-01": "test",
+    }))
+
+    build(SOURCE, destination)
+
+    manifest = json.loads((destination / "split_manifest.json").read_text())
+    assert manifest["version"] == 2
+    assert manifest["assignments"]["read-01"]["split"] == "test"
+    assert len(manifest["assignments"]["read-01"]["fingerprint"]) == 64
 
 
 def test_seed_examples_cover_every_runtime_tool_at_least_twice() -> None:

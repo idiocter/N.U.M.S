@@ -16,6 +16,15 @@ from nums.tools import TOOL_SCHEMAS, validate_tool_arguments
 SCHEMAS = {item["function"]["name"]: item["function"] for item in TOOL_SCHEMAS}
 
 
+def _example_fingerprint(item: dict) -> str:
+    protected = {
+        key: item.get(key) for key in ("user", "tool", "arguments", "answer")
+    }
+    return hashlib.sha256(
+        json.dumps(protected, ensure_ascii=False, sort_keys=True).encode()
+    ).hexdigest()
+
+
 def load_examples(path: Path, minimum: int = 15) -> list[dict]:
     examples = []
     seen = set()
@@ -89,7 +98,11 @@ def build(source: Path, destination: Path) -> dict[str, int]:
     groups = {name: [] for name in ("train", "valid", "test")}
     manifest_path = destination / "split_manifest.json"
     if manifest_path.exists():
-        assignments = json.loads(manifest_path.read_text())
+        manifest = json.loads(manifest_path.read_text())
+        if isinstance(manifest, dict) and manifest.get("version") == 2:
+            assignments = manifest.get("assignments")
+        else:
+            assignments = manifest
     else:
         assignments = {}
         for name in groups:
@@ -98,23 +111,43 @@ def build(source: Path, destination: Path) -> dict[str, int]:
                 for line in prior.read_text().splitlines():
                     if line.strip():
                         assignments[json.loads(line)["id"]] = name
-    if not isinstance(assignments, dict) or any(
-        value not in groups for value in assignments.values()
-    ):
+    if not isinstance(assignments, dict) or any(not isinstance(key, str) for key in assignments):
         raise ValueError(f"Invalid split manifest at {manifest_path}")
+    for value in assignments.values():
+        if isinstance(value, str):
+            valid = value in groups
+        else:
+            valid = (
+                isinstance(value, dict)
+                and value.get("split") in groups
+                and isinstance(value.get("fingerprint"), str)
+            )
+        if not valid:
+            raise ValueError(f"Invalid split manifest at {manifest_path}")
     initial_split = not assignments
     train_end = len(examples) * 6 // 10
     valid_end = len(examples) * 8 // 10
+    updated_assignments = {}
     for index, item in enumerate(examples):
         identifier = item["id"]
-        if identifier not in assignments:
+        fingerprint = _example_fingerprint(item)
+        prior = assignments.get(identifier)
+        if prior is None:
             if initial_split:
                 name = "train" if index < train_end else "valid" if index < valid_end else "test"
             else:
                 bucket = int(hashlib.sha256(identifier.encode()).hexdigest()[:8], 16) % 100
                 name = "train" if bucket < 60 else "valid" if bucket < 80 else "test"
-            assignments[identifier] = name
-        groups[assignments[identifier]].append(convert(item))
+        elif isinstance(prior, str):
+            name = prior
+        else:
+            name = prior["split"]
+            if prior["fingerprint"] != fingerprint:
+                raise ValueError(
+                    f"Example {identifier} changed after assignment to the {name} split; use a new id"
+                )
+        updated_assignments[identifier] = {"split": name, "fingerprint": fingerprint}
+        groups[name].append(convert(item))
     destination.mkdir(mode=0o700, parents=True, exist_ok=True)
     for name, group in groups.items():
         output = destination / f"{name}.jsonl"
@@ -140,7 +173,10 @@ def build(source: Path, destination: Path) -> dict[str, int]:
             prefix=".split_manifest.", delete=False,
         ) as handle:
             temporary = Path(handle.name)
-            json.dump(assignments, handle, indent=2, sort_keys=True)
+            json.dump(
+                {"version": 2, "assignments": updated_assignments},
+                handle, indent=2, sort_keys=True,
+            )
             handle.write("\n")
             handle.flush()
             os.fsync(handle.fileno())
