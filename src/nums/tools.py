@@ -39,25 +39,48 @@ def _schema(name: str, description: str, properties: dict[str, Any], required: l
     }
 
 
+def _text(description: str, **constraints: Any) -> dict[str, Any]:
+    """Build a documented string property for the model-facing tool schema."""
+    return {"type": "string", "description": description, **constraints}
+
+
+NONNEGATIVE_INTEGER = r"^(0|[1-9][0-9]*)$"
+POSITIVE_INTEGER = r"^[1-9][0-9]*$"
+
+
 TOOL_SCHEMAS = [
     _schema(
         "read_file", "Read up to 12000 characters from a UTF-8 file; use offset for later chunks.",
-        {"path": {"type": "string"}, "offset": {"type": "string"}}, ["path"],
+        {
+            "path": _text("File path to read.", minLength=1),
+            "offset": _text("Zero-based character offset; defaults to 0.", pattern=NONNEGATIVE_INTEGER),
+        }, ["path"],
     ),
     _schema(
         "read_lines", "Read numbered lines from a UTF-8 file; use start_line and count to inspect code sections.",
-        {"path": {"type": "string"}, "start_line": {"type": "string"}, "count": {"type": "string"}},
+        {
+            "path": _text("File path to read.", minLength=1),
+            "start_line": _text("One-based first line; defaults to 1.", pattern=POSITIVE_INTEGER),
+            "count": _text("Number of lines from 1 through 100; defaults to 80.", pattern=r"^(?:[1-9]|[1-9][0-9]|100)$"),
+        },
         ["path"],
     ),
     _schema(
         "list_directory", "List up to 500 files and folders; use offset for later pages.",
-        {"path": {"type": "string"}, "offset": {"type": "string"}}, ["path"],
+        {
+            "path": _text("Directory path to list.", minLength=1),
+            "offset": _text("Zero-based item offset; defaults to 0.", pattern=NONNEGATIVE_INTEGER),
+        }, ["path"],
     ),
     _schema("path_info", "Inspect a path's type, byte size, permissions, modification time, and symlink target without following the final symlink.", {"path": {"type": "string"}}, ["path"]),
     _schema("hash_file", "Calculate the SHA-256 digest and byte count of one file using bounded-memory reads.", {"path": {"type": "string"}}, ["path"]),
     _schema(
         "find_files", "Find project files recursively, respecting Git ignores; use glob and offset to narrow or page results.",
-        {"path": {"type": "string"}, "glob": {"type": "string"}, "offset": {"type": "string"}},
+        {
+            "path": _text("Root directory to search.", minLength=1),
+            "glob": _text("Optional nonempty path glob such as **/*.py.", minLength=1),
+            "offset": _text("Zero-based result offset; defaults to 0.", pattern=NONNEGATIVE_INTEGER),
+        },
         ["path"],
     ),
     _schema(
@@ -76,16 +99,30 @@ TOOL_SCHEMAS = [
     ),
     _schema(
         "git_log", "Show 1 to 100 recent commits with hash, date, refs, and subject; optionally follow history affecting one path.",
-        {"repo": {"type": "string"}, "count": {"type": "string"}, "file": {"type": "string"}}, ["repo"],
+        {
+            "repo": _text("Git repository path.", minLength=1),
+            "count": _text("Commit count from 1 through 100; defaults to 20.", pattern=r"^(?:[1-9]|[1-9][0-9]|100)$"),
+            "file": _text("Optional nonempty repository-relative path.", minLength=1),
+        }, ["repo"],
     ),
     _schema(
         "git_show", "Show one exact Git revision and its patch, optionally limited to one path; defaults to HEAD.",
-        {"repo": {"type": "string"}, "revision": {"type": "string"}, "file": {"type": "string"}}, ["repo"],
+        {
+            "repo": _text("Git repository path.", minLength=1),
+            "revision": _text("Exact commit or ref; defaults to HEAD.", pattern=r"^(?!-)(?!.*\.\.)[A-Za-z0-9_./@{}~^-]+$"),
+            "file": _text("Optional nonempty repository-relative path.", minLength=1),
+        }, ["repo"],
     ),
     _schema("git_branches", "List local and remote Git branches by recent commit with hashes, upstreams, dates, and subjects.", {"repo": {"type": "string"}}, ["repo"]),
     _schema(
         "git_blame", "Show detailed Git attribution for 1 to 200 lines of one file at an optional exact revision.",
-        {"repo": {"type": "string"}, "file": {"type": "string"}, "start_line": {"type": "string"}, "count": {"type": "string"}, "revision": {"type": "string"}},
+        {
+            "repo": _text("Git repository path.", minLength=1),
+            "file": _text("Nonempty repository-relative file path.", minLength=1),
+            "start_line": _text("One-based first line; defaults to 1.", pattern=POSITIVE_INTEGER),
+            "count": _text("Line count from 1 through 200; defaults to 40.", pattern=r"^(?:[1-9]|[1-9][0-9]|1[0-9]{2}|200)$"),
+            "revision": _text("Exact commit or ref; defaults to HEAD.", pattern=r"^(?!-)(?!.*\.\.)[A-Za-z0-9_./@{}~^-]+$"),
+        },
         ["repo", "file"],
     ),
     _schema(

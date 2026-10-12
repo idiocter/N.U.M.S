@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from nums.tools import MacTools, _run
+from nums.tools import MacTools, TOOL_SCHEMAS, _run
 from nums.mac_ui import (
     ACTIVATE_APP_SCRIPT, ADJUST_CONTROL_SCRIPT, CLICK_ELEMENT_SCRIPT, CLICK_MENU_ITEM_SCRIPT, CLOSE_WINDOW_SCRIPT,
     FOCUS_WINDOW_SCRIPT, INSPECT_APP_SCRIPT, MOVE_WINDOW_SCRIPT, RESIZE_WINDOW_SCRIPT,
@@ -17,6 +17,15 @@ from nums.mac_ui import (
     SHOW_ELEMENT_MENU_SCRIPT, WAIT_ELEMENT_SCRIPT, WAIT_MENU_ITEM_SCRIPT, WAIT_WINDOW_SCRIPT,
     key_script,
 )
+
+
+def test_paging_and_git_schemas_expose_value_constraints() -> None:
+    schemas = {item["function"]["name"]: item["function"] for item in TOOL_SCHEMAS}
+
+    assert schemas["read_file"]["parameters"]["properties"]["offset"]["pattern"]
+    assert schemas["read_lines"]["parameters"]["properties"]["count"]["pattern"]
+    assert schemas["git_log"]["parameters"]["properties"]["count"]["pattern"]
+    assert schemas["git_show"]["parameters"]["properties"]["revision"]["pattern"]
 
 
 def test_read_and_list(tmp_path: Path) -> None:
