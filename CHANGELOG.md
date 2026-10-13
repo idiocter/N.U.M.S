@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added optional paraphrase groups that stay together across train, validation, and test splits.
 - Fingerprinted complete held-out evaluation inputs and rejected comparisons across changed prompts or schemas.
 - Added meaningful command, notification, reminder, speech, script, and trash-path constraints.
 - Added exact menu, accessibility role, label, and inspected-index constraints to UI selectors.

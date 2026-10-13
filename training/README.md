@@ -23,6 +23,10 @@ See [BASELINE.md](BASELINE.md) for the current starter-set result.
 
 Add reviewed examples to `seed_examples.jsonl` or a separate private JSONL file. Each record needs `id`, `user`, `tool`, and `arguments`. Labels should be the **first** correct tool call for the user's request. Remove personal paths, secrets, and private content before using actual NUMS conversations. Keep evaluation examples separate from training examples, and include cases where a tool should not be called before deploying a trained model.
 
+Use the same optional `group` value for paraphrases or variants of one underlying
+request. The builder keeps every member of a group in one split so related
+wording cannot leak from training into validation or test data.
+
 Dataset validation rejects repeated user prompts even when their IDs, spacing,
 or capitalization differ. This prevents the same request from appearing in
 multiple train and evaluation splits.

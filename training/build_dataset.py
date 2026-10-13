@@ -18,7 +18,7 @@ SCHEMAS = {item["function"]["name"]: item["function"] for item in TOOL_SCHEMAS}
 
 def _example_fingerprint(item: dict) -> str:
     protected = {
-        key: item.get(key) for key in ("user", "tool", "arguments", "answer")
+        key: item.get(key) for key in ("user", "tool", "arguments", "answer", "group")
     }
     return hashlib.sha256(
         json.dumps(protected, ensure_ascii=False, sort_keys=True).encode()
@@ -43,6 +43,10 @@ def load_examples(path: Path, minimum: int = 15) -> list[dict]:
                 raise ValueError(f"duplicate id: {identifier}")
             if not isinstance(user, str) or not user.strip():
                 raise ValueError("user must be a nonempty string")
+            if "group" in item and (
+                not isinstance(item["group"], str) or not item["group"].strip()
+            ):
+                raise ValueError("group must be a nonempty string when provided")
             normalized_prompt = " ".join(user.split()).casefold()
             if normalized_prompt in seen_prompts:
                 raise ValueError(
@@ -139,15 +143,29 @@ def build(source: Path, destination: Path) -> dict[str, int]:
     train_end = len(examples) * 6 // 10
     valid_end = len(examples) * 8 // 10
     updated_assignments = {}
+    group_assignments: dict[str, str] = {}
+    for item in examples:
+        group = item.get("group")
+        prior = assignments.get(item["id"])
+        if group is None or prior is None:
+            continue
+        name = prior if isinstance(prior, str) else prior["split"]
+        if group in group_assignments and group_assignments[group] != name:
+            raise ValueError(f"Group {group} is assigned across multiple splits")
+        group_assignments[group] = name
     for index, item in enumerate(examples):
         identifier = item["id"]
+        group = item.get("group")
         fingerprint = _example_fingerprint(item)
         prior = assignments.get(identifier)
         if prior is None:
-            if initial_split:
+            if group in group_assignments:
+                name = group_assignments[group]
+            elif initial_split:
                 name = "train" if index < train_end else "valid" if index < valid_end else "test"
             else:
-                bucket = int(hashlib.sha256(identifier.encode()).hexdigest()[:8], 16) % 100
+                assignment_key = f"group:{group}" if group is not None else identifier
+                bucket = int(hashlib.sha256(assignment_key.encode()).hexdigest()[:8], 16) % 100
                 name = "train" if bucket < 60 else "valid" if bucket < 80 else "test"
         elif isinstance(prior, str):
             name = prior
@@ -157,6 +175,10 @@ def build(source: Path, destination: Path) -> dict[str, int]:
                 raise ValueError(
                     f"Example {identifier} changed after assignment to the {name} split; use a new id"
                 )
+        if group is not None:
+            if group in group_assignments and group_assignments[group] != name:
+                raise ValueError(f"Group {group} is assigned across multiple splits")
+            group_assignments[group] = name
         updated_assignments[identifier] = {"split": name, "fingerprint": fingerprint}
         groups[name].append(convert(item))
     destination.mkdir(mode=0o700, parents=True, exist_ok=True)

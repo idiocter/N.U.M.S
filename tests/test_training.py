@@ -52,6 +52,17 @@ def test_training_labels_must_satisfy_tool_value_constraints(tmp_path: Path) -> 
         load_examples(source, minimum=1)
 
 
+def test_optional_paraphrase_group_must_be_nonempty(tmp_path: Path) -> None:
+    source = tmp_path / "bad-group.jsonl"
+    source.write_text(json.dumps({
+        "id": "bad-group", "group": "", "user": "show system info",
+        "tool": "system_info", "arguments": {},
+    }) + "\n")
+
+    with pytest.raises(ValueError, match="group must be a nonempty string"):
+        load_examples(source, minimum=1)
+
+
 def test_duplicate_prompts_cannot_leak_across_data_splits(tmp_path: Path) -> None:
     source = tmp_path / "duplicates.jsonl"
     rows = [
@@ -101,6 +112,22 @@ def test_assigned_example_cannot_change_prompt_or_label(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="changed after assignment.*use a new id"):
         build(source, destination)
+
+
+def test_paraphrase_group_stays_in_one_split(tmp_path: Path) -> None:
+    source = tmp_path / "grouped.jsonl"
+    rows = [json.loads(line) for line in SOURCE.read_text().splitlines()]
+    rows[0]["group"] = "read-a-file"
+    rows[-1]["group"] = "read-a-file"
+    source.write_text("".join(json.dumps(row) + "\n" for row in rows))
+    destination = tmp_path / "splits"
+
+    build(source, destination)
+
+    assignments = json.loads(
+        (destination / "split_manifest.json").read_text()
+    )["assignments"]
+    assert assignments[rows[0]["id"]]["split"] == assignments[rows[-1]["id"]]["split"]
 
 
 def test_legacy_split_manifest_is_upgraded(tmp_path: Path) -> None:
