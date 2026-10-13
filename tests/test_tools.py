@@ -82,6 +82,19 @@ def test_file_mutation_schemas_reject_empty_paths_and_bad_modes() -> None:
     ) == "replace_in_file.old_text must not be empty"
 
 
+def test_exact_ui_selector_schemas_reject_empty_names_and_bad_indexes() -> None:
+    assert validate_tool_arguments(
+        "click_app_menu_item", {"app": "Safari", "menu": "", "item": "New Tab"},
+    ) == "click_app_menu_item.menu must not be empty"
+    index_error = validate_tool_arguments("select_app_popup_item", {
+        "app": "System Settings", "window": "Sound", "index": "0", "item": "AirPods",
+    })
+    assert index_error is not None and "positive index" in index_error
+    assert validate_tool_arguments("select_app_radio", {
+        "app": "System Settings", "window": "Appearance", "label": "",
+    }) == "select_app_radio.label must not be empty"
+
+
 def test_read_and_list(tmp_path: Path) -> None:
     file = tmp_path / "hello.txt"
     file.write_text("hello NUMS")

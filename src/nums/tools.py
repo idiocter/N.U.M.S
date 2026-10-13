@@ -199,7 +199,7 @@ TOOL_SCHEMAS = [
     ),
     _schema(
         "inspect_app_menu", "List app menus or named menu/submenu items with enabled status.",
-        {"app": {"type": "string"}, "menu": {"type": "string"}, "submenu": {"type": "string"}}, ["app"],
+        {"app": _text("Exact running process name.", minLength=1), "menu": _text("Optional exact top-level menu name.", minLength=1), "submenu": _text("Optional exact submenu name; requires menu.", minLength=1)}, ["app"],
     ),
     _schema(
         "wait_for_app_menu_item", "Wait for one exact menu or submenu item to exist, enable, disable, or become absent.",
@@ -215,22 +215,22 @@ TOOL_SCHEMAS = [
     ),
     _schema(
         "click_app_menu_item", "Click an exact menu item in a running app; optionally name its parent submenu.",
-        {"app": {"type": "string"}, "menu": {"type": "string"}, "item": {"type": "string"}, "submenu": {"type": "string"}},
+        {"app": _text("Exact running process name.", minLength=1), "menu": _text("Exact top-level menu name.", minLength=1), "item": _text("Exact menu item name.", minLength=1), "submenu": _text("Optional exact parent submenu name.", minLength=1)},
         ["app", "menu", "item"],
     ),
     _schema(
         "click_app_element", "Click a front-window element by role and label, or by role and inspected index when unlabeled.",
-        {"app": {"type": "string"}, "window": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "index": {"type": "string"}},
+        {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact front-window title.", minLength=1), "role": _text("Exact inspected accessibility role.", minLength=1), "label": _text("Exact inspected name or description; omit when using index.", minLength=1), "index": _text("Optional positive index from inspect_app_ui.", pattern=POSITIVE_INTEGER)},
         ["app", "window", "role"],
     ),
     _schema(
         "show_app_element_menu", "Open the accessibility context menu for one exact front-window element by label or inspected index.",
-        {"app": {"type": "string"}, "window": {"type": "string"}, "role": {"type": "string"}, "label": {"type": "string"}, "index": {"type": "string"}},
+        {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact front-window title.", minLength=1), "role": _text("Exact inspected accessibility role.", minLength=1), "label": _text("Exact inspected name or description; omit when using index.", minLength=1), "index": _text("Optional positive index from inspect_app_ui.", pattern=POSITIVE_INTEGER)},
         ["app", "window", "role"],
     ),
     _schema(
         "select_app_popup_item", "Select one exact item from an inspected AXPopUpButton by label or element index.",
-        {"app": {"type": "string"}, "window": {"type": "string"}, "label": {"type": "string"}, "index": {"type": "string"}, "item": {"type": "string"}},
+        {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact front-window title.", minLength=1), "label": _text("Exact popup name or description; omit when using index.", minLength=1), "index": _text("Optional positive index from inspect_app_ui.", pattern=POSITIVE_INTEGER), "item": _text("Exact popup item name.", minLength=1)},
         ["app", "window", "item"],
     ),
     _schema(
@@ -247,7 +247,7 @@ TOOL_SCHEMAS = [
     ),
     _schema(
         "select_app_radio", "Select one inspected AXRadioButton by label or element index; does nothing when already selected.",
-        {"app": {"type": "string"}, "window": {"type": "string"}, "label": {"type": "string"}, "index": {"type": "string"}},
+        {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact front-window title.", minLength=1), "label": _text("Exact radio button name or description; omit when using index.", minLength=1), "index": _text("Optional positive index from inspect_app_ui.", pattern=POSITIVE_INTEGER)},
         ["app", "window"],
     ),
     _schema(
