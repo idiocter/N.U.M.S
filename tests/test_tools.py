@@ -69,6 +69,19 @@ def test_shared_argument_validation_enforces_schema_values() -> None:
     )
 
 
+def test_file_mutation_schemas_reject_empty_paths_and_bad_modes() -> None:
+    assert validate_tool_arguments("copy_path", {"source": "", "destination": "/tmp/copy"}) == (
+        "copy_path.source must not be empty"
+    )
+    mode_error = validate_tool_arguments(
+        "set_path_permissions", {"path": "/tmp/file", "mode": "999"},
+    )
+    assert mode_error is not None and "three-digit octal" in mode_error.lower()
+    assert validate_tool_arguments(
+        "replace_in_file", {"path": "/tmp/a", "old_text": "", "new_text": ""},
+    ) == "replace_in_file.old_text must not be empty"
+
+
 def test_read_and_list(tmp_path: Path) -> None:
     file = tmp_path / "hello.txt"
     file.write_text("hello NUMS")

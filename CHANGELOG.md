@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added nonempty path, safe destination, octal mode, and exact replacement constraints to file tools.
 - Kept held-out evaluation running across Ollama request failures and blocked candidates with increased response errors.
 - Fingerprinted split assignments so prompt or label edits cannot silently rewrite held-out cases.
 - Enforced model-facing enum, pattern, and nonempty constraints in both runtime calls and training labels.

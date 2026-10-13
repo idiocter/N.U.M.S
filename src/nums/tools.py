@@ -73,8 +73,8 @@ TOOL_SCHEMAS = [
             "offset": _text("Nonnegative item offset; defaults to 0.", pattern=NONNEGATIVE_INTEGER),
         }, ["path"],
     ),
-    _schema("path_info", "Inspect a path's type, byte size, permissions, modification time, and symlink target without following the final symlink.", {"path": {"type": "string"}}, ["path"]),
-    _schema("hash_file", "Calculate the SHA-256 digest and byte count of one file using bounded-memory reads.", {"path": {"type": "string"}}, ["path"]),
+    _schema("path_info", "Inspect a path's type, byte size, permissions, modification time, and symlink target without following the final symlink.", {"path": _text("Existing path to inspect.", minLength=1)}, ["path"]),
+    _schema("hash_file", "Calculate the SHA-256 digest and byte count of one file using bounded-memory reads.", {"path": _text("Existing file path to hash.", minLength=1)}, ["path"]),
     _schema(
         "find_files", "Find project files recursively, respecting Git ignores; use glob and offset to narrow or page results.",
         {
@@ -87,16 +87,16 @@ TOOL_SCHEMAS = [
     _schema(
         "search_files",
         "Search file contents for a literal string with ripgrep; optionally narrow by glob.",
-        {"query": {"type": "string"}, "path": {"type": "string"}, "glob": {"type": "string"}},
+        {"query": _text("Nonempty literal text to find.", minLength=1), "path": _text("File or directory to search.", minLength=1), "glob": _text("Optional nonempty file glob such as *.py.", minLength=1)},
         ["query", "path"],
     ),
     _schema(
         "git_status", "Show the branch and changed or untracked files in a Git repository.",
-        {"repo": {"type": "string"}}, ["repo"],
+        {"repo": _text("Git repository path.", minLength=1)}, ["repo"],
     ),
     _schema(
         "git_diff", "Show tracked changes against HEAD, optionally limited to one file; untracked files appear in git_status only.",
-        {"repo": {"type": "string"}, "file": {"type": "string"}}, ["repo"],
+        {"repo": _text("Git repository path.", minLength=1), "file": _text("Optional nonempty repository-relative path.", minLength=1)}, ["repo"],
     ),
     _schema(
         "git_log", "Show 1 to 100 recent commits with hash, date, refs, and subject; optionally follow history affecting one path.",
@@ -114,7 +114,7 @@ TOOL_SCHEMAS = [
             "file": _text("Optional nonempty repository-relative path.", minLength=1),
         }, ["repo"],
     ),
-    _schema("git_branches", "List local and remote Git branches by recent commit with hashes, upstreams, dates, and subjects.", {"repo": {"type": "string"}}, ["repo"]),
+    _schema("git_branches", "List local and remote Git branches by recent commit with hashes, upstreams, dates, and subjects.", {"repo": _text("Git repository path.", minLength=1)}, ["repo"]),
     _schema(
         "git_blame", "Show detailed Git attribution for 1 to 200 lines of one file at an optional exact revision.",
         {
@@ -129,19 +129,19 @@ TOOL_SCHEMAS = [
     _schema(
         "write_file",
         "Write UTF-8 text to a file, creating parent folders.",
-        {"path": {"type": "string"}, "content": {"type": "string"}},
+        {"path": _text("Destination file path.", minLength=1), "content": _text("Exact UTF-8 file contents; may be empty.")},
         ["path", "content"],
     ),
-    _schema("append_file", "Append exact UTF-8 text to a file with fsync, creating its parent directories and file when needed.", {"path": {"type": "string"}, "content": {"type": "string"}}, ["path", "content"]),
-    _schema("create_directory", "Create a directory and missing parents; succeeds without changes when the exact directory already exists.", {"path": {"type": "string"}}, ["path"]),
-    _schema("copy_path", "Copy one file, directory tree, or symlink to a new destination without overwriting an existing path.", {"source": {"type": "string"}, "destination": {"type": "string"}}, ["source", "destination"]),
-    _schema("move_path", "Move or rename one file, directory tree, or symlink to a new destination without overwriting an existing path.", {"source": {"type": "string"}, "destination": {"type": "string"}}, ["source", "destination"]),
-    _schema("set_path_permissions", "Set standard owner/group/other permissions on an existing non-symlink path using a three-digit octal mode.", {"path": {"type": "string"}, "mode": {"type": "string"}}, ["path", "mode"]),
-    _schema("create_symlink", "Create one symbolic link with an exact target string, creating link parent directories and refusing existing destinations.", {"target": {"type": "string"}, "link": {"type": "string"}}, ["target", "link"]),
+    _schema("append_file", "Append exact UTF-8 text to a file with fsync, creating its parent directories and file when needed.", {"path": _text("Destination file path.", minLength=1), "content": _text("Exact UTF-8 text to append; may be empty.")}, ["path", "content"]),
+    _schema("create_directory", "Create a directory and missing parents; succeeds without changes when the exact directory already exists.", {"path": _text("Directory path to create.", minLength=1)}, ["path"]),
+    _schema("copy_path", "Copy one file, directory tree, or symlink to a new destination without overwriting an existing path.", {"source": _text("Existing source path.", minLength=1), "destination": _text("New destination path that must not exist.", minLength=1)}, ["source", "destination"]),
+    _schema("move_path", "Move or rename one file, directory tree, or symlink to a new destination without overwriting an existing path.", {"source": _text("Existing source path.", minLength=1), "destination": _text("New destination path that must not exist.", minLength=1)}, ["source", "destination"]),
+    _schema("set_path_permissions", "Set standard owner/group/other permissions on an existing non-symlink path using a three-digit octal mode.", {"path": _text("Existing non-symlink path.", minLength=1), "mode": _text("Three-digit octal mode, optionally prefixed with 0.", pattern=r"^0?[0-7]{3}$")}, ["path", "mode"]),
+    _schema("create_symlink", "Create one symbolic link with an exact target string, creating link parent directories and refusing existing destinations.", {"target": _text("Exact nonempty link target string.", minLength=1), "link": _text("New symlink path that must not exist.", minLength=1)}, ["target", "link"]),
     _schema(
         "replace_in_file",
         "Replace one exact, unique UTF-8 text span in an existing file. Fails if the old text is missing or repeated.",
-        {"path": {"type": "string"}, "old_text": {"type": "string"}, "new_text": {"type": "string"}},
+        {"path": _text("Existing UTF-8 file path.", minLength=1), "old_text": _text("Exact text that must occur once.", minLength=1), "new_text": _text("Exact replacement text; may be empty.")},
         ["path", "old_text", "new_text"],
     ),
     _schema(
