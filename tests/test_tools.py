@@ -89,10 +89,10 @@ def test_exact_ui_selector_schemas_reject_empty_names_and_bad_indexes() -> None:
     index_error = validate_tool_arguments("select_app_popup_item", {
         "app": "System Settings", "window": "Sound", "index": "0", "item": "AirPods",
     })
-    assert index_error is not None and "positive index" in index_error
-    assert validate_tool_arguments("select_app_radio", {
-        "app": "System Settings", "window": "Appearance", "label": "",
-    }) == "select_app_radio.label must not be empty"
+    assert index_error is not None and "positive element number" in index_error
+    assert validate_tool_arguments("click_app_element", {
+        "app": "System Settings", "window": "Appearance", "role": "", "label": "Dark",
+    }) == "click_app_element.role must not be empty"
 
 
 def test_personal_tool_schemas_require_meaningful_commands_and_titles() -> None:

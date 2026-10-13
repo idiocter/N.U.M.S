@@ -37,6 +37,8 @@ def _write_private_jsonl(path: Path, rows: list[dict], validate: bool = False) -
 def prepare(trace_path: Path, review_path: Path) -> int:
     rows = [json.loads(line) for line in review_path.read_text().splitlines() if line.strip()] \
         if review_path.exists() else []
+    for row in rows:
+        row.setdefault("decision", "")
     existing_ids = {row["id"] for row in rows}
     existing_fingerprints = {
         row["source_fingerprint"] for row in rows if row.get("source_fingerprint")
@@ -89,6 +91,7 @@ def prepare(trace_path: Path, review_path: Path) -> int:
             "arguments": first.get("arguments", {}),
             "answer": trace.get("reply") if not calls else None,
             "reviewed": False,
+            "decision": "",
             "review_notes": "",
         })
         existing_ids.add(identifier)
@@ -105,6 +108,18 @@ def export(review_path: Path, output_path: Path) -> int:
         row = json.loads(line)
         if row.get("reviewed") is not True:
             continue
+        decision = row.get("decision")
+        if decision not in {"accept", "corrected"}:
+            raise ValueError(
+                f"{row.get('id', 'review row')}: review decision must be accept or corrected"
+            )
+        if decision == "accept" and (
+            row.get("tool") != row.get("proposed_tool")
+            or row.get("arguments") != row.get("proposed_arguments")
+        ):
+            raise ValueError(
+                f"{row.get('id', 'review row')}: accept decision does not match the proposal"
+            )
         example = {key: row[key] for key in ("id", "user", "tool", "arguments")}
         if row["tool"] == "none":
             example["answer"] = row.get("answer") or ""

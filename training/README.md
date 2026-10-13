@@ -38,8 +38,10 @@ ID instead of silently rewriting a held-out example.
 Set `NUMS_TRACE_FILE=~/.local/share/nums/usage.nums-trace.jsonl` when running NUMS to record prompts, proposed tool calls, replies, and model errors locally. The trace intentionally omits tool results and is owner-readable only, but prompts and tool arguments can still contain private information. Review and correct traces before converting them into labeled training examples; model proposals are not ground truth.
 
 Prepare a review file, edit each record's expected `tool`, `arguments`, and
-optional `answer`, then set `reviewed` to `true` only after checking it. Export
-skips every unreviewed record:
+optional `answer`, then set `reviewed` to `true` only after checking it. Set
+`decision` to `accept` when the proposed tool and arguments are correct, or
+`corrected` after fixing them. An `accept` decision is rejected if the label no
+longer matches the proposal. Export skips every unreviewed record:
 
 ```bash
 PYTHONPATH=src:. .venv/bin/python training/review_traces.py prepare ~/.local/share/nums/usage.nums-trace.jsonl training/private/review.jsonl

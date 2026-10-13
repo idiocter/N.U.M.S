@@ -47,6 +47,7 @@ def _text(description: str, **constraints: Any) -> dict[str, Any]:
 
 NONNEGATIVE_INTEGER = r"^(0|[1-9][0-9]*)$"
 POSITIVE_INTEGER = r"^[1-9][0-9]*$"
+OPTIONAL_POSITIVE_INTEGER = r"^(?:|[1-9][0-9]*)$"
 
 
 TOOL_SCHEMAS = [
@@ -170,12 +171,12 @@ TOOL_SCHEMAS = [
         },
         ["app", "window"],
     ),
-    _schema("focus_app_window", "Raise one exact named window in a running Mac app; use inspected index if titles repeat.", {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact window title.", minLength=1), "index": _text("Optional positive index from list_app_windows.", pattern=POSITIVE_INTEGER)}, ["app", "window"]),
-    _schema("close_app_window", "Close one exact named app window; use its listed index when titles repeat and inspect if a confirmation dialog blocks closing.", {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact window title.", minLength=1), "index": _text("Optional positive index from list_app_windows.", pattern=POSITIVE_INTEGER)}, ["app", "window"]),
-    _schema("set_app_window_minimized", "Set one exact named window's minimized state on or off; use its listed index when titles repeat.", {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact window title.", minLength=1), "index": _text("Optional positive index from list_app_windows.", pattern=POSITIVE_INTEGER), "state": _text("Requested minimized state.", enum=["on", "off"])}, ["app", "window", "state"]),
-    _schema("set_app_window_fullscreen", "Set one exact named window's full-screen state on or off when the app exposes it.", {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact window title.", minLength=1), "index": _text("Optional positive index from list_app_windows.", pattern=POSITIVE_INTEGER), "state": _text("Requested full-screen state.", enum=["on", "off"])}, ["app", "window", "state"]),
-    _schema("move_app_window", "Move one exact named window to bounded screen coordinates; use its listed index when titles repeat.", {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact window title.", minLength=1), "index": _text("Optional positive index from list_app_windows.", pattern=POSITIVE_INTEGER), "x": _text("Horizontal coordinate between -10000 and 10000.", pattern=r"^-?(?:[0-9]|[1-9][0-9]{1,3}|10000)$"), "y": _text("Vertical coordinate between -10000 and 10000.", pattern=r"^-?(?:[0-9]|[1-9][0-9]{1,3}|10000)$")}, ["app", "window", "x", "y"]),
-    _schema("resize_app_window", "Resize one exact named window to bounded dimensions; use its listed index when titles repeat.", {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact window title.", minLength=1), "index": _text("Optional positive index from list_app_windows.", pattern=POSITIVE_INTEGER), "width": _text("Width between 100 and 10000 pixels.", pattern=r"^(?:[1-9][0-9]{2,3}|10000)$"), "height": _text("Height between 100 and 10000 pixels.", pattern=r"^(?:[1-9][0-9]{2,3}|10000)$")}, ["app", "window", "width", "height"]),
+    _schema("focus_app_window", "Raise one exact named window in a running Mac app; use inspected index if titles repeat.", {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact window title.", minLength=1), "index": _text("Optional positive index from list_app_windows.", pattern=OPTIONAL_POSITIVE_INTEGER)}, ["app", "window"]),
+    _schema("close_app_window", "Close one exact named app window; use its listed index when titles repeat and inspect if a confirmation dialog blocks closing.", {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact window title.", minLength=1), "index": _text("Optional positive index from list_app_windows.", pattern=OPTIONAL_POSITIVE_INTEGER)}, ["app", "window"]),
+    _schema("set_app_window_minimized", "Set one exact named window's minimized state on or off; use its listed index when titles repeat.", {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact window title.", minLength=1), "index": _text("Optional positive index from list_app_windows.", pattern=OPTIONAL_POSITIVE_INTEGER), "state": _text("Requested minimized state.", enum=["on", "off"])}, ["app", "window", "state"]),
+    _schema("set_app_window_fullscreen", "Set one exact named window's full-screen state on or off when the app exposes it.", {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact window title.", minLength=1), "index": _text("Optional positive index from list_app_windows.", pattern=OPTIONAL_POSITIVE_INTEGER), "state": _text("Requested full-screen state.", enum=["on", "off"])}, ["app", "window", "state"]),
+    _schema("move_app_window", "Move one exact named window to bounded screen coordinates; use its listed index when titles repeat.", {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact window title.", minLength=1), "index": _text("Optional positive index from list_app_windows.", pattern=OPTIONAL_POSITIVE_INTEGER), "x": _text("Horizontal coordinate between -10000 and 10000.", pattern=r"^-?(?:[0-9]|[1-9][0-9]{1,3}|10000)$"), "y": _text("Vertical coordinate between -10000 and 10000.", pattern=r"^-?(?:[0-9]|[1-9][0-9]{1,3}|10000)$")}, ["app", "window", "x", "y"]),
+    _schema("resize_app_window", "Resize one exact named window to bounded dimensions; use its listed index when titles repeat.", {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact window title.", minLength=1), "index": _text("Optional positive index from list_app_windows.", pattern=OPTIONAL_POSITIVE_INTEGER), "width": _text("Width between 100 and 10000 pixels.", pattern=r"^(?:[1-9][0-9]{2,3}|10000)$"), "height": _text("Height between 100 and 10000 pixels.", pattern=r"^(?:[1-9][0-9]{2,3}|10000)$")}, ["app", "window", "width", "height"]),
     _schema(
         "inspect_app_ui", "Inspect a page of front-window accessibility elements with availability and exposed control values; use offset and limit to page.",
         {
@@ -199,7 +200,7 @@ TOOL_SCHEMAS = [
     ),
     _schema(
         "inspect_app_menu", "List app menus or named menu/submenu items with enabled status.",
-        {"app": _text("Exact running process name.", minLength=1), "menu": _text("Optional exact top-level menu name.", minLength=1), "submenu": _text("Optional exact submenu name; requires menu.", minLength=1)}, ["app"],
+        {"app": _text("Exact running process name.", minLength=1), "menu": _text("Optional exact top-level menu name."), "submenu": _text("Optional exact submenu name; requires menu.")}, ["app"],
     ),
     _schema(
         "wait_for_app_menu_item", "Wait for one exact menu or submenu item to exist, enable, disable, or become absent.",
@@ -207,7 +208,7 @@ TOOL_SCHEMAS = [
             "app": _text("Exact running process name.", minLength=1),
             "menu": _text("Exact top-level menu name.", minLength=1),
             "item": _text("Exact menu item name.", minLength=1),
-            "submenu": _text("Optional exact parent submenu name.", minLength=1),
+            "submenu": _text("Optional exact parent submenu name."),
             "state": _text("Condition to wait for; defaults to enabled.", enum=["exists", "enabled", "disabled", "absent"]),
             "timeout": _text("Timeout between 1 and 30 seconds; defaults to 10.", pattern=r"^(?:[1-9]|[12][0-9]|30)$"),
         },
@@ -215,22 +216,22 @@ TOOL_SCHEMAS = [
     ),
     _schema(
         "click_app_menu_item", "Click an exact menu item in a running app; optionally name its parent submenu.",
-        {"app": _text("Exact running process name.", minLength=1), "menu": _text("Exact top-level menu name.", minLength=1), "item": _text("Exact menu item name.", minLength=1), "submenu": _text("Optional exact parent submenu name.", minLength=1)},
+        {"app": _text("Exact running process name.", minLength=1), "menu": _text("Exact top-level menu name.", minLength=1), "item": _text("Exact menu item name.", minLength=1), "submenu": _text("Optional exact parent submenu name.")},
         ["app", "menu", "item"],
     ),
     _schema(
         "click_app_element", "Click a front-window element by role and label, or by role and inspected index when unlabeled.",
-        {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact front-window title.", minLength=1), "role": _text("Exact inspected accessibility role.", minLength=1), "label": _text("Exact inspected name or description; omit when using index.", minLength=1), "index": _text("Optional positive index from inspect_app_ui.", pattern=POSITIVE_INTEGER)},
+        {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact front-window title.", minLength=1), "role": _text("Exact inspected accessibility role.", minLength=1), "label": _text("Exact inspected name or description; omit when using index."), "index": _text("Optional positive element number from inspect_app_ui.", pattern=OPTIONAL_POSITIVE_INTEGER)},
         ["app", "window", "role"],
     ),
     _schema(
         "show_app_element_menu", "Open the accessibility context menu for one exact front-window element by label or inspected index.",
-        {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact front-window title.", minLength=1), "role": _text("Exact inspected accessibility role.", minLength=1), "label": _text("Exact inspected name or description; omit when using index.", minLength=1), "index": _text("Optional positive index from inspect_app_ui.", pattern=POSITIVE_INTEGER)},
+        {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact front-window title.", minLength=1), "role": _text("Exact inspected accessibility role.", minLength=1), "label": _text("Exact inspected name or description; omit when using index."), "index": _text("Optional positive element number from inspect_app_ui.", pattern=OPTIONAL_POSITIVE_INTEGER)},
         ["app", "window", "role"],
     ),
     _schema(
         "select_app_popup_item", "Select one exact item from an inspected AXPopUpButton by label or element index.",
-        {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact front-window title.", minLength=1), "label": _text("Exact popup name or description; omit when using index.", minLength=1), "index": _text("Optional positive index from inspect_app_ui.", pattern=POSITIVE_INTEGER), "item": _text("Exact popup item name.", minLength=1)},
+        {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact front-window title.", minLength=1), "label": _text("Exact popup name or description; omit when using index."), "index": _text("Optional positive element number from inspect_app_ui.", pattern=OPTIONAL_POSITIVE_INTEGER), "item": _text("Exact popup item name.", minLength=1)},
         ["app", "window", "item"],
     ),
     _schema(
@@ -239,15 +240,15 @@ TOOL_SCHEMAS = [
             "app": _text("Exact running process name.", minLength=1),
             "window": _text("Exact front-window title.", minLength=1),
             "role": _text("Inspected toggle role.", enum=["AXCheckBox", "AXSwitch", "AXDisclosureTriangle"]),
-            "label": _text("Exact inspected name or description; omit when using index.", minLength=1),
-            "index": _text("Optional positive index from inspect_app_ui.", pattern=POSITIVE_INTEGER),
+            "label": _text("Exact inspected name or description; omit when using index."),
+            "index": _text("Optional positive element number from inspect_app_ui.", pattern=OPTIONAL_POSITIVE_INTEGER),
             "state": _text("Requested toggle state.", enum=["on", "off"]),
         },
         ["app", "window", "role", "state"],
     ),
     _schema(
         "select_app_radio", "Select one inspected AXRadioButton by label or element index; does nothing when already selected.",
-        {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact front-window title.", minLength=1), "label": _text("Exact radio button name or description; omit when using index.", minLength=1), "index": _text("Optional positive index from inspect_app_ui.", pattern=POSITIVE_INTEGER)},
+        {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact front-window title.", minLength=1), "label": _text("Exact radio button name or description; omit when using index."), "index": _text("Optional positive element number from inspect_app_ui.", pattern=OPTIONAL_POSITIVE_INTEGER)},
         ["app", "window"],
     ),
     _schema(
@@ -256,8 +257,8 @@ TOOL_SCHEMAS = [
             "app": _text("Exact running process name.", minLength=1),
             "window": _text("Exact front-window title.", minLength=1),
             "role": _text("Inspected adjustable role.", enum=["AXSlider", "AXIncrementor"]),
-            "label": _text("Exact inspected name or description; omit when using index.", minLength=1),
-            "index": _text("Optional positive index from inspect_app_ui.", pattern=POSITIVE_INTEGER),
+            "label": _text("Exact inspected name or description; omit when using index."),
+            "index": _text("Optional positive element number from inspect_app_ui.", pattern=OPTIONAL_POSITIVE_INTEGER),
             "direction": _text("Adjustment direction.", enum=["increase", "decrease"]),
             "steps": _text("Number of accessibility steps between 1 and 20; defaults to 1.", pattern=r"^(?:[1-9]|1[0-9]|20)$"),
         },
@@ -265,12 +266,12 @@ TOOL_SCHEMAS = [
     ),
     _schema(
         "type_in_app", "Type into an inspected text field by role and label or index, or the currently focused control when no target is supplied.",
-        {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact front-window title.", minLength=1), "text": _text("Nonempty text to append.", minLength=1), "role": _text("Optional inspected text role.", enum=["AXTextField", "AXTextArea", "AXComboBox"]), "label": _text("Exact inspected name or description; requires role.", minLength=1), "index": _text("Optional positive index from inspect_app_ui; requires role.", pattern=POSITIVE_INTEGER)},
+        {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact front-window title.", minLength=1), "text": _text("Nonempty text to append.", minLength=1), "role": _text("Optional inspected text role.", enum=["AXTextField", "AXTextArea", "AXComboBox"]), "label": _text("Exact inspected name or description; requires role."), "index": _text("Optional positive element number from inspect_app_ui; requires role.", pattern=OPTIONAL_POSITIVE_INTEGER)},
         ["app", "window", "text"],
     ),
     _schema(
         "replace_app_text", "Replace all text in one inspected text field, text area, or combo box; an empty value clears it.",
-        {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact front-window title.", minLength=1), "text": _text("Replacement text; empty clears the control."), "role": _text("Inspected text role.", enum=["AXTextField", "AXTextArea", "AXComboBox"]), "label": _text("Exact inspected name or description; omit when using index.", minLength=1), "index": _text("Optional positive index from inspect_app_ui.", pattern=POSITIVE_INTEGER)},
+        {"app": _text("Exact running process name.", minLength=1), "window": _text("Exact front-window title.", minLength=1), "text": _text("Replacement text; empty clears the control."), "role": _text("Inspected text role.", enum=["AXTextField", "AXTextArea", "AXComboBox"]), "label": _text("Exact inspected name or description; omit when using index."), "index": _text("Optional positive element number from inspect_app_ui.", pattern=OPTIONAL_POSITIVE_INTEGER)},
         ["app", "window", "text", "role"],
     ),
     _schema(
@@ -279,7 +280,7 @@ TOOL_SCHEMAS = [
             "app": _text("Exact running process name.", minLength=1),
             "window": _text("Exact front-window title.", minLength=1),
             "key": _text("One character or supported named key.", pattern=r"^(?:.|left|right|up|down|home|end|page_up|page_down|enter|return|delete|forward_delete|tab|space|escape)$"),
-            "modifiers": _text("Optional comma-separated unique names: command, option, control, shift.", pattern=r"^(?:(?:command|option|control|shift)(?:,(?:command|option|control|shift))*)$"),
+            "modifiers": _text("Optional comma-separated unique names: command, option, control, shift.", pattern=r"^(?:|(?:command|option|control|shift)(?:,(?:command|option|control|shift))*)$"),
         },
         ["app", "window", "key"],
     ),

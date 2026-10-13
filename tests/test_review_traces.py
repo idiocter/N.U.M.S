@@ -23,6 +23,7 @@ def test_only_human_reviewed_traces_are_exported(tmp_path: Path) -> None:
     assert export(review, output) == 0
     row = json.loads(review.read_text())
     row["reviewed"] = True
+    row["decision"] = "accept"
     review.write_text(json.dumps(row) + "\n")
     assert export(review, output) == 1
     example = json.loads(output.read_text())
@@ -39,7 +40,10 @@ def test_prepare_keeps_reviewed_rows_and_private_permissions(tmp_path: Path) -> 
     trace.write_text(json.dumps(first) + "\n")
     prepare(trace, review)
     row = json.loads(review.read_text())
-    row.update({"reviewed": True, "answer": "Done", "review_notes": "Checked"})
+    row.update({
+        "reviewed": True, "decision": "accept", "answer": "Done",
+        "review_notes": "Checked",
+    })
     review.write_text(json.dumps(row) + "\n")
     trace.write_text(json.dumps(first) + "\n" + json.dumps(second) + "\n")
 
@@ -59,6 +63,7 @@ def test_trace_reordering_does_not_duplicate_reviewed_row(tmp_path: Path) -> Non
     prepare(trace, review)
     row = json.loads(review.read_text())
     row["reviewed"] = True
+    row["decision"] = "accept"
     review.write_text(json.dumps(row) + "\n")
     trace.write_text(json.dumps(second) + "\n" + json.dumps(first) + "\n")
 
@@ -77,7 +82,7 @@ def test_prepare_preserves_legacy_review_id(tmp_path: Path) -> None:
     legacy = {
         "id": "trace-legacy", "user": "open Safari", "proposed_tool": "none",
         "proposed_arguments": {}, "tool": "none", "arguments": {},
-        "answer": "done", "reviewed": True,
+        "answer": "done", "reviewed": True, "decision": "accept",
     }
     review.write_text(json.dumps(legacy) + "\n")
 
@@ -94,10 +99,40 @@ def test_bad_review_label_does_not_replace_prior_export(tmp_path: Path) -> None:
     output.write_text("previous export\n")
     review.write_text(json.dumps({
         "id": "bad", "user": "open Safari", "tool": "no_such_tool",
-        "arguments": {}, "reviewed": True,
+        "arguments": {}, "reviewed": True, "decision": "corrected",
     }) + "\n")
 
     with pytest.raises(ValueError, match="invalid tool"):
         export(review, output)
 
     assert output.read_text() == "previous export\n"
+
+
+def test_reviewed_trace_requires_an_explicit_decision(tmp_path: Path) -> None:
+    review = tmp_path / "review.jsonl"
+    output = tmp_path / "examples.jsonl"
+    review.write_text(json.dumps({
+        "id": "trace-one", "user": "open Safari",
+        "proposed_tool": "open_item", "proposed_arguments": {"target": "Safari"},
+        "tool": "open_item", "arguments": {"target": "Safari"}, "reviewed": True,
+        "decision": "",
+    }) + "\n")
+
+    with pytest.raises(ValueError, match="decision must be accept or corrected"):
+        export(review, output)
+
+    assert not output.exists()
+
+
+def test_accept_decision_must_match_model_proposal(tmp_path: Path) -> None:
+    review = tmp_path / "review.jsonl"
+    output = tmp_path / "examples.jsonl"
+    review.write_text(json.dumps({
+        "id": "trace-two", "user": "open Safari",
+        "proposed_tool": "open_item", "proposed_arguments": {"target": "Safari"},
+        "tool": "activate_app", "arguments": {"app": "Safari"}, "reviewed": True,
+        "decision": "accept",
+    }) + "\n")
+
+    with pytest.raises(ValueError, match="accept decision does not match"):
+        export(review, output)
