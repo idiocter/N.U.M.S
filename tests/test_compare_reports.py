@@ -57,3 +57,11 @@ def test_new_evaluation_response_errors_block_candidate() -> None:
 
     assert not eligible
     assert "evaluation response errors increased" in reasons
+
+
+def test_comparison_rejects_changed_evaluation_input() -> None:
+    baseline = {"cases": [{**_case("a", "read_file", True), "case_fingerprint": "a" * 64}]}
+    candidate = {"cases": [{**_case("a", "read_file", True), "case_fingerprint": "b" * 64}]}
+
+    with pytest.raises(ValueError, match="held-out input changed"):
+        compare(baseline, candidate)

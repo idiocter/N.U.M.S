@@ -70,6 +70,7 @@ def evaluate(data: Path, model: str, url: str) -> dict[str, Any]:
         cases.append(
             {
                 "id": item["id"],
+                "case_fingerprint": item.get("case_fingerprint"),
                 "expected_tool": item["expected_tool"],
                 "actual_tool": function.get("name") if calls else (None if error else "none"),
                 "expected_arguments": item["expected_arguments"],

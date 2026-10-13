@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fingerprinted complete held-out evaluation inputs and rejected comparisons across changed prompts or schemas.
 - Added meaningful command, notification, reminder, speech, script, and trash-path constraints.
 - Added exact menu, accessibility role, label, and inspected-index constraints to UI selectors.
 - Added nonempty path, safe destination, octal mode, and exact replacement constraints to file tools.

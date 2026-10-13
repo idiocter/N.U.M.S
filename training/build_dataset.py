@@ -77,15 +77,26 @@ def convert(item: dict) -> dict:
             "function": {"name": name, "arguments": json.dumps(item["arguments"])},
         }]}
     )
-    return {
-        "id": item["id"],
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": item["user"]},
+        assistant,
+    ]
+    evaluation_input = {
+        "messages": messages[:-1],
+        "tools": TOOL_SCHEMAS,
         "expected_tool": name,
         "expected_arguments": item["arguments"],
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": item["user"]},
-            assistant,
-        ],
+    }
+    case_fingerprint = hashlib.sha256(
+        json.dumps(evaluation_input, ensure_ascii=False, sort_keys=True).encode()
+    ).hexdigest()
+    return {
+        "id": item["id"],
+        "case_fingerprint": case_fingerprint,
+        "expected_tool": name,
+        "expected_arguments": item["arguments"],
+        "messages": messages,
         "tools": TOOL_SCHEMAS,
     }
 

@@ -23,6 +23,10 @@ def test_seed_examples_build_disjoint_splits(tmp_path: Path) -> None:
     ids = [item["id"] for group in groups for item in group]
     assert len(ids) == len(set(ids))
     assert all(item["tools"] for group in groups for item in group)
+    assert all(
+        len(item["case_fingerprint"]) == 64
+        for group in groups for item in group
+    )
     assert stat.S_IMODE(destination.stat().st_mode) == 0o700
     assert all(
         stat.S_IMODE((destination / f"{name}.jsonl").stat().st_mode) == 0o600

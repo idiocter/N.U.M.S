@@ -10,6 +10,7 @@ def test_evaluate_reports_per_tool_results(monkeypatch, tmp_path) -> None:
     examples = [
         {
             "id": "right",
+            "case_fingerprint": "a" * 64,
             "messages": [{"role": "user", "content": "status"}, {"role": "assistant"}],
             "tools": [],
             "expected_tool": "system_info",
@@ -43,6 +44,7 @@ def test_evaluate_reports_per_tool_results(monkeypatch, tmp_path) -> None:
     assert report["arguments_correct"] == 1
     assert report["tool_accuracy"] == 1
     assert report["arguments_accuracy"] == 0.5
+    assert report["cases"][0]["case_fingerprint"] == "a" * 64
     assert report["by_expected_tool"]["open_app"] == {
         "total": 1,
         "tool_correct": 1,

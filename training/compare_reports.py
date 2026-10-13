@@ -33,6 +33,15 @@ def compare(baseline: dict[str, Any], candidate: dict[str, Any]) -> tuple[bool, 
     if before.keys() != after.keys():
         raise ValueError("reports must contain the same held-out case ids")
     for identifier in before:
+        before_fingerprint = before[identifier].get("case_fingerprint")
+        after_fingerprint = after[identifier].get("case_fingerprint")
+        if (before_fingerprint is None) != (after_fingerprint is None):
+            raise ValueError(f"held-out fingerprint missing for {identifier}")
+        if before_fingerprint is not None:
+            if not isinstance(before_fingerprint, str) or not isinstance(after_fingerprint, str):
+                raise ValueError(f"held-out fingerprint is invalid for {identifier}")
+            if before_fingerprint != after_fingerprint:
+                raise ValueError(f"held-out input changed for {identifier}")
         expected = (before[identifier].get("expected_tool"),
                     before[identifier].get("expected_arguments"))
         actual = (after[identifier].get("expected_tool"),
