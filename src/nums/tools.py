@@ -147,7 +147,7 @@ TOOL_SCHEMAS = [
     _schema(
         "shell",
         "Run a zsh command on this Mac. Use for tasks not covered by a narrower tool.",
-        {"command": {"type": "string"}, "cwd": {"type": "string"}},
+        {"command": _text("Nonempty zsh command to run.", minLength=1), "cwd": _text("Optional working directory path.", minLength=1)},
         ["command"],
     ),
     _schema(
@@ -283,30 +283,30 @@ TOOL_SCHEMAS = [
         },
         ["app", "window", "key"],
     ),
-    _schema("speak", "Speak text using the macOS voice.", {"text": {"type": "string"}}, ["text"]),
+    _schema("speak", "Speak text using the macOS voice.", {"text": _text("Nonempty text to speak.", minLength=1)}, ["text"]),
     _schema(
         "notify",
         "Show a macOS notification.",
-        {"title": {"type": "string"}, "message": {"type": "string"}},
+        {"title": _text("Nonempty notification title.", minLength=1), "message": _text("Nonempty notification body.", minLength=1)},
         ["title", "message"],
     ),
     _schema("system_info", "Get basic local Mac system information.", {}, []),
     _schema("get_clipboard", "Read text from the macOS clipboard.", {}, []),
-    _schema("set_clipboard", "Replace text on the macOS clipboard.", {"text": {"type": "string"}}, ["text"]),
+    _schema("set_clipboard", "Replace text on the macOS clipboard.", {"text": _text("Exact clipboard text; empty clears it.")}, ["text"]),
     _schema(
         "create_reminder",
         "Create a reminder in the macOS Reminders app.",
-        {"title": {"type": "string"}, "notes": {"type": "string"}},
+        {"title": _text("Nonempty reminder title.", minLength=1), "notes": _text("Optional reminder notes; may be empty.")},
         ["title"],
     ),
     _schema("get_calendar_events", "List today's events from macOS Calendar.", {}, []),
     _schema(
         "run_applescript",
         "Run AppleScript for Mac app automation. This may require Automation permissions.",
-        {"script": {"type": "string"}},
+        {"script": _text("Nonempty AppleScript source to execute.", minLength=1)},
         ["script"],
     ),
-    _schema("trash_path", "Move a file or folder to the macOS Trash.", {"path": {"type": "string"}}, ["path"]),
+    _schema("trash_path", "Move a file or folder to the macOS Trash.", {"path": _text("Existing file or directory path to trash.", minLength=1)}, ["path"]),
 ]
 
 

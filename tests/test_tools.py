@@ -95,6 +95,17 @@ def test_exact_ui_selector_schemas_reject_empty_names_and_bad_indexes() -> None:
     }) == "select_app_radio.label must not be empty"
 
 
+def test_personal_tool_schemas_require_meaningful_commands_and_titles() -> None:
+    assert validate_tool_arguments("shell", {"command": ""}) == "shell.command must not be empty"
+    assert validate_tool_arguments("notify", {"title": "NUMS", "message": ""}) == (
+        "notify.message must not be empty"
+    )
+    assert validate_tool_arguments("create_reminder", {"title": ""}) == (
+        "create_reminder.title must not be empty"
+    )
+    assert validate_tool_arguments("set_clipboard", {"text": ""}) is None
+
+
 def test_read_and_list(tmp_path: Path) -> None:
     file = tmp_path / "hello.txt"
     file.write_text("hello NUMS")

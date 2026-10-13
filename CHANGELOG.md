@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added meaningful command, notification, reminder, speech, script, and trash-path constraints.
 - Added exact menu, accessibility role, label, and inspected-index constraints to UI selectors.
 - Added nonempty path, safe destination, octal mode, and exact replacement constraints to file tools.
 - Kept held-out evaluation running across Ollama request failures and blocked candidates with increased response errors.
