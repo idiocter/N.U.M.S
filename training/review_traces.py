@@ -55,7 +55,9 @@ def prepare(trace_path: Path, review_path: Path) -> int:
     signatures = []
     for trace in traces:
         calls = trace.get("tool_calls") or []
-        first = calls[0] if calls else {"tool": "none", "arguments": {}}
+        first = calls[0] if calls else {
+            "tool": "" if trace.get("error") else "none", "arguments": {},
+        }
         signatures.append(json.dumps(
             [trace.get("prompt"), first.get("tool", "none"), first.get("arguments", {})],
             sort_keys=True,
@@ -63,9 +65,12 @@ def prepare(trace_path: Path, review_path: Path) -> int:
     signature_counts = Counter(signatures)
     for number, trace in enumerate(traces, 1):
         calls = trace.get("tool_calls") or []
-        first = calls[0] if calls else {"tool": "none", "arguments": {}}
+        first = calls[0] if calls else {
+            "tool": "" if trace.get("error") else "none", "arguments": {},
+        }
         source = {
             "at": trace.get("at"), "prompt": trace.get("prompt"), "tool_calls": calls,
+            "error": trace.get("error"),
         }
         if source["at"] is None:
             source["line"] = number
@@ -90,6 +95,7 @@ def prepare(trace_path: Path, review_path: Path) -> int:
             "tool": first.get("tool", "none"),
             "arguments": first.get("arguments", {}),
             "answer": trace.get("reply") if not calls else None,
+            "source_error": trace.get("error"),
             "reviewed": False,
             "decision": "",
             "review_notes": "",

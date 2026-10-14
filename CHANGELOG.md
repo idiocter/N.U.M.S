@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Distinguished failed model traces from valid no-tool answers during label review.
 - Required an explicit accept-or-correct review decision before traces can become training labels.
 - Added optional paraphrase groups that stay together across train, validation, and test splits.
 - Fingerprinted complete held-out evaluation inputs and rejected comparisons across changed prompts or schemas.

@@ -136,3 +136,26 @@ def test_accept_decision_must_match_model_proposal(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="accept decision does not match"):
         export(review, output)
+
+
+def test_failed_trace_is_not_proposed_as_a_no_tool_label(tmp_path: Path) -> None:
+    trace = tmp_path / "trace.jsonl"
+    review = tmp_path / "review.jsonl"
+    output = tmp_path / "examples.jsonl"
+    trace.write_text(json.dumps({
+        "at": "2026-01-01", "prompt": "open Safari", "tool_calls": [],
+        "reply": None, "error": "Ollama unavailable",
+    }) + "\n")
+
+    prepare(trace, review)
+
+    row = json.loads(review.read_text())
+    assert row["proposed_tool"] == ""
+    assert row["source_error"] == "Ollama unavailable"
+    row.update({
+        "tool": "open_item", "arguments": {"target": "Safari"},
+        "reviewed": True, "decision": "corrected",
+    })
+    review.write_text(json.dumps(row) + "\n")
+    assert export(review, output) == 1
+    assert json.loads(output.read_text())["tool"] == "open_item"

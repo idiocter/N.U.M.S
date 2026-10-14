@@ -41,7 +41,9 @@ Prepare a review file, edit each record's expected `tool`, `arguments`, and
 optional `answer`, then set `reviewed` to `true` only after checking it. Set
 `decision` to `accept` when the proposed tool and arguments are correct, or
 `corrected` after fixing them. An `accept` decision is rejected if the label no
-longer matches the proposal. Export skips every unreviewed record:
+longer matches the proposal. Failed model calls preserve their error and start
+with an empty proposed tool, so they cannot be mistaken for valid no-tool
+answers. Export skips every unreviewed record:
 
 ```bash
 PYTHONPATH=src:. .venv/bin/python training/review_traces.py prepare ~/.local/share/nums/usage.nums-trace.jsonl training/private/review.jsonl
