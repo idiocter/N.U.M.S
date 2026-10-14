@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added private per-case checkpoints and resumable held-out model evaluation.
 - Validated complete held-out datasets before sending any evaluation requests to Ollama.
 - Validated trace JSON and tool-call structure before updating human review files.
 - Preserved optional paraphrase groups from trace review into exported labels.

@@ -67,6 +67,10 @@ PYTHONPATH=src .venv/bin/python training/evaluate.py training/data/test.jsonl \
   --model qwen2.5:1.5b-instruct --json-out training/runs/baseline.json
 ```
 
+Add `--resume` to reuse completed cases from the output report and atomically
+checkpoint the private report after every case. Cases with request or response
+errors are retried when the command resumes.
+
 The JSON report includes overall accuracy, a breakdown by expected tool, and
 case-level failures and arguments so regressions can be compared before
 installing an adapted model. Reports are written with owner-only permissions

@@ -157,6 +157,53 @@ def test_evaluation_input_validates_case_fingerprint(tmp_path) -> None:
         load_cases(data)
 
 
+def test_evaluation_resumes_completed_cases_and_checkpoints(monkeypatch, tmp_path) -> None:
+    examples = [
+        {"id": "done", "case_fingerprint": "a" * 64,
+         "messages": [{"role": "user"}, {"role": "assistant"}], "tools": [],
+         "expected_tool": "none", "expected_arguments": {}},
+        {"id": "pending", "case_fingerprint": "b" * 64,
+         "messages": [{"role": "user"}, {"role": "assistant"}], "tools": [],
+         "expected_tool": "none", "expected_arguments": {}},
+    ]
+    data = tmp_path / "test.jsonl"
+    data.write_text("\n".join(json.dumps(item) for item in examples))
+    prior_case = {
+        "id": "done", "case_fingerprint": "a" * 64,
+        "expected_tool": "none", "actual_tool": "none",
+        "expected_arguments": {}, "actual_arguments": {},
+        "tool_correct": True, "arguments_correct": True, "error": None,
+    }
+    requests = []
+    monkeypatch.setattr(
+        "training.evaluate.urllib.request.urlopen",
+        lambda request, **kwargs: requests.append(request) or nullcontext(
+            _JsonResponse({"message": {"content": "hello"}})
+        ),
+    )
+    checkpoint = tmp_path / "runs" / "resume.json"
+
+    report = evaluate(
+        data, "test-model", "http://ollama.test",
+        prior={"model": "test-model", "cases": [prior_case]}, checkpoint=checkpoint,
+    )
+
+    assert len(requests) == 1
+    assert [case["id"] for case in report["cases"]] == ["done", "pending"]
+    assert json.loads(checkpoint.read_text())["total"] == 2
+    assert stat.S_IMODE(checkpoint.stat().st_mode) == 0o600
+
+
+def test_resume_rejects_a_different_model(tmp_path) -> None:
+    data = tmp_path / "empty.jsonl"
+    data.write_text("")
+
+    with pytest.raises(ValueError, match="model does not match"):
+        evaluate(data, "candidate", "http://ollama.test", prior={
+            "model": "baseline", "cases": [],
+        })
+
+
 def test_evaluation_report_is_private(tmp_path) -> None:
     output = tmp_path / "runs" / "report.json"
     write_report(output, {"cases": [{"expected_arguments": {"path": "/private"}}]})

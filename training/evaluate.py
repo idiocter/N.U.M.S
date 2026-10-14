@@ -52,9 +52,71 @@ def load_cases(data: Path) -> list[dict[str, Any]]:
     return cases
 
 
-def evaluate(data: Path, model: str, url: str) -> dict[str, Any]:
+def _build_report(model: str, cases: list[dict[str, Any]]) -> dict[str, Any]:
+    per_tool: defaultdict[str, dict[str, int]] = defaultdict(
+        lambda: {"total": 0, "tool_correct": 0, "arguments_correct": 0}
+    )
+    for case in cases:
+        scores = per_tool[case["expected_tool"]]
+        scores["total"] += 1
+        scores["tool_correct"] += int(case["tool_correct"])
+        scores["arguments_correct"] += int(case["arguments_correct"])
+    total = len(cases)
+    tool_correct = sum(int(case["tool_correct"]) for case in cases)
+    arguments_correct = sum(int(case["arguments_correct"]) for case in cases)
+    return {
+        "model": model,
+        "total": total,
+        "tool_correct": tool_correct,
+        "arguments_correct": arguments_correct,
+        "tool_accuracy": tool_correct / total if total else 0,
+        "arguments_accuracy": arguments_correct / total if total else 0,
+        "by_expected_tool": dict(sorted(per_tool.items())),
+        "cases": cases,
+    }
+
+
+def _resume_cases(prior: dict[str, Any] | None, model: str) -> dict[str, dict[str, Any]]:
+    if prior is None:
+        return {}
+    if prior.get("model") != model:
+        raise ValueError("resume report model does not match the requested model")
+    rows = prior.get("cases")
+    if not isinstance(rows, list):
+        raise ValueError("resume report must contain cases")
+    result = {}
+    for row in rows:
+        if not isinstance(row, dict) or not isinstance(row.get("id"), str):
+            raise ValueError("resume report contains an invalid case")
+        if row["id"] in result:
+            raise ValueError(f"resume report contains duplicate id: {row['id']}")
+        result[row["id"]] = row
+    return result
+
+
+def evaluate(
+    data: Path, model: str, url: str, prior: dict[str, Any] | None = None,
+    checkpoint: Path | None = None,
+) -> dict[str, Any]:
     cases: list[dict[str, Any]] = []
+    resumed = _resume_cases(prior, model)
     for item in load_cases(data):
+        previous = resumed.get(item["id"])
+        if previous is not None and not previous.get("error"):
+            if previous.get("case_fingerprint") != item.get("case_fingerprint"):
+                raise ValueError(f"resume fingerprint changed for {item['id']}")
+            if (
+                previous.get("expected_tool") != item["expected_tool"]
+                or previous.get("expected_arguments") != item["expected_arguments"]
+                or not isinstance(previous.get("tool_correct"), bool)
+                or not isinstance(previous.get("arguments_correct"), bool)
+            ):
+                raise ValueError(f"resume label or scores changed for {item['id']}")
+            cases.append(previous)
+            print(f"{item['id']}: resumed")
+            if checkpoint:
+                write_report(checkpoint, _build_report(model, cases))
+            continue
         payload = json.dumps({
             "model": model,
             "messages": item["messages"][:-1],
@@ -120,29 +182,9 @@ def evaluate(data: Path, model: str, url: str) -> dict[str, Any]:
             f"{item['id']}: tool={'ok' if name_ok else 'wrong'} "
             f"args={'ok' if args_ok else 'wrong'}" + (f" ({error})" if error else "")
         )
-
-    per_tool: defaultdict[str, dict[str, int]] = defaultdict(
-        lambda: {"total": 0, "tool_correct": 0, "arguments_correct": 0}
-    )
-    for case in cases:
-        scores = per_tool[case["expected_tool"]]
-        scores["total"] += 1
-        scores["tool_correct"] += int(case["tool_correct"])
-        scores["arguments_correct"] += int(case["arguments_correct"])
-
-    total = len(cases)
-    tool_correct = sum(int(case["tool_correct"]) for case in cases)
-    arguments_correct = sum(int(case["arguments_correct"]) for case in cases)
-    return {
-        "model": model,
-        "total": total,
-        "tool_correct": tool_correct,
-        "arguments_correct": arguments_correct,
-        "tool_accuracy": tool_correct / total if total else 0,
-        "arguments_accuracy": arguments_correct / total if total else 0,
-        "by_expected_tool": dict(sorted(per_tool.items())),
-        "cases": cases,
-    }
+        if checkpoint:
+            write_report(checkpoint, _build_report(model, cases))
+    return _build_report(model, cases)
 
 
 def write_report(path: Path, report: dict[str, Any]) -> None:
@@ -170,8 +212,20 @@ def main() -> None:
     parser.add_argument("--model", required=True)
     parser.add_argument("--url", default="http://127.0.0.1:11434")
     parser.add_argument("--json-out", type=Path, help="Write a detailed JSON report")
+    parser.add_argument(
+        "--resume", action="store_true",
+        help="Reuse completed cases in --json-out and checkpoint after every case",
+    )
     args = parser.parse_args()
-    report = evaluate(args.data, args.model, args.url)
+    if args.resume and args.json_out is None:
+        parser.error("--resume requires --json-out")
+    prior = None
+    if args.resume and args.json_out.exists():
+        prior = json.loads(args.json_out.read_text())
+    report = evaluate(
+        args.data, args.model, args.url, prior=prior,
+        checkpoint=args.json_out if args.resume else None,
+    )
     if not report["total"]:
         raise SystemExit("empty evaluation set")
     if args.json_out:
