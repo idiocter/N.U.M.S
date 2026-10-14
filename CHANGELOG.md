@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Preserved optional paraphrase groups from trace review into exported labels.
 - Distinguished failed model traces from valid no-tool answers during label review.
 - Required an explicit accept-or-correct review decision before traces can become training labels.
 - Added optional paraphrase groups that stay together across train, validation, and test splits.

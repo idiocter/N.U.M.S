@@ -159,3 +159,21 @@ def test_failed_trace_is_not_proposed_as_a_no_tool_label(tmp_path: Path) -> None
     review.write_text(json.dumps(row) + "\n")
     assert export(review, output) == 1
     assert json.loads(output.read_text())["tool"] == "open_item"
+
+
+def test_reviewed_trace_preserves_optional_paraphrase_group(tmp_path: Path) -> None:
+    trace = tmp_path / "trace.jsonl"
+    review = tmp_path / "review.jsonl"
+    output = tmp_path / "examples.jsonl"
+    trace.write_text(json.dumps({
+        "at": "2026-01-01", "prompt": "open Safari",
+        "tool_calls": [{"tool": "open_item", "arguments": {"target": "Safari"}}],
+        "reply": "done", "error": None,
+    }) + "\n")
+    prepare(trace, review)
+    row = json.loads(review.read_text())
+    row.update({"reviewed": True, "decision": "accept", "group": "open-browser"})
+    review.write_text(json.dumps(row) + "\n")
+
+    assert export(review, output) == 1
+    assert json.loads(output.read_text())["group"] == "open-browser"

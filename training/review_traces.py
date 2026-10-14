@@ -39,6 +39,7 @@ def prepare(trace_path: Path, review_path: Path) -> int:
         if review_path.exists() else []
     for row in rows:
         row.setdefault("decision", "")
+        row.setdefault("group", "")
     existing_ids = {row["id"] for row in rows}
     existing_fingerprints = {
         row["source_fingerprint"] for row in rows if row.get("source_fingerprint")
@@ -98,6 +99,7 @@ def prepare(trace_path: Path, review_path: Path) -> int:
             "source_error": trace.get("error"),
             "reviewed": False,
             "decision": "",
+            "group": "",
             "review_notes": "",
         })
         existing_ids.add(identifier)
@@ -127,6 +129,8 @@ def export(review_path: Path, output_path: Path) -> int:
                 f"{row.get('id', 'review row')}: accept decision does not match the proposal"
             )
         example = {key: row[key] for key in ("id", "user", "tool", "arguments")}
+        if row.get("group") is not None and row.get("group") != "":
+            example["group"] = row["group"]
         if row["tool"] == "none":
             example["answer"] = row.get("answer") or ""
         examples.append(example)
