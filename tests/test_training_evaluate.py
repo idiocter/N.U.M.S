@@ -3,7 +3,9 @@ import stat
 import urllib.error
 from contextlib import nullcontext
 
-from training.evaluate import evaluate, write_report
+import pytest
+
+from training.evaluate import evaluate, load_cases, write_report
 
 
 def test_evaluate_reports_per_tool_results(monkeypatch, tmp_path) -> None:
@@ -125,6 +127,34 @@ def test_non_object_tool_arguments_are_a_model_response_error(monkeypatch, tmp_p
 
     assert report["tool_correct"] == 0
     assert "not a JSON object" in report["cases"][0]["error"]
+
+
+def test_evaluation_input_rejects_duplicate_ids_before_requests(monkeypatch, tmp_path) -> None:
+    case = {
+        "id": "duplicate", "messages": [{"role": "user"}, {"role": "assistant"}],
+        "tools": [], "expected_tool": "none", "expected_arguments": {},
+    }
+    data = tmp_path / "test.jsonl"
+    data.write_text(json.dumps(case) + "\n" + json.dumps(case) + "\n")
+    monkeypatch.setattr(
+        "training.evaluate.urllib.request.urlopen",
+        lambda *args, **kwargs: pytest.fail("invalid evaluation data reached Ollama"),
+    )
+
+    with pytest.raises(ValueError, match="duplicate id"):
+        evaluate(data, "test-model", "http://ollama.test")
+
+
+def test_evaluation_input_validates_case_fingerprint(tmp_path) -> None:
+    data = tmp_path / "test.jsonl"
+    data.write_text(json.dumps({
+        "id": "bad-fingerprint", "case_fingerprint": "ABC",
+        "messages": [{"role": "user"}, {"role": "assistant"}], "tools": [],
+        "expected_tool": "none", "expected_arguments": {},
+    }) + "\n")
+
+    with pytest.raises(ValueError, match="lowercase SHA-256"):
+        load_cases(data)
 
 
 def test_evaluation_report_is_private(tmp_path) -> None:

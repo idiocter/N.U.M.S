@@ -13,12 +13,48 @@ from pathlib import Path
 from typing import Any
 
 
-def evaluate(data: Path, model: str, url: str) -> dict[str, Any]:
-    cases: list[dict[str, Any]] = []
-    for line in data.read_text().splitlines():
+def load_cases(data: Path) -> list[dict[str, Any]]:
+    cases = []
+    seen = set()
+    for number, line in enumerate(data.read_text().splitlines(), 1):
         if not line.strip():
             continue
-        item = json.loads(line)
+        try:
+            item = json.loads(line)
+            if not isinstance(item, dict):
+                raise ValueError("case must be a JSON object")
+            identifier = item.get("id")
+            if not isinstance(identifier, str) or not identifier:
+                raise ValueError("id must be a nonempty string")
+            if identifier in seen:
+                raise ValueError(f"duplicate id: {identifier}")
+            if not isinstance(item.get("messages"), list) or len(item["messages"]) < 2:
+                raise ValueError("messages must contain the prompt and expected reply")
+            if not all(isinstance(message, dict) for message in item["messages"]):
+                raise ValueError("every message must be an object")
+            if not isinstance(item.get("tools"), list):
+                raise ValueError("tools must be a list")
+            if not isinstance(item.get("expected_tool"), str) or not item["expected_tool"]:
+                raise ValueError("expected_tool must be a nonempty string")
+            if not isinstance(item.get("expected_arguments"), dict):
+                raise ValueError("expected_arguments must be an object")
+            fingerprint = item.get("case_fingerprint")
+            if fingerprint is not None and (
+                not isinstance(fingerprint, str)
+                or len(fingerprint) != 64
+                or any(character not in "0123456789abcdef" for character in fingerprint)
+            ):
+                raise ValueError("case_fingerprint must be a lowercase SHA-256 digest")
+        except (json.JSONDecodeError, ValueError) as exc:
+            raise ValueError(f"{data}:{number}: {exc}") from exc
+        seen.add(identifier)
+        cases.append(item)
+    return cases
+
+
+def evaluate(data: Path, model: str, url: str) -> dict[str, Any]:
+    cases: list[dict[str, Any]] = []
+    for item in load_cases(data):
         payload = json.dumps({
             "model": model,
             "messages": item["messages"][:-1],

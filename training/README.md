@@ -73,6 +73,8 @@ installing an adapted model. Reports are written with owner-only permissions
 under `training/runs/` by default because arguments can contain private paths.
 Each case also carries a fingerprint of its prompt, system instructions, tool
 schemas, and expected label. Report comparison rejects mismatched fingerprints.
+The evaluator validates the complete held-out file, including unique IDs and
+fingerprint format, before it sends any request to Ollama.
 
 The evaluator sends prompts to Ollama and **does not execute** the model's requested tools. Compare the same held-out set against both models. Do not switch NUMS to a trained model unless it improves tool choice and full argument accuracy on representative held-out tasks.
 

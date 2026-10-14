@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Validated complete held-out datasets before sending any evaluation requests to Ollama.
 - Validated trace JSON and tool-call structure before updating human review files.
 - Preserved optional paraphrase groups from trace review into exported labels.
 - Distinguished failed model traces from valid no-tool answers during label review.
