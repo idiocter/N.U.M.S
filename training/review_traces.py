@@ -13,6 +13,39 @@ from pathlib import Path
 from training.build_dataset import load_examples
 
 
+def _read_jsonl(path: Path, kind: str) -> list[dict]:
+    rows = []
+    for number, line in enumerate(path.read_text().splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{kind} {path}:{number}: invalid JSON: {exc}") from exc
+        if not isinstance(row, dict):
+            raise ValueError(f"{kind} {path}:{number}: record must be a JSON object")
+        rows.append(row)
+    return rows
+
+
+def _validate_trace(trace: dict, path: Path, number: int) -> None:
+    prompt = trace.get("prompt")
+    calls = trace.get("tool_calls")
+    if not isinstance(prompt, str) or not prompt.strip():
+        raise ValueError(f"trace {path}:{number}: prompt must be a nonempty string")
+    if not isinstance(calls, list):
+        raise ValueError(f"trace {path}:{number}: tool_calls must be a list")
+    for call in calls:
+        if not isinstance(call, dict) or not isinstance(call.get("tool"), str) or not call["tool"]:
+            raise ValueError(f"trace {path}:{number}: each tool call needs a nonempty tool")
+        if not isinstance(call.get("arguments"), dict):
+            raise ValueError(f"trace {path}:{number}: tool call arguments must be an object")
+    if trace.get("reply") is not None and not isinstance(trace["reply"], str):
+        raise ValueError(f"trace {path}:{number}: reply must be a string or null")
+    if trace.get("error") is not None and not isinstance(trace["error"], str):
+        raise ValueError(f"trace {path}:{number}: error must be a string or null")
+
+
 def _write_private_jsonl(path: Path, rows: list[dict], validate: bool = False) -> None:
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     temporary = None
@@ -35,16 +68,19 @@ def _write_private_jsonl(path: Path, rows: list[dict], validate: bool = False) -
 
 
 def prepare(trace_path: Path, review_path: Path) -> int:
-    rows = [json.loads(line) for line in review_path.read_text().splitlines() if line.strip()] \
-        if review_path.exists() else []
+    rows = _read_jsonl(review_path, "review") if review_path.exists() else []
     for row in rows:
+        if not isinstance(row.get("id"), str) or not row["id"]:
+            raise ValueError(f"review {review_path}: every record needs a nonempty id")
         row.setdefault("decision", "")
         row.setdefault("group", "")
     existing_ids = {row["id"] for row in rows}
     existing_fingerprints = {
         row["source_fingerprint"] for row in rows if row.get("source_fingerprint")
     }
-    traces = [json.loads(line) for line in trace_path.read_text().splitlines() if line.strip()]
+    traces = _read_jsonl(trace_path, "trace")
+    for number, trace in enumerate(traces, 1):
+        _validate_trace(trace, trace_path, number)
     legacy_by_signature: dict[str, list[dict]] = {}
     for row in rows:
         if "source_fingerprint" not in row:

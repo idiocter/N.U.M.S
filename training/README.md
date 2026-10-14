@@ -44,7 +44,8 @@ optional `answer`, then set `reviewed` to `true` only after checking it. Set
 longer matches the proposal. Failed model calls preserve their error and start
 with an empty proposed tool, so they cannot be mistaken for valid no-tool
 answers. Set the optional `group` during review for related paraphrases; export
-preserves it for split isolation. Export skips every unreviewed record:
+preserves it for split isolation. Preparation validates trace structure before
+changing the review file. Export skips every unreviewed record:
 
 ```bash
 PYTHONPATH=src:. .venv/bin/python training/review_traces.py prepare ~/.local/share/nums/usage.nums-trace.jsonl training/private/review.jsonl

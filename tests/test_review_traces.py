@@ -177,3 +177,23 @@ def test_reviewed_trace_preserves_optional_paraphrase_group(tmp_path: Path) -> N
 
     assert export(review, output) == 1
     assert json.loads(output.read_text())["group"] == "open-browser"
+
+
+def test_malformed_trace_does_not_replace_existing_review(tmp_path: Path) -> None:
+    trace = tmp_path / "trace.jsonl"
+    review = tmp_path / "review.jsonl"
+    original = json.dumps({
+        "id": "kept", "user": "hello", "proposed_tool": "none",
+        "proposed_arguments": {}, "tool": "none", "arguments": {},
+        "answer": "hello", "reviewed": False,
+    }) + "\n"
+    review.write_text(original)
+    trace.write_text(json.dumps({
+        "prompt": "open Safari",
+        "tool_calls": [{"tool": "open_item", "arguments": "not-an-object"}],
+    }) + "\n")
+
+    with pytest.raises(ValueError, match=r"trace .*:1: tool call arguments must be an object"):
+        prepare(trace, review)
+
+    assert review.read_text() == original

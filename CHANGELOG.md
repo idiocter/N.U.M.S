@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Validated trace JSON and tool-call structure before updating human review files.
 - Preserved optional paraphrase groups from trace review into exported labels.
 - Distinguished failed model traces from valid no-tool answers during label review.
 - Required an explicit accept-or-correct review decision before traces can become training labels.
