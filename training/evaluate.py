@@ -96,8 +96,10 @@ def _resume_cases(prior: dict[str, Any] | None, model: str) -> dict[str, dict[st
 
 def evaluate(
     data: Path, model: str, url: str, prior: dict[str, Any] | None = None,
-    checkpoint: Path | None = None,
+    checkpoint: Path | None = None, retries: int = 0,
 ) -> dict[str, Any]:
+    if not 0 <= retries <= 3:
+        raise ValueError("retries must be between 0 and 3")
     cases: list[dict[str, Any]] = []
     resumed = _resume_cases(prior, model)
     for item in load_cases(data):
@@ -129,34 +131,39 @@ def evaluate(
             data=payload,
             headers={"Content-Type": "application/json"},
         )
-        try:
-            with urllib.request.urlopen(request, timeout=180) as response:
-                result = json.load(response)
-                if not isinstance(result, dict) or not isinstance(result.get("message"), dict):
-                    raise ValueError("missing assistant message")
-                calls = result["message"].get("tool_calls") or []
-                if not isinstance(calls, list) or any(
-                    not isinstance(call, dict) or not isinstance(call.get("function"), dict)
-                    for call in calls
-                ):
-                    raise ValueError("malformed tool calls")
-                function = calls[0]["function"] if calls else {}
-                actual = function.get("arguments", {})
-                if isinstance(actual, str):
-                    actual = json.loads(actual)
-                if not isinstance(actual, dict):
-                    raise ValueError("tool arguments are not a JSON object")
-                error = None
-        except (ValueError, TypeError, json.JSONDecodeError) as exc:
-            calls = []
-            function = {}
-            actual = None
-            error = f"Invalid model response: {exc}"
-        except (urllib.error.URLError, TimeoutError, OSError) as exc:
-            calls = []
-            function = {}
-            actual = None
-            error = f"Evaluation request failed: {type(exc).__name__}: {exc}"
+        for attempt in range(retries + 1):
+            try:
+                with urllib.request.urlopen(request, timeout=180) as response:
+                    result = json.load(response)
+                    if not isinstance(result, dict) or not isinstance(result.get("message"), dict):
+                        raise ValueError("missing assistant message")
+                    calls = result["message"].get("tool_calls") or []
+                    if not isinstance(calls, list) or any(
+                        not isinstance(call, dict) or not isinstance(call.get("function"), dict)
+                        for call in calls
+                    ):
+                        raise ValueError("malformed tool calls")
+                    function = calls[0]["function"] if calls else {}
+                    actual = function.get("arguments", {})
+                    if isinstance(actual, str):
+                        actual = json.loads(actual)
+                    if not isinstance(actual, dict):
+                        raise ValueError("tool arguments are not a JSON object")
+                    error = None
+                break
+            except (ValueError, TypeError, json.JSONDecodeError) as exc:
+                calls = []
+                function = {}
+                actual = None
+                error = f"Invalid model response: {exc}"
+                break
+            except (urllib.error.URLError, TimeoutError, OSError) as exc:
+                calls = []
+                function = {}
+                actual = None
+                error = f"Evaluation request failed: {type(exc).__name__}: {exc}"
+                if attempt < retries:
+                    print(f"{item['id']}: transient request failure; retry {attempt + 1}/{retries}")
         if error:
             name_ok = args_ok = False
         elif item["expected_tool"] == "none":
@@ -216,6 +223,10 @@ def main() -> None:
         "--resume", action="store_true",
         help="Reuse completed cases in --json-out and checkpoint after every case",
     )
+    parser.add_argument(
+        "--retries", type=int, choices=range(4), default=0,
+        help="Retry each transient Ollama request up to 3 times",
+    )
     args = parser.parse_args()
     if args.resume and args.json_out is None:
         parser.error("--resume requires --json-out")
@@ -224,7 +235,7 @@ def main() -> None:
         prior = json.loads(args.json_out.read_text())
     report = evaluate(
         args.data, args.model, args.url, prior=prior,
-        checkpoint=args.json_out if args.resume else None,
+        checkpoint=args.json_out if args.resume else None, retries=args.retries,
     )
     if not report["total"]:
         raise SystemExit("empty evaluation set")

@@ -204,6 +204,42 @@ def test_resume_rejects_a_different_model(tmp_path) -> None:
         })
 
 
+def test_transient_request_failure_is_retried(monkeypatch, tmp_path) -> None:
+    data = tmp_path / "test.jsonl"
+    data.write_text(json.dumps({
+        "id": "retry", "messages": [{"role": "user"}, {"role": "assistant"}],
+        "tools": [], "expected_tool": "none", "expected_arguments": {},
+    }) + "\n")
+    responses = iter([
+        urllib.error.URLError("temporarily unavailable"),
+        _JsonResponse({"message": {"content": "hello"}}),
+    ])
+    attempts = []
+
+    def open_next(*args, **kwargs):
+        attempts.append(1)
+        response = next(responses)
+        if isinstance(response, Exception):
+            raise response
+        return nullcontext(response)
+
+    monkeypatch.setattr("training.evaluate.urllib.request.urlopen", open_next)
+
+    report = evaluate(data, "test-model", "http://ollama.test", retries=1)
+
+    assert len(attempts) == 2
+    assert report["tool_correct"] == 1
+    assert report["cases"][0]["error"] is None
+
+
+def test_evaluation_retries_are_bounded(tmp_path) -> None:
+    data = tmp_path / "empty.jsonl"
+    data.write_text("")
+
+    with pytest.raises(ValueError, match="retries must be between 0 and 3"):
+        evaluate(data, "test-model", "http://ollama.test", retries=4)
+
+
 def test_evaluation_report_is_private(tmp_path) -> None:
     output = tmp_path / "runs" / "report.json"
     write_report(output, {"cases": [{"expected_arguments": {"path": "/private"}}]})

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added bounded retries for transient Ollama failures during held-out evaluation.
 - Added private per-case checkpoints and resumable held-out model evaluation.
 - Validated complete held-out datasets before sending any evaluation requests to Ollama.
 - Validated trace JSON and tool-call structure before updating human review files.
