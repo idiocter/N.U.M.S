@@ -1,4 +1,5 @@
 import json
+import hashlib
 import stat
 import urllib.error
 from contextlib import nullcontext
@@ -8,11 +9,22 @@ import pytest
 from training.evaluate import evaluate, load_cases, write_report
 
 
+def _fingerprint(case: dict) -> str:
+    protected = {
+        "messages": case["messages"][:-1],
+        "tools": case["tools"],
+        "expected_tool": case["expected_tool"],
+        "expected_arguments": case["expected_arguments"],
+    }
+    return hashlib.sha256(
+        json.dumps(protected, ensure_ascii=False, sort_keys=True).encode()
+    ).hexdigest()
+
+
 def test_evaluate_reports_per_tool_results(monkeypatch, tmp_path) -> None:
     examples = [
         {
             "id": "right",
-            "case_fingerprint": "a" * 64,
             "messages": [{"role": "user", "content": "status"}, {"role": "assistant"}],
             "tools": [],
             "expected_tool": "system_info",
@@ -26,6 +38,7 @@ def test_evaluate_reports_per_tool_results(monkeypatch, tmp_path) -> None:
             "expected_arguments": {"name": "Notes"},
         },
     ]
+    examples[0]["case_fingerprint"] = _fingerprint(examples[0])
     data = tmp_path / "test.jsonl"
     data.write_text("\n".join(json.dumps(item) for item in examples))
     responses = iter(
@@ -46,7 +59,7 @@ def test_evaluate_reports_per_tool_results(monkeypatch, tmp_path) -> None:
     assert report["arguments_correct"] == 1
     assert report["tool_accuracy"] == 1
     assert report["arguments_accuracy"] == 0.5
-    assert report["cases"][0]["case_fingerprint"] == "a" * 64
+    assert report["cases"][0]["case_fingerprint"] == examples[0]["case_fingerprint"]
     assert report["by_expected_tool"]["open_app"] == {
         "total": 1,
         "tool_correct": 1,
@@ -157,19 +170,35 @@ def test_evaluation_input_validates_case_fingerprint(tmp_path) -> None:
         load_cases(data)
 
 
+def test_evaluation_input_rejects_stale_case_fingerprint(tmp_path) -> None:
+    data = tmp_path / "test.jsonl"
+    case = {
+        "id": "changed", "messages": [{"role": "user"}, {"role": "assistant"}],
+        "tools": [], "expected_tool": "none", "expected_arguments": {},
+    }
+    case["case_fingerprint"] = _fingerprint(case)
+    case["messages"][0]["content"] = "changed after the split was built"
+    data.write_text(json.dumps(case) + "\n")
+
+    with pytest.raises(ValueError, match="does not match the evaluation input"):
+        load_cases(data)
+
+
 def test_evaluation_resumes_completed_cases_and_checkpoints(monkeypatch, tmp_path) -> None:
     examples = [
-        {"id": "done", "case_fingerprint": "a" * 64,
+        {"id": "done",
          "messages": [{"role": "user"}, {"role": "assistant"}], "tools": [],
          "expected_tool": "none", "expected_arguments": {}},
-        {"id": "pending", "case_fingerprint": "b" * 64,
+        {"id": "pending",
          "messages": [{"role": "user"}, {"role": "assistant"}], "tools": [],
          "expected_tool": "none", "expected_arguments": {}},
     ]
+    for example in examples:
+        example["case_fingerprint"] = _fingerprint(example)
     data = tmp_path / "test.jsonl"
     data.write_text("\n".join(json.dumps(item) for item in examples))
     prior_case = {
-        "id": "done", "case_fingerprint": "a" * 64,
+        "id": "done", "case_fingerprint": examples[0]["case_fingerprint"],
         "expected_tool": "none", "actual_tool": "none",
         "expected_arguments": {}, "actual_arguments": {},
         "tool_correct": True, "arguments_correct": True, "error": None,

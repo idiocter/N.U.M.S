@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import tempfile
@@ -11,6 +12,18 @@ import urllib.request
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
+
+
+def _case_fingerprint(item: dict[str, Any]) -> str:
+    protected = {
+        "messages": item["messages"][:-1],
+        "tools": item["tools"],
+        "expected_tool": item["expected_tool"],
+        "expected_arguments": item["expected_arguments"],
+    }
+    return hashlib.sha256(
+        json.dumps(protected, ensure_ascii=False, sort_keys=True).encode()
+    ).hexdigest()
 
 
 def load_cases(data: Path) -> list[dict[str, Any]]:
@@ -45,6 +58,8 @@ def load_cases(data: Path) -> list[dict[str, Any]]:
                 or any(character not in "0123456789abcdef" for character in fingerprint)
             ):
                 raise ValueError("case_fingerprint must be a lowercase SHA-256 digest")
+            if fingerprint is not None and fingerprint != _case_fingerprint(item):
+                raise ValueError("case_fingerprint does not match the evaluation input")
         except (json.JSONDecodeError, ValueError) as exc:
             raise ValueError(f"{data}:{number}: {exc}") from exc
         seen.add(identifier)
