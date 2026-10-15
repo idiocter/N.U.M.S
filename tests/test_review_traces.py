@@ -211,3 +211,31 @@ def test_malformed_trace_does_not_replace_existing_review(tmp_path: Path) -> Non
         prepare(trace, review)
 
     assert review.read_text() == original
+
+
+def test_duplicate_review_id_does_not_replace_prior_export(tmp_path: Path) -> None:
+    review = tmp_path / "review.jsonl"
+    output = tmp_path / "examples.jsonl"
+    row = {
+        "id": "duplicate", "user": "say hello", "proposed_tool": "none",
+        "proposed_arguments": {}, "tool": "none", "arguments": {},
+        "answer": "hello", "reviewed": True, "decision": "accept",
+    }
+    review.write_text(json.dumps(row) + "\n" + json.dumps(row) + "\n")
+    output.write_text("prior export\n")
+
+    with pytest.raises(ValueError, match="duplicate id"):
+        export(review, output)
+
+    assert output.read_text() == "prior export\n"
+
+
+def test_malformed_review_json_reports_its_line(tmp_path: Path) -> None:
+    review = tmp_path / "review.jsonl"
+    output = tmp_path / "examples.jsonl"
+    review.write_text("{}\n{bad json}\n")
+
+    with pytest.raises(ValueError, match=r"review .*:2: invalid JSON"):
+        export(review, output)
+
+    assert not output.exists()

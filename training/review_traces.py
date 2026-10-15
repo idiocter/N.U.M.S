@@ -46,6 +46,39 @@ def _validate_trace(trace: dict, path: Path, number: int) -> None:
         raise ValueError(f"trace {path}:{number}: error must be a string or null")
 
 
+def _validate_review_rows(rows: list[dict], path: Path) -> None:
+    seen: set[str] = set()
+    for number, row in enumerate(rows, 1):
+        identifier = row.get("id")
+        if not isinstance(identifier, str) or not identifier:
+            raise ValueError(f"review {path}:{number}: id must be a nonempty string")
+        if identifier in seen:
+            raise ValueError(f"review {path}:{number}: duplicate id: {identifier}")
+        seen.add(identifier)
+        if not isinstance(row.get("user"), str) or not row["user"].strip():
+            raise ValueError(f"review {path}:{number}: user must be a nonempty string")
+        for key in ("proposed_tool", "tool", "decision"):
+            if not isinstance(row.get(key), str):
+                raise ValueError(f"review {path}:{number}: {key} must be a string")
+        for key in ("proposed_arguments", "arguments"):
+            if not isinstance(row.get(key), dict):
+                raise ValueError(f"review {path}:{number}: {key} must be an object")
+        if not isinstance(row.get("reviewed"), bool):
+            raise ValueError(f"review {path}:{number}: reviewed must be a boolean")
+        for key in ("answer", "source_error", "review_notes", "group"):
+            if row.get(key) is not None and not isinstance(row[key], str):
+                raise ValueError(f"review {path}:{number}: {key} must be a string or null")
+        fingerprint = row.get("source_fingerprint")
+        if fingerprint is not None and (
+            not isinstance(fingerprint, str)
+            or len(fingerprint) != 16
+            or any(character not in "0123456789abcdef" for character in fingerprint)
+        ):
+            raise ValueError(
+                f"review {path}:{number}: source_fingerprint must be a 16-character hex digest"
+            )
+
+
 def _write_private_jsonl(path: Path, rows: list[dict], validate: bool = False) -> None:
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     temporary = None
@@ -70,10 +103,13 @@ def _write_private_jsonl(path: Path, rows: list[dict], validate: bool = False) -
 def prepare(trace_path: Path, review_path: Path) -> int:
     rows = _read_jsonl(review_path, "review") if review_path.exists() else []
     for row in rows:
-        if not isinstance(row.get("id"), str) or not row["id"]:
-            raise ValueError(f"review {review_path}: every record needs a nonempty id")
+        row.setdefault("proposed_tool", "")
+        row.setdefault("proposed_arguments", {})
         row.setdefault("decision", "")
         row.setdefault("group", "")
+        row.setdefault("review_notes", "")
+        row.setdefault("source_error", None)
+    _validate_review_rows(rows, review_path)
     existing_ids = {row["id"] for row in rows}
     existing_fingerprints = {
         row["source_fingerprint"] for row in rows if row.get("source_fingerprint")
@@ -146,10 +182,16 @@ def prepare(trace_path: Path, review_path: Path) -> int:
 
 def export(review_path: Path, output_path: Path) -> int:
     examples = []
-    for line in review_path.read_text().splitlines():
-        if not line.strip():
-            continue
-        row = json.loads(line)
+    rows = _read_jsonl(review_path, "review")
+    for row in rows:
+        row.setdefault("proposed_tool", "")
+        row.setdefault("proposed_arguments", {})
+        row.setdefault("decision", "")
+        row.setdefault("group", "")
+        row.setdefault("review_notes", "")
+        row.setdefault("source_error", None)
+    _validate_review_rows(rows, review_path)
+    for row in rows:
         if row.get("reviewed") is not True:
             continue
         decision = row.get("decision")
