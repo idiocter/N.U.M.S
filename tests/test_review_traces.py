@@ -118,10 +118,24 @@ def test_reviewed_trace_requires_an_explicit_decision(tmp_path: Path) -> None:
         "decision": "",
     }) + "\n")
 
-    with pytest.raises(ValueError, match="decision must be accept or corrected"):
+    with pytest.raises(ValueError, match="decision must be accept, corrected, or reject"):
         export(review, output)
 
     assert not output.exists()
+
+
+def test_rejected_trace_is_reviewed_but_not_exported(tmp_path: Path) -> None:
+    review = tmp_path / "review.jsonl"
+    output = tmp_path / "examples.jsonl"
+    review.write_text(json.dumps({
+        "id": "unsafe-proposal", "user": "delete everything",
+        "proposed_tool": "shell", "proposed_arguments": {"command": "rm -rf ~"},
+        "tool": "shell", "arguments": {"command": "rm -rf ~"},
+        "reviewed": True, "decision": "reject", "review_notes": "unsafe label",
+    }) + "\n")
+
+    assert export(review, output) == 0
+    assert output.read_text() == ""
 
 
 def test_accept_decision_must_match_model_proposal(tmp_path: Path) -> None:

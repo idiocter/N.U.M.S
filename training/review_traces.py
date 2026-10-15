@@ -153,10 +153,12 @@ def export(review_path: Path, output_path: Path) -> int:
         if row.get("reviewed") is not True:
             continue
         decision = row.get("decision")
-        if decision not in {"accept", "corrected"}:
+        if decision not in {"accept", "corrected", "reject"}:
             raise ValueError(
-                f"{row.get('id', 'review row')}: review decision must be accept or corrected"
+                f"{row.get('id', 'review row')}: review decision must be accept, corrected, or reject"
             )
+        if decision == "reject":
+            continue
         if decision == "accept" and (
             row.get("tool") != row.get("proposed_tool")
             or row.get("arguments") != row.get("proposed_arguments")
