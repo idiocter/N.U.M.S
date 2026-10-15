@@ -23,7 +23,26 @@ def _cases(report: dict[str, Any]) -> dict[str, dict[str, Any]]:
             row.get("arguments_correct"), bool
         ):
             raise ValueError(f"evaluation case {row['id']} lacks correctness scores")
+        if row["arguments_correct"] and not row["tool_correct"]:
+            raise ValueError(
+                f"evaluation case {row['id']} has correct arguments with the wrong tool"
+            )
+        if row.get("error") and (row["tool_correct"] or row["arguments_correct"]):
+            raise ValueError(f"evaluation case {row['id']} has an error but is scored correct")
         by_id[row["id"]] = row
+    summary_fields = {"total", "tool_correct", "arguments_correct"}
+    present = summary_fields.intersection(report)
+    if present and present != summary_fields:
+        raise ValueError("evaluation report has an incomplete score summary")
+    if present:
+        expected = {
+            "total": len(rows),
+            "tool_correct": sum(row["tool_correct"] for row in rows),
+            "arguments_correct": sum(row["arguments_correct"] for row in rows),
+        }
+        for field, value in expected.items():
+            if report[field] != value:
+                raise ValueError(f"evaluation report {field} does not match its cases")
     return by_id
 
 

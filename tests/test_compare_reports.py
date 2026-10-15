@@ -65,3 +65,35 @@ def test_comparison_rejects_changed_evaluation_input() -> None:
 
     with pytest.raises(ValueError, match="held-out input changed"):
         compare(baseline, candidate)
+
+
+def test_comparison_rejects_tampered_report_summary() -> None:
+    baseline = {
+        "total": 1, "tool_correct": 1, "arguments_correct": 1,
+        "cases": [_case("a", "read_file", True)],
+    }
+    candidate = {
+        "total": 1, "tool_correct": 1, "arguments_correct": 1,
+        "cases": [_case("a", "read_file", False)],
+    }
+
+    with pytest.raises(ValueError, match="tool_correct does not match its cases"):
+        compare(baseline, candidate)
+
+
+def test_comparison_rejects_impossible_case_scores() -> None:
+    baseline = {"cases": [{
+        **_case("a", "read_file", True), "tool_correct": False,
+    }]}
+    candidate = {"cases": [_case("a", "read_file", True)]}
+
+    with pytest.raises(ValueError, match="correct arguments with the wrong tool"):
+        compare(baseline, candidate)
+
+
+def test_comparison_rejects_correct_score_with_response_error() -> None:
+    baseline = {"cases": [{**_case("a", "read_file", True), "error": "timeout"}]}
+    candidate = {"cases": [_case("a", "read_file", True)]}
+
+    with pytest.raises(ValueError, match="has an error but is scored correct"):
+        compare(baseline, candidate)
