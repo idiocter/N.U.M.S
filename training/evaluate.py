@@ -14,6 +14,13 @@ from pathlib import Path
 from typing import Any
 
 
+RETRYABLE_HTTP_STATUS = {408, 429, 500, 502, 503, 504}
+
+
+def _is_transient_request_error(exc: BaseException) -> bool:
+    return not isinstance(exc, urllib.error.HTTPError) or exc.code in RETRYABLE_HTTP_STATUS
+
+
 def _case_fingerprint(item: dict[str, Any]) -> str:
     protected = {
         "messages": item["messages"][:-1],
@@ -182,8 +189,10 @@ def evaluate(
                 function = {}
                 actual = None
                 error = f"Evaluation request failed: {type(exc).__name__}: {exc}"
-                if attempt < retries:
+                if attempt < retries and _is_transient_request_error(exc):
                     print(f"{item['id']}: transient request failure; retry {attempt + 1}/{retries}")
+                    continue
+                break
         if error:
             name_ok = args_ok = False
         elif item["expected_tool"] == "none":

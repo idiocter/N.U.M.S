@@ -75,7 +75,8 @@ errors are retried when the command resumes. Resume also rejects prior report
 cases that no longer exist in the held-out file, preventing a report for a
 different test set from being silently reused. Use `--retries 1` through
 `--retries 3` to retry transient Ollama connection failures during the run;
-malformed model responses are scored immediately rather than retried.
+timeouts, rate limits, and temporary server failures qualify. Permanent HTTP
+errors and malformed model responses are scored immediately rather than retried.
 
 The JSON report includes overall accuracy, a breakdown by expected tool, and
 case-level failures and arguments so regressions can be compared before

@@ -279,6 +279,58 @@ def test_transient_request_failure_is_retried(monkeypatch, tmp_path) -> None:
     assert report["cases"][0]["error"] is None
 
 
+@pytest.mark.parametrize("status", [400, 401, 404])
+def test_non_transient_http_failure_is_not_retried(monkeypatch, tmp_path, status) -> None:
+    data = tmp_path / "test.jsonl"
+    data.write_text(json.dumps({
+        "id": "bad-request", "messages": [{"role": "user"}, {"role": "assistant"}],
+        "tools": [], "expected_tool": "none", "expected_arguments": {},
+    }) + "\n")
+    attempts = []
+
+    def fail_request(*args, **kwargs):
+        attempts.append(1)
+        raise urllib.error.HTTPError(
+            "http://ollama.test/api/chat", status, "request rejected", None, None
+        )
+
+    monkeypatch.setattr("training.evaluate.urllib.request.urlopen", fail_request)
+
+    report = evaluate(data, "test-model", "http://ollama.test", retries=3)
+
+    assert len(attempts) == 1
+    assert report["cases"][0]["tool_correct"] is False
+
+
+def test_retryable_http_failure_is_retried(monkeypatch, tmp_path) -> None:
+    data = tmp_path / "test.jsonl"
+    data.write_text(json.dumps({
+        "id": "busy", "messages": [{"role": "user"}, {"role": "assistant"}],
+        "tools": [], "expected_tool": "none", "expected_arguments": {},
+    }) + "\n")
+    responses = iter([
+        urllib.error.HTTPError(
+            "http://ollama.test/api/chat", 503, "temporarily unavailable", None, None
+        ),
+        _JsonResponse({"message": {"content": "hello"}}),
+    ])
+    attempts = []
+
+    def open_next(*args, **kwargs):
+        attempts.append(1)
+        response = next(responses)
+        if isinstance(response, Exception):
+            raise response
+        return nullcontext(response)
+
+    monkeypatch.setattr("training.evaluate.urllib.request.urlopen", open_next)
+
+    report = evaluate(data, "test-model", "http://ollama.test", retries=1)
+
+    assert len(attempts) == 2
+    assert report["tool_correct"] == 1
+
+
 def test_evaluation_retries_are_bounded(tmp_path) -> None:
     data = tmp_path / "empty.jsonl"
     data.write_text("")
