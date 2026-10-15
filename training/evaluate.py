@@ -116,8 +116,13 @@ def evaluate(
     if not 0 <= retries <= 3:
         raise ValueError("retries must be between 0 and 3")
     cases: list[dict[str, Any]] = []
+    inputs = load_cases(data)
     resumed = _resume_cases(prior, model)
-    for item in load_cases(data):
+    orphaned = set(resumed) - {item["id"] for item in inputs}
+    if orphaned:
+        identifiers = ", ".join(sorted(orphaned))
+        raise ValueError(f"resume report contains cases absent from the evaluation set: {identifiers}")
+    for item in inputs:
         previous = resumed.get(item["id"])
         if previous is not None and not previous.get("error"):
             if previous.get("case_fingerprint") != item.get("case_fingerprint"):

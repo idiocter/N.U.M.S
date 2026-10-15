@@ -233,6 +233,24 @@ def test_resume_rejects_a_different_model(tmp_path) -> None:
         })
 
 
+def test_resume_rejects_cases_removed_from_evaluation_set(tmp_path) -> None:
+    data = tmp_path / "test.jsonl"
+    data.write_text(json.dumps({
+        "id": "current", "messages": [{"role": "user"}, {"role": "assistant"}],
+        "tools": [], "expected_tool": "none", "expected_arguments": {},
+    }) + "\n")
+    prior = {
+        "model": "test-model",
+        "cases": [{
+            "id": "removed", "expected_tool": "none", "expected_arguments": {},
+            "tool_correct": True, "arguments_correct": True, "error": None,
+        }],
+    }
+
+    with pytest.raises(ValueError, match="cases absent.*removed"):
+        evaluate(data, "test-model", "http://ollama.test", prior=prior)
+
+
 def test_transient_request_failure_is_retried(monkeypatch, tmp_path) -> None:
     data = tmp_path / "test.jsonl"
     data.write_text(json.dumps({

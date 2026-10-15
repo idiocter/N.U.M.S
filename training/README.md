@@ -71,7 +71,9 @@ PYTHONPATH=src .venv/bin/python training/evaluate.py training/data/test.jsonl \
 
 Add `--resume` to reuse completed cases from the output report and atomically
 checkpoint the private report after every case. Cases with request or response
-errors are retried when the command resumes. Use `--retries 1` through
+errors are retried when the command resumes. Resume also rejects prior report
+cases that no longer exist in the held-out file, preventing a report for a
+different test set from being silently reused. Use `--retries 1` through
 `--retries 3` to retry transient Ollama connection failures during the run;
 malformed model responses are scored immediately rather than retried.
 
