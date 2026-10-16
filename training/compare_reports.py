@@ -96,6 +96,12 @@ def compare(baseline: dict[str, Any], candidate: dict[str, Any]) -> tuple[bool, 
     after_errors = sum(bool(row.get("error")) for row in after.values())
     if after_errors > before_errors:
         reasons.append("evaluation response errors increased")
+    newly_failing = sorted(
+        identifier for identifier, row in after.items()
+        if row.get("error") and not before[identifier].get("error")
+    )
+    if newly_failing:
+        reasons.append("new evaluation response errors: " + ", ".join(newly_failing))
 
     per_tool_before: defaultdict[str, int] = defaultdict(int)
     per_tool_after: defaultdict[str, int] = defaultdict(int)

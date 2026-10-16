@@ -57,6 +57,26 @@ def test_new_evaluation_response_errors_block_candidate() -> None:
 
     assert not eligible
     assert "evaluation response errors increased" in reasons
+    assert "new evaluation response errors: b" in reasons
+
+
+def test_error_moving_to_a_different_case_blocks_candidate() -> None:
+    baseline = {"cases": [
+        {**_case("a", "read_file", False), "error": "timeout"},
+        _case("b", "open_item", False),
+        _case("c", "open_item", False),
+    ]}
+    candidate = {"cases": [
+        _case("a", "read_file", True),
+        {**_case("b", "open_item", False), "error": "invalid response"},
+        _case("c", "open_item", True),
+    ]}
+
+    eligible, reasons = compare(baseline, candidate)
+
+    assert not eligible
+    assert "evaluation response errors increased" not in reasons
+    assert "new evaluation response errors: b" in reasons
 
 
 def test_comparison_rejects_changed_evaluation_input() -> None:

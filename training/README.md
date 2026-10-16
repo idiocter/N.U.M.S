@@ -106,7 +106,8 @@ PYTHONPATH=src:. .venv/bin/python training/compare_reports.py \
 ```
 
 The comparison rejects changed labels, a lower tool choice score, any per-tool
-regression, increased model or connection response errors, or a candidate that
+regression, increased model or connection response errors, any newly failing
+held-out case even when the total error count is unchanged, or a candidate that
 does not improve full tool and argument accuracy. It also verifies that report
 summary counts match their case records and rejects impossible scores, such as
 correct arguments paired with the wrong tool or a response error. Versioned
