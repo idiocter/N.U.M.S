@@ -73,7 +73,9 @@ Add `--resume` to reuse completed cases from the output report and atomically
 checkpoint the private report after every case. Cases with request or response
 errors are retried when the command resumes. Resume also rejects prior report
 cases that no longer exist in the held-out file, preventing a report for a
-different test set from being silently reused. Use `--retries 1` through
+different test set from being silently reused. Reports include a version and a
+digest of the complete held-out set; resume rejects a mismatched digest before
+contacting Ollama. Use `--retries 1` through
 `--retries 3` to retry transient Ollama connection failures during the run;
 timeouts, rate limits, and temporary server failures qualify. Permanent HTTP
 errors and malformed model responses are scored immediately rather than retried.

@@ -33,6 +33,16 @@ def _case_fingerprint(item: dict[str, Any]) -> str:
     ).hexdigest()
 
 
+def _dataset_digest(cases: list[dict[str, Any]]) -> str:
+    identities = sorted(
+        (item["id"], item.get("case_fingerprint") or _case_fingerprint(item))
+        for item in cases
+    )
+    return hashlib.sha256(
+        json.dumps(identities, ensure_ascii=False, separators=(",", ":")).encode()
+    ).hexdigest()
+
+
 def load_cases(data: Path) -> list[dict[str, Any]]:
     cases = []
     seen = set()
@@ -126,7 +136,9 @@ def load_cases(data: Path) -> list[dict[str, Any]]:
     return cases
 
 
-def _build_report(model: str, cases: list[dict[str, Any]]) -> dict[str, Any]:
+def _build_report(
+    model: str, cases: list[dict[str, Any]], dataset_digest: str
+) -> dict[str, Any]:
     per_tool: defaultdict[str, dict[str, int]] = defaultdict(
         lambda: {"total": 0, "tool_correct": 0, "arguments_correct": 0}
     )
@@ -139,7 +151,9 @@ def _build_report(model: str, cases: list[dict[str, Any]]) -> dict[str, Any]:
     tool_correct = sum(int(case["tool_correct"]) for case in cases)
     arguments_correct = sum(int(case["arguments_correct"]) for case in cases)
     return {
+        "report_version": 1,
         "model": model,
+        "dataset_digest": dataset_digest,
         "total": total,
         "tool_correct": tool_correct,
         "arguments_correct": arguments_correct,
@@ -150,11 +164,15 @@ def _build_report(model: str, cases: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def _resume_cases(prior: dict[str, Any] | None, model: str) -> dict[str, dict[str, Any]]:
+def _resume_cases(
+    prior: dict[str, Any] | None, model: str, dataset_digest: str
+) -> dict[str, dict[str, Any]]:
     if prior is None:
         return {}
     if prior.get("model") != model:
         raise ValueError("resume report model does not match the requested model")
+    if prior.get("dataset_digest") not in {None, dataset_digest}:
+        raise ValueError("resume report dataset does not match the evaluation set")
     rows = prior.get("cases")
     if not isinstance(rows, list):
         raise ValueError("resume report must contain cases")
@@ -176,7 +194,8 @@ def evaluate(
         raise ValueError("retries must be between 0 and 3")
     cases: list[dict[str, Any]] = []
     inputs = load_cases(data)
-    resumed = _resume_cases(prior, model)
+    dataset_digest = _dataset_digest(inputs)
+    resumed = _resume_cases(prior, model, dataset_digest)
     orphaned = set(resumed) - {item["id"] for item in inputs}
     if orphaned:
         identifiers = ", ".join(sorted(orphaned))
@@ -196,7 +215,7 @@ def evaluate(
             cases.append(previous)
             print(f"{item['id']}: resumed")
             if checkpoint:
-                write_report(checkpoint, _build_report(model, cases))
+                write_report(checkpoint, _build_report(model, cases, dataset_digest))
             continue
         payload = json.dumps({
             "model": model,
@@ -271,8 +290,8 @@ def evaluate(
             f"args={'ok' if args_ok else 'wrong'}" + (f" ({error})" if error else "")
         )
         if checkpoint:
-            write_report(checkpoint, _build_report(model, cases))
-    return _build_report(model, cases)
+            write_report(checkpoint, _build_report(model, cases, dataset_digest))
+    return _build_report(model, cases, dataset_digest)
 
 
 def write_report(path: Path, report: dict[str, Any]) -> None:

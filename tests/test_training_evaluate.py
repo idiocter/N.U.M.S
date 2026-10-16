@@ -79,6 +79,8 @@ def test_evaluate_reports_per_tool_results(monkeypatch, tmp_path) -> None:
     assert report["arguments_correct"] == 1
     assert report["tool_accuracy"] == 1
     assert report["arguments_accuracy"] == 0.5
+    assert report["report_version"] == 1
+    assert len(report["dataset_digest"]) == 64
     assert report["cases"][0]["case_fingerprint"] == examples[0]["case_fingerprint"]
     assert report["by_expected_tool"]["open_app"] == {
         "total": 1,
@@ -339,6 +341,19 @@ def test_resume_rejects_cases_removed_from_evaluation_set(tmp_path) -> None:
 
     with pytest.raises(ValueError, match="cases absent.*removed"):
         evaluate(data, "test-model", "http://ollama.test", prior=prior)
+
+
+def test_resume_rejects_a_different_dataset_digest(tmp_path) -> None:
+    data = tmp_path / "test.jsonl"
+    data.write_text(json.dumps({
+        "id": "current", "messages": [{"role": "user"}, {"role": "assistant"}],
+        "tools": [], "expected_tool": "none", "expected_arguments": {},
+    }) + "\n")
+
+    with pytest.raises(ValueError, match="dataset does not match"):
+        evaluate(data, "test-model", "http://ollama.test", prior={
+            "model": "test-model", "dataset_digest": "a" * 64, "cases": [],
+        })
 
 
 def test_transient_request_failure_is_retried(monkeypatch, tmp_path) -> None:
