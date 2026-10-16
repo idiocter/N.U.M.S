@@ -109,7 +109,8 @@ The comparison rejects changed labels, a lower tool choice score, any per-tool
 regression, increased model or connection response errors, or a candidate that
 does not improve full tool and argument accuracy. It also verifies that report
 summary counts match their case records and rejects impossible scores, such as
-correct arguments paired with the wrong tool or a response error. Individual
+correct arguments paired with the wrong tool or a response error. Versioned
+reports must carry the same valid held-out dataset digest. Individual
 request failures are scored as incorrect while the remaining held-out cases continue.
 
 Generated split files are replaced atomically with owner-only permissions,

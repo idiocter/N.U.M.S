@@ -10,6 +10,15 @@ from typing import Any
 
 
 def _cases(report: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    if report.get("report_version") not in {None, 1}:
+        raise ValueError("unsupported evaluation report version")
+    digest = report.get("dataset_digest")
+    if digest is not None and (
+        not isinstance(digest, str)
+        or len(digest) != 64
+        or any(character not in "0123456789abcdef" for character in digest)
+    ):
+        raise ValueError("evaluation report has an invalid dataset digest")
     rows = report.get("cases")
     if not isinstance(rows, list) or not rows:
         raise ValueError("evaluation report must contain cases")
@@ -49,6 +58,12 @@ def _cases(report: dict[str, Any]) -> dict[str, dict[str, Any]]:
 def compare(baseline: dict[str, Any], candidate: dict[str, Any]) -> tuple[bool, list[str]]:
     before = _cases(baseline)
     after = _cases(candidate)
+    before_digest = baseline.get("dataset_digest")
+    after_digest = candidate.get("dataset_digest")
+    if (before_digest is None) != (after_digest is None):
+        raise ValueError("evaluation dataset digest is missing from one report")
+    if before_digest is not None and before_digest != after_digest:
+        raise ValueError("reports use different evaluation datasets")
     if before.keys() != after.keys():
         raise ValueError("reports must contain the same held-out case ids")
     for identifier in before:

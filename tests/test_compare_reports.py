@@ -97,3 +97,19 @@ def test_comparison_rejects_correct_score_with_response_error() -> None:
 
     with pytest.raises(ValueError, match="has an error but is scored correct"):
         compare(baseline, candidate)
+
+
+def test_comparison_rejects_different_dataset_digests() -> None:
+    baseline = {"dataset_digest": "a" * 64, "cases": [_case("a", "read_file", False)]}
+    candidate = {"dataset_digest": "b" * 64, "cases": [_case("a", "read_file", True)]}
+
+    with pytest.raises(ValueError, match="different evaluation datasets"):
+        compare(baseline, candidate)
+
+
+def test_comparison_rejects_invalid_report_version() -> None:
+    baseline = {"report_version": 2, "cases": [_case("a", "read_file", False)]}
+    candidate = {"report_version": 1, "cases": [_case("a", "read_file", True)]}
+
+    with pytest.raises(ValueError, match="unsupported evaluation report version"):
+        compare(baseline, candidate)
