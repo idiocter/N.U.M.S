@@ -70,6 +70,22 @@ def load_cases(data: Path) -> list[dict[str, Any]]:
                 raise ValueError("expected_tool must be a nonempty string")
             if not isinstance(item.get("expected_arguments"), dict):
                 raise ValueError("expected_arguments must be an object")
+            tool_names: set[str] = set()
+            for tool in item["tools"]:
+                if not isinstance(tool, dict) or tool.get("type") != "function":
+                    raise ValueError("every tool must be a function schema")
+                function = tool.get("function")
+                if not isinstance(function, dict) or not isinstance(
+                    function.get("name"), str
+                ) or not function["name"]:
+                    raise ValueError("every tool schema needs a nonempty function name")
+                if not isinstance(function.get("parameters"), dict):
+                    raise ValueError("every tool schema needs an object parameters schema")
+                if function["name"] in tool_names:
+                    raise ValueError(f"duplicate tool schema: {function['name']}")
+                tool_names.add(function["name"])
+            if item["expected_tool"] != "none" and item["expected_tool"] not in tool_names:
+                raise ValueError("expected_tool is not present in the offered tools")
             fingerprint = item.get("case_fingerprint")
             if fingerprint is not None and (
                 not isinstance(fingerprint, str)

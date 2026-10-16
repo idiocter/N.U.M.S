@@ -9,6 +9,13 @@ import pytest
 from training.evaluate import evaluate, load_cases, write_report
 
 
+def _tool(name: str) -> dict:
+    return {
+        "type": "function",
+        "function": {"name": name, "description": "test", "parameters": {"type": "object"}},
+    }
+
+
 def _fingerprint(case: dict) -> str:
     protected = {
         "messages": case["messages"][:-1],
@@ -26,14 +33,14 @@ def test_evaluate_reports_per_tool_results(monkeypatch, tmp_path) -> None:
         {
             "id": "right",
             "messages": [{"role": "user", "content": "status"}, {"role": "assistant"}],
-            "tools": [],
+            "tools": [_tool("system_info")],
             "expected_tool": "system_info",
             "expected_arguments": {},
         },
         {
             "id": "wrong",
             "messages": [{"role": "user", "content": "open notes"}, {"role": "assistant"}],
-            "tools": [],
+            "tools": [_tool("open_app")],
             "expected_tool": "open_app",
             "expected_arguments": {"name": "Notes"},
         },
@@ -124,7 +131,8 @@ def test_request_failure_scores_wrong_and_keeps_next_case(monkeypatch, tmp_path)
 def test_non_object_tool_arguments_are_a_model_response_error(monkeypatch, tmp_path) -> None:
     example = {
         "id": "list-args", "messages": [{"role": "user"}, {"role": "assistant"}],
-        "tools": [], "expected_tool": "system_info", "expected_arguments": {},
+        "tools": [_tool("system_info")],
+        "expected_tool": "system_info", "expected_arguments": {},
     }
     data = tmp_path / "test.jsonl"
     data.write_text(json.dumps(example) + "\n")
@@ -156,6 +164,28 @@ def test_evaluation_input_rejects_duplicate_ids_before_requests(monkeypatch, tmp
 
     with pytest.raises(ValueError, match="duplicate id"):
         evaluate(data, "test-model", "http://ollama.test")
+
+
+@pytest.mark.parametrize(
+    ("tools", "expected_tool", "error"),
+    [
+        ([{"type": "command", "function": {}}], "none", "must be a function schema"),
+        ([{"type": "function", "function": {"name": "read_file"}}], "none", "parameters schema"),
+        ([_tool("read_file"), _tool("read_file")], "read_file", "duplicate tool schema"),
+        ([_tool("read_file")], "write_file", "not present in the offered tools"),
+    ],
+)
+def test_evaluation_input_validates_offered_tools(
+    tmp_path, tools, expected_tool, error
+) -> None:
+    data = tmp_path / "test.jsonl"
+    data.write_text(json.dumps({
+        "id": "bad-tools", "messages": [{"role": "user"}, {"role": "assistant"}],
+        "tools": tools, "expected_tool": expected_tool, "expected_arguments": {},
+    }) + "\n")
+
+    with pytest.raises(ValueError, match=error):
+        load_cases(data)
 
 
 @pytest.mark.parametrize(

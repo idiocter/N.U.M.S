@@ -89,6 +89,8 @@ fingerprint format, before it sends any request to Ollama. When a case includes
 a fingerprint, the evaluator recomputes it and rejects edits to the prompt,
 tools, or expected label made after the split was built. Message roles, content,
 and ordering are also checked so a malformed conversation cannot reach Ollama.
+Tool schemas must be unique function definitions, and each expected tool must
+actually be present in the tools offered to the model.
 
 The evaluator sends prompts to Ollama and **does not execute** the model's requested tools. Compare the same held-out set against both models. Do not switch NUMS to a trained model unless it improves tool choice and full argument accuracy on representative held-out tasks.
 
