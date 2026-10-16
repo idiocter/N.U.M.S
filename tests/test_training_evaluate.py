@@ -16,6 +16,13 @@ def _tool(name: str) -> dict:
     }
 
 
+def _assistant_call(name: str, arguments: dict) -> dict:
+    return {
+        "role": "assistant",
+        "tool_calls": [{"function": {"name": name, "arguments": json.dumps(arguments)}}],
+    }
+
+
 def _fingerprint(case: dict) -> str:
     protected = {
         "messages": case["messages"][:-1],
@@ -32,14 +39,20 @@ def test_evaluate_reports_per_tool_results(monkeypatch, tmp_path) -> None:
     examples = [
         {
             "id": "right",
-            "messages": [{"role": "user", "content": "status"}, {"role": "assistant"}],
+            "messages": [
+                {"role": "user", "content": "status"},
+                _assistant_call("system_info", {}),
+            ],
             "tools": [_tool("system_info")],
             "expected_tool": "system_info",
             "expected_arguments": {},
         },
         {
             "id": "wrong",
-            "messages": [{"role": "user", "content": "open notes"}, {"role": "assistant"}],
+            "messages": [
+                {"role": "user", "content": "open notes"},
+                _assistant_call("open_app", {"name": "Notes"}),
+            ],
             "tools": [_tool("open_app")],
             "expected_tool": "open_app",
             "expected_arguments": {"name": "Notes"},
@@ -130,7 +143,8 @@ def test_request_failure_scores_wrong_and_keeps_next_case(monkeypatch, tmp_path)
 
 def test_non_object_tool_arguments_are_a_model_response_error(monkeypatch, tmp_path) -> None:
     example = {
-        "id": "list-args", "messages": [{"role": "user"}, {"role": "assistant"}],
+        "id": "list-args",
+        "messages": [{"role": "user"}, _assistant_call("system_info", {})],
         "tools": [_tool("system_info")],
         "expected_tool": "system_info", "expected_arguments": {},
     }
@@ -182,6 +196,32 @@ def test_evaluation_input_validates_offered_tools(
     data.write_text(json.dumps({
         "id": "bad-tools", "messages": [{"role": "user"}, {"role": "assistant"}],
         "tools": tools, "expected_tool": expected_tool, "expected_arguments": {},
+    }) + "\n")
+
+    with pytest.raises(ValueError, match=error):
+        load_cases(data)
+
+
+@pytest.mark.parametrize(
+    ("expected_tool", "expected_arguments", "assistant", "error"),
+    [
+        ("none", {}, _assistant_call("read_file", {"path": "/tmp/a"}), "no-tool label"),
+        ("read_file", {"path": "/tmp/a"}, {"role": "assistant"}, "contain one tool call"),
+        (
+            "read_file", {"path": "/tmp/a"},
+            _assistant_call("read_file", {"path": "/tmp/b"}), "do not match",
+        ),
+    ],
+)
+def test_evaluation_input_validates_expected_assistant_label(
+    tmp_path, expected_tool, expected_arguments, assistant, error
+) -> None:
+    data = tmp_path / "test.jsonl"
+    tools = [] if expected_tool == "none" else [_tool(expected_tool)]
+    data.write_text(json.dumps({
+        "id": "bad-label", "messages": [{"role": "user"}, assistant],
+        "tools": tools, "expected_tool": expected_tool,
+        "expected_arguments": expected_arguments,
     }) + "\n")
 
     with pytest.raises(ValueError, match=error):

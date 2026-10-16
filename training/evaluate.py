@@ -86,6 +86,30 @@ def load_cases(data: Path) -> list[dict[str, Any]]:
                 tool_names.add(function["name"])
             if item["expected_tool"] != "none" and item["expected_tool"] not in tool_names:
                 raise ValueError("expected_tool is not present in the offered tools")
+            expected_message = item["messages"][-1]
+            expected_calls = expected_message.get("tool_calls") or []
+            if item["expected_tool"] == "none":
+                if expected_calls:
+                    raise ValueError("a no-tool label cannot have an expected tool call")
+            else:
+                if len(expected_calls) != 1 or not isinstance(expected_calls[0], dict):
+                    raise ValueError("the expected assistant reply must contain one tool call")
+                expected_function = expected_calls[0].get("function")
+                if not isinstance(expected_function, dict):
+                    raise ValueError("the expected tool call needs a function")
+                labeled_arguments = expected_function.get("arguments")
+                if isinstance(labeled_arguments, str):
+                    try:
+                        labeled_arguments = json.loads(labeled_arguments)
+                    except json.JSONDecodeError as exc:
+                        raise ValueError(
+                            "expected tool call arguments must contain valid JSON"
+                        ) from exc
+                if (
+                    expected_function.get("name") != item["expected_tool"]
+                    or labeled_arguments != item["expected_arguments"]
+                ):
+                    raise ValueError("expected fields do not match the assistant tool call")
             fingerprint = item.get("case_fingerprint")
             if fingerprint is not None and (
                 not isinstance(fingerprint, str)
