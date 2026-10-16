@@ -81,7 +81,8 @@ timeouts, rate limits, and temporary server failures qualify. Permanent HTTP
 errors and malformed model responses are scored immediately rather than retried.
 
 The JSON report includes overall accuracy, a breakdown by expected tool, and
-case-level failures and arguments so regressions can be compared before
+case-level failures, arguments, and request-attempt counts so regressions and
+transient service instability can be compared before
 installing an adapted model. Reports are written with owner-only permissions
 under `training/runs/` by default because arguments can contain private paths.
 Each case also carries a fingerprint of its prompt, system instructions, tool

@@ -89,6 +89,7 @@ def test_evaluate_reports_per_tool_results(monkeypatch, tmp_path) -> None:
     }
     assert report["cases"][1]["actual_tool"] == "open_app"
     assert report["cases"][1]["actual_arguments"] == {"name": "Mail"}
+    assert report["cases"][1]["attempts"] == 1
 
 
 def test_malformed_model_response_scores_wrong_and_keeps_next_case(monkeypatch, tmp_path) -> None:
@@ -382,6 +383,7 @@ def test_transient_request_failure_is_retried(monkeypatch, tmp_path) -> None:
     assert len(attempts) == 2
     assert report["tool_correct"] == 1
     assert report["cases"][0]["error"] is None
+    assert report["cases"][0]["attempts"] == 2
 
 
 @pytest.mark.parametrize("status", [400, 401, 404])
@@ -405,6 +407,7 @@ def test_non_transient_http_failure_is_not_retried(monkeypatch, tmp_path, status
 
     assert len(attempts) == 1
     assert report["cases"][0]["tool_correct"] is False
+    assert report["cases"][0]["attempts"] == 1
 
 
 def test_retryable_http_failure_is_retried(monkeypatch, tmp_path) -> None:

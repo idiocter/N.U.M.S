@@ -282,6 +282,7 @@ def evaluate(
                 "actual_arguments": actual,
                 "tool_correct": name_ok,
                 "arguments_correct": args_ok,
+                "attempts": attempt + 1,
                 "error": error,
             }
         )
