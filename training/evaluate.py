@@ -52,6 +52,18 @@ def load_cases(data: Path) -> list[dict[str, Any]]:
                 raise ValueError("messages must contain the prompt and expected reply")
             if not all(isinstance(message, dict) for message in item["messages"]):
                 raise ValueError("every message must be an object")
+            roles = [message.get("role") for message in item["messages"]]
+            if any(role not in {"system", "user", "assistant", "tool"} for role in roles):
+                raise ValueError("every message needs a recognized role")
+            if roles[-1] != "assistant":
+                raise ValueError("the expected final message must be from the assistant")
+            if "user" not in roles[:-1]:
+                raise ValueError("messages must include a user prompt before the expected reply")
+            for message in item["messages"]:
+                if "content" in message and not isinstance(message["content"], str):
+                    raise ValueError("message content must be a string when provided")
+                if "tool_calls" in message and not isinstance(message["tool_calls"], list):
+                    raise ValueError("message tool_calls must be a list when provided")
             if not isinstance(item.get("tools"), list):
                 raise ValueError("tools must be a list")
             if not isinstance(item.get("expected_tool"), str) or not item["expected_tool"]:

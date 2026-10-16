@@ -158,6 +158,26 @@ def test_evaluation_input_rejects_duplicate_ids_before_requests(monkeypatch, tmp
         evaluate(data, "test-model", "http://ollama.test")
 
 
+@pytest.mark.parametrize(
+    ("messages", "error"),
+    [
+        ([{"role": "developer"}, {"role": "assistant"}], "recognized role"),
+        ([{"role": "user"}, {"role": "user"}], "final message must be from the assistant"),
+        ([{"role": "system"}, {"role": "assistant"}], "include a user prompt"),
+        ([{"role": "user", "content": 42}, {"role": "assistant"}], "content must be a string"),
+    ],
+)
+def test_evaluation_input_validates_message_structure(tmp_path, messages, error) -> None:
+    data = tmp_path / "test.jsonl"
+    data.write_text(json.dumps({
+        "id": "bad-messages", "messages": messages, "tools": [],
+        "expected_tool": "none", "expected_arguments": {},
+    }) + "\n")
+
+    with pytest.raises(ValueError, match=error):
+        load_cases(data)
+
+
 def test_evaluation_input_validates_case_fingerprint(tmp_path) -> None:
     data = tmp_path / "test.jsonl"
     data.write_text(json.dumps({
