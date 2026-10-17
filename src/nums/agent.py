@@ -130,6 +130,7 @@ class Agent:
         last_signature: str | None = None
         last_result: str | None = None
         unchanged_count = 0
+        outcome_counts: dict[str, int] = {}
         executed_calls = 0
         try:
             for step in range(1, self.settings.max_steps + 1):
@@ -195,11 +196,18 @@ class Agent:
                         return reply
                     result = self.tools.execute(name, args)
                     executed_calls += 1
+                    was_consecutive = signature == last_signature
                     if signature == last_signature and result == last_result:
                         unchanged_count += 1
                     else:
                         unchanged_count = 1
                     last_signature, last_result = signature, result
+                    outcome_signature = json.dumps(
+                        [name, args, result], sort_keys=True, default=str
+                    )
+                    outcome_counts[outcome_signature] = outcome_counts.get(
+                        outcome_signature, 0
+                    ) + 1
                     try:
                         parsed_result = json.loads(result)
                         if isinstance(parsed_result, dict) and "error" in parsed_result:
@@ -207,6 +215,34 @@ class Agent:
                     except (json.JSONDecodeError, TypeError):
                         pass
                     self.messages.append({"role": "tool", "tool_name": name, "content": result})
+                    if (
+                        not was_consecutive
+                        and outcome_counts[outcome_signature] > self.settings.repeat_tool_limit
+                    ):
+                        for skipped in calls[index + 1:]:
+                            skipped_function = skipped["function"]
+                            skipped_name = skipped_function["name"]
+                            trace_calls.append({
+                                "tool": skipped_name,
+                                "arguments": skipped_function["arguments"],
+                            })
+                            self.last_run["tool_calls"] += 1
+                            self.last_run["tool_errors"] += 1
+                            self.messages.append({
+                                "role": "tool", "tool_name": skipped_name,
+                                "content": json.dumps({
+                                    "error": "Skipped after a repeated tool-call cycle"
+                                }),
+                            })
+                        self.last_run["status"] = "no_progress"
+                        reply = (
+                            f"I stopped after {name} repeated the same result "
+                            "within a tool-call cycle."
+                        )
+                        self.messages.append({"role": "assistant", "content": reply})
+                        self._save_history()
+                        self._trace(prompt, trace_calls, reply, "repeated tool-call cycle")
+                        return reply
         except OllamaError as exc:
             self.last_run["status"] = "model_error"
             if executed_calls:

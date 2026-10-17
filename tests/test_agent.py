@@ -297,6 +297,32 @@ def test_repeated_tool_call_can_continue_when_results_change() -> None:
     assert agent.last_run["status"] == "completed"
 
 
+def test_alternating_tool_loop_stops_when_outcomes_repeat() -> None:
+    class AlternatingClient:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def chat(self, messages, tools):
+            name = "system_info" if self.calls % 2 == 0 else "read_file"
+            arguments = {} if name == "system_info" else {"path": "/tmp/status"}
+            self.calls += 1
+            return {"message": {"role": "assistant", "tool_calls": [
+                {"function": {"name": name, "arguments": arguments}}
+            ]}}
+
+    agent = Agent(Settings(max_steps=8, repeat_tool_limit=2))
+    agent.client = AlternatingClient()  # type: ignore[assignment]
+    tools = RecordingTools()
+    agent.tools = tools  # type: ignore[assignment]
+
+    reply = agent.run("alternate forever")
+
+    assert "tool-call cycle" in reply
+    assert len(tools.calls) == 5
+    assert agent.last_run["status"] == "no_progress"
+    assert agent.last_run["steps"] == 5
+
+
 def test_run_report_counts_tool_errors() -> None:
     agent = Agent(Settings())
     agent.client = FakeClient()  # type: ignore[assignment]
