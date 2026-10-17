@@ -43,6 +43,8 @@ budget so an unexpectedly large file cannot exhaust memory. Stored user,
 assistant, tool, and tool-call fields are validated before they reach the
 model. NUMS also validates complete user, assistant, and matching tool-result
 sequences while still discarding a final turn interrupted by disconnection.
+The same validation runs before an atomic save, leaving the prior history
+untouched if a caller supplies an incomplete conversation.
 `NUMS_HISTORY_TURNS` controls how many
 recent turns reach the model on each request (default: 8).
 `NUMS_MAX_CONTEXT_CHARS` also removes oldest complete turns when the saved

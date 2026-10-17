@@ -145,3 +145,17 @@ def test_history_rejects_mismatched_tool_result(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="Invalid NUMS history sequence"):
         HistoryStore(path).load()
+
+
+def test_invalid_save_keeps_previous_history(tmp_path: Path) -> None:
+    path = tmp_path / "history.json"
+    original = json.dumps([
+        {"role": "user", "content": "hello"},
+        {"role": "assistant", "content": "hi"},
+    ])
+    path.write_text(original)
+
+    with pytest.raises(ValueError, match="incomplete NUMS history"):
+        HistoryStore(path).save([{"role": "user", "content": "unfinished"}])
+
+    assert path.read_text() == original

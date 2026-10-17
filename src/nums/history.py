@@ -118,6 +118,10 @@ class HistoryStore:
         return _complete_history(messages, self.path)
 
     def save(self, messages: list[dict[str, Any]]) -> None:
+        if not isinstance(messages, list) or any(not _valid_message(item) for item in messages):
+            raise ValueError(f"Invalid NUMS history at {self.path}")
+        if _complete_history(messages, self.path) != messages:
+            raise ValueError(f"Cannot save incomplete NUMS history at {self.path}")
         self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         temporary = None
         try:
