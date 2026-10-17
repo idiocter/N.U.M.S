@@ -138,6 +138,22 @@ def test_rejected_trace_is_reviewed_but_not_exported(tmp_path: Path) -> None:
     assert output.read_text() == ""
 
 
+def test_rejected_trace_requires_review_notes(tmp_path: Path) -> None:
+    review = tmp_path / "review.jsonl"
+    output = tmp_path / "examples.jsonl"
+    review.write_text(json.dumps({
+        "id": "unclear-rejection", "user": "open Safari",
+        "proposed_tool": "open_item", "proposed_arguments": {"target": "Safari"},
+        "tool": "open_item", "arguments": {"target": "Safari"},
+        "reviewed": True, "decision": "reject", "review_notes": "  ",
+    }) + "\n")
+
+    with pytest.raises(ValueError, match="reject decision needs review_notes"):
+        export(review, output)
+
+    assert not output.exists()
+
+
 def test_accept_decision_must_match_model_proposal(tmp_path: Path) -> None:
     review = tmp_path / "review.jsonl"
     output = tmp_path / "examples.jsonl"

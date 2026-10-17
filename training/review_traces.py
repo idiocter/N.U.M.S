@@ -200,6 +200,10 @@ def export(review_path: Path, output_path: Path) -> int:
                 f"{row.get('id', 'review row')}: review decision must be accept, corrected, or reject"
             )
         if decision == "reject":
+            if not (row.get("review_notes") or "").strip():
+                raise ValueError(
+                    f"{row.get('id', 'review row')}: reject decision needs review_notes"
+                )
             continue
         if decision == "accept" and (
             row.get("tool") != row.get("proposed_tool")

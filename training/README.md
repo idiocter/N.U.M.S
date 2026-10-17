@@ -41,7 +41,8 @@ Prepare a review file, edit each record's expected `tool`, `arguments`, and
 optional `answer`, then set `reviewed` to `true` only after checking it. Set
 `decision` to `accept` when the proposed tool and arguments are correct, or
 `corrected` after fixing them. Use `reject` for a trace that should never enter
-the dataset; rejected records remain reviewed and are skipped during export.
+the dataset; rejected records require a nonempty `review_notes` explanation,
+remain reviewed, and are skipped during export.
 An `accept` decision is rejected if the label no
 longer matches the proposal. Failed model calls preserve their error and start
 with an empty proposed tool, so they cannot be mistaken for valid no-tool
