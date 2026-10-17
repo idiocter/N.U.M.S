@@ -62,6 +62,47 @@ def test_chat_bounds_http_error_detail(monkeypatch: pytest.MonkeyPatch) -> None:
     assert requested == [8]
 
 
+def test_chat_reports_truncated_response(monkeypatch: pytest.MonkeyPatch) -> None:
+    import http.client
+
+    class TruncatedResponse:
+        def read(self, *args: object) -> bytes:
+            raise http.client.IncompleteRead(b"partial")
+
+        def __enter__(self) -> "TruncatedResponse":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+    monkeypatch.setattr(
+        "nums.ollama.urllib.request.urlopen", lambda *args, **kwargs: TruncatedResponse()
+    )
+
+    with pytest.raises(OllamaError, match="truncated or malformed"):
+        OllamaClient("http://127.0.0.1:11434", "qwen").chat([], [])
+
+
+def test_model_check_treats_truncated_response_as_unready(monkeypatch: pytest.MonkeyPatch) -> None:
+    import http.client
+
+    class TruncatedResponse:
+        def read(self, *args: object) -> bytes:
+            raise http.client.IncompleteRead(b"partial")
+
+        def __enter__(self) -> "TruncatedResponse":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+    monkeypatch.setattr(
+        "nums.ollama.urllib.request.urlopen", lambda *args, **kwargs: TruncatedResponse()
+    )
+
+    assert not OllamaClient("http://127.0.0.1:11434", "qwen").has_model()
+
+
 def test_chat_explains_low_level_socket_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "nums.ollama.urllib.request.urlopen",

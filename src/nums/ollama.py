@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import http.client
 import json
 import urllib.error
 import urllib.request
@@ -48,6 +49,8 @@ class OllamaClient:
             raise OllamaError(
                 f"Cannot reach Ollama at {self.base_url}. Start it with `ollama serve`."
             ) from exc
+        except http.client.HTTPException as exc:
+            raise OllamaError("Ollama returned a truncated or malformed response") from exc
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
             raise OllamaError("Ollama returned an invalid JSON response") from exc
         if not isinstance(result, dict) or not isinstance(result.get("message"), dict):
@@ -76,7 +79,8 @@ class OllamaClient:
                 payload = _bounded_json(response, TAGS_RESPONSE_MAX_BYTES)
         except (
             urllib.error.URLError, TimeoutError, ConnectionError, OSError,
-            json.JSONDecodeError, UnicodeDecodeError, OllamaError,
+            http.client.HTTPException, json.JSONDecodeError, UnicodeDecodeError,
+            OllamaError,
         ):
             return False
         if not isinstance(payload, dict) or not isinstance(payload.get("models"), list):
