@@ -36,7 +36,8 @@ NUMS_HISTORY_FILE=~/.local/share/nums/history.json uv run nums
 ```
 
 This file includes prompts, model replies, and tool results. NUMS writes it
-atomically with owner-only permissions. `NUMS_HISTORY_TURNS` controls how many
+atomically with owner-only permissions and refuses symlink or special-file
+history inputs. `NUMS_HISTORY_TURNS` controls how many
 recent turns reach the model on each request (default: 8).
 `NUMS_MAX_CONTEXT_CHARS` also removes oldest complete turns when the saved
 conversation grows beyond its character budget (default: 60000).

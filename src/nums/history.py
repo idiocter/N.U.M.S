@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,9 @@ class HistoryStore:
     def load(self) -> list[dict[str, Any]]:
         if not self.path.exists():
             return []
+        details = self.path.lstat()
+        if self.path.is_symlink() or not stat.S_ISREG(details.st_mode):
+            raise ValueError(f"NUMS history path is not a regular file: {self.path}")
         try:
             messages = json.loads(self.path.read_text())
         except (OSError, json.JSONDecodeError) as exc:

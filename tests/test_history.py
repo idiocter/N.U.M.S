@@ -37,6 +37,16 @@ def test_corrupt_history_has_clear_error(tmp_path: Path) -> None:
         HistoryStore(path).load()
 
 
+def test_history_refuses_symlink_input(tmp_path: Path) -> None:
+    target = tmp_path / "actual.json"
+    target.write_text("[]")
+    link = tmp_path / "history.json"
+    link.symlink_to(target)
+
+    with pytest.raises(ValueError, match="not a regular file"):
+        HistoryStore(link).load()
+
+
 def test_legacy_history_drops_unfinished_tool_turn(tmp_path: Path) -> None:
     path = tmp_path / "history.json"
     complete = [
