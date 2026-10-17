@@ -5,7 +5,6 @@ import shutil
 import subprocess
 import sys
 import time
-import urllib.error
 import urllib.request
 from pathlib import Path
 from urllib.parse import urlparse
@@ -73,7 +72,10 @@ def _ollama_reachable(url: str) -> bool:
     try:
         with urllib.request.urlopen(f"{url}/api/version", timeout=1):
             return True
-    except (urllib.error.URLError, TimeoutError, ConnectionError):
+    except OSError:
+        # URLError, TimeoutError, ConnectionError, and socket errors such as
+        # gaierror are all OSError subclasses; a reachability probe must never
+        # raise and abort startup.
         return False
 
 

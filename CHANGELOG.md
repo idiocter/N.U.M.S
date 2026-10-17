@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Bounded the Ollama HTTP error-response body read so a large error payload cannot be pulled into memory.
+- Hardened the Ollama reachability probe to treat any socket error (including DNS failures) as unreachable instead of aborting startup.
 - Added bounded retries for transient Ollama failures during held-out evaluation.
 - Added private per-case checkpoints and resumable held-out model evaluation.
 - Validated complete held-out datasets before sending any evaluation requests to Ollama.

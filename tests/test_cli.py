@@ -3,7 +3,8 @@ from contextlib import nullcontext
 import pytest
 
 from nums.cli import (
-    doctor, ensure_ollama_running, main, prepare_voice, verify_text_model, verify_voice_model, wake_mode,
+    _ollama_reachable, doctor, ensure_ollama_running, main, prepare_voice,
+    verify_text_model, verify_voice_model, wake_mode,
 )
 from nums.config import Settings
 from nums.ollama import OllamaError
@@ -188,6 +189,15 @@ def test_local_ollama_starts_when_needed(monkeypatch: pytest.MonkeyPatch, tmp_pa
 
     assert launches == [["/usr/local/bin/ollama", "serve"]]
     assert "Started local Ollama" in capsys.readouterr().out
+
+
+def test_reachability_probe_swallows_socket_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail(*args: object, **kwargs: object) -> None:
+        raise OSError("name resolution failed")
+
+    monkeypatch.setattr("nums.cli.urllib.request.urlopen", fail)
+
+    assert _ollama_reachable("http://127.0.0.1:11434") is False
 
 
 def test_remote_ollama_is_not_started_locally(monkeypatch: pytest.MonkeyPatch) -> None:
