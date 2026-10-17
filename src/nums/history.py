@@ -10,6 +10,37 @@ from pathlib import Path
 from typing import Any
 
 
+def _valid_message(message: Any) -> bool:
+    if not isinstance(message, dict):
+        return False
+    role = message.get("role")
+    if role == "user":
+        return isinstance(message.get("content"), str)
+    if role == "tool":
+        return (
+            isinstance(message.get("tool_name"), str)
+            and bool(message["tool_name"])
+            and isinstance(message.get("content"), str)
+        )
+    if role != "assistant":
+        return False
+    if "content" in message and not isinstance(message["content"], str):
+        return False
+    calls = message.get("tool_calls")
+    if calls is None:
+        return "content" in message
+    if not isinstance(calls, list) or not calls:
+        return False
+    return all(
+        isinstance(call, dict)
+        and isinstance(call.get("function"), dict)
+        and isinstance(call["function"].get("name"), str)
+        and bool(call["function"]["name"])
+        and isinstance(call["function"].get("arguments"), (dict, str))
+        for call in calls
+    )
+
+
 class HistoryStore:
     def __init__(self, path: Path, max_bytes: int = 1_000_000) -> None:
         self.path = path.expanduser()
@@ -33,10 +64,7 @@ class HistoryStore:
             messages = json.loads(data.decode("utf-8"))
         except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise ValueError(f"Cannot read NUMS history at {self.path}: {exc}") from exc
-        if not isinstance(messages, list) or any(
-            not isinstance(item, dict) or item.get("role") not in {"user", "assistant", "tool"}
-            for item in messages
-        ):
+        if not isinstance(messages, list) or any(not _valid_message(item) for item in messages):
             raise ValueError(f"Invalid NUMS history at {self.path}")
         while messages and (
             messages[-1]["role"] != "assistant" or messages[-1].get("tool_calls")

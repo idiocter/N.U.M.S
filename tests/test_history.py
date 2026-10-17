@@ -55,6 +55,26 @@ def test_history_read_is_bounded(tmp_path: Path) -> None:
         HistoryStore(path, max_bytes=32).load()
 
 
+@pytest.mark.parametrize(
+    "message",
+    [
+        {"role": "user", "content": 7},
+        {"role": "assistant"},
+        {"role": "assistant", "content": []},
+        {"role": "assistant", "tool_calls": []},
+        {"role": "assistant", "tool_calls": [{"function": {"name": "read_file"}}]},
+        {"role": "tool", "tool_name": "", "content": "result"},
+        {"role": "tool", "tool_name": "read_file", "content": {}},
+    ],
+)
+def test_history_validates_message_fields(tmp_path: Path, message: dict) -> None:
+    path = tmp_path / "history.json"
+    path.write_text(json.dumps([message]))
+
+    with pytest.raises(ValueError, match="Invalid NUMS history"):
+        HistoryStore(path).load()
+
+
 def test_legacy_history_drops_unfinished_tool_turn(tmp_path: Path) -> None:
     path = tmp_path / "history.json"
     complete = [
