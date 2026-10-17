@@ -291,7 +291,10 @@ train/validation/test splits, and compares model tool choices without executing
 the requested actions. The included examples are synthetic pipeline fixtures;
 collect representative reviewed examples before choosing a trained model for NUMS.
 To collect real tool decisions for review, opt in with
-`NUMS_TRACE_FILE=~/.local/share/nums/usage.nums-trace.jsonl`.
+`NUMS_TRACE_FILE=~/.local/share/nums/usage.nums-trace.jsonl`. Trace growth is
+capped at 10 MB by default; change the bound with `NUMS_TRACE_MAX_BYTES`.
+When the limit is reached, NUMS keeps answering and reports the trace error in
+`/status`.
 
 ## Architecture
 

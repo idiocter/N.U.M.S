@@ -68,3 +68,14 @@ def test_trace_failure_does_not_hide_completed_response(tmp_path: Path) -> None:
     assert agent.last_run["status"] == "completed"
     assert agent.trace_error
     assert target.read_text() == "original"
+
+
+def test_trace_store_stops_before_size_limit(tmp_path: Path) -> None:
+    trace = tmp_path / "trace.jsonl"
+    trace.write_text("existing\n")
+    store = TraceStore(trace, max_bytes=32)
+
+    with pytest.raises(ValueError, match="trace (entry exceeds|reached)"):
+        store.append("a prompt too large for the remaining space", [], "done")
+
+    assert trace.read_text() == "existing\n"

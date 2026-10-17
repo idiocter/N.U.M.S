@@ -62,7 +62,10 @@ class Agent:
             HistoryStore(Path(settings.history_file), max_bytes=settings.max_context_chars * 4)
             if settings.history_file else None
         )
-        self.trace_store = TraceStore(Path(settings.trace_file)) if settings.trace_file else None
+        self.trace_store = (
+            TraceStore(Path(settings.trace_file), max_bytes=settings.trace_max_bytes)
+            if settings.trace_file else None
+        )
         saved = self.history_store.load() if self.history_store else []
         self.system_message = {
             "role": "system",

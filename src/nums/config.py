@@ -30,6 +30,7 @@ class Settings:
     max_context_chars: int = 60000
     history_file: str | None = None
     trace_file: str | None = None
+    trace_max_bytes: int = 10_000_000
     action_mode: str = "unrestricted"
     repeat_tool_limit: int = 2
     session_timeout_seconds: int = 300
@@ -91,6 +92,9 @@ class Settings:
             if os.getenv("NUMS_HISTORY_FILE") else None,
             trace_file=os.path.expanduser(os.environ["NUMS_TRACE_FILE"])
             if os.getenv("NUMS_TRACE_FILE") else None,
+            trace_max_bytes=_integer(
+                "NUMS_TRACE_MAX_BYTES", cls.trace_max_bytes, 1024
+            ),
             action_mode=action_mode,
             repeat_tool_limit=_integer("NUMS_REPEAT_TOOL_LIMIT", cls.repeat_tool_limit, 1),
             session_timeout_seconds=_integer(
