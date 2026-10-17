@@ -246,6 +246,32 @@ def test_stream_reports_failed_process_exit(monkeypatch: pytest.MonkeyPatch, tmp
         list(WhisperStream(str(model)).transcripts())
 
 
+def test_stream_failure_tail_is_bounded(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    model = tmp_path / "model.bin"
+    model.touch()
+
+    class FailedProcess:
+        returncode = 2
+
+        def poll(self) -> int:
+            return 2
+
+    def fake_popen(command: list[str], **kwargs: object) -> FailedProcess:
+        log = kwargs["stdout"]  # type: ignore[index]
+        log.write("EARLY-NOISE\n" + "x" * 10000 + "\nTAIL-REASON\n")  # type: ignore[union-attr]
+        return FailedProcess()
+
+    monkeypatch.setattr("nums.wake.shutil.which", lambda _: "/usr/local/bin/whisper-stream")
+    monkeypatch.setattr("nums.wake.subprocess.Popen", fake_popen)
+
+    with pytest.raises(RuntimeError) as excinfo:
+        list(WhisperStream(str(model)).transcripts())
+
+    message = str(excinfo.value)
+    assert "TAIL-REASON" in message
+    assert "EARLY-NOISE" not in message
+
+
 def test_stream_explains_startup_failure(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     model = tmp_path / "model.bin"
     model.touch()

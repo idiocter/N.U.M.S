@@ -252,8 +252,9 @@ class WhisperStream:
 
                 if self.process.returncode == 0:
                     return
-                log.seek(0)
-                tail = log.read()[-3000:].strip()
+                size = log.seek(0, os.SEEK_END)
+                log.seek(max(0, size - 3000))
+                tail = log.read().strip()
                 raise RuntimeError(
                     f"whisper-stream stopped with exit code {self.process.returncode}:\n{tail}"
                 )
