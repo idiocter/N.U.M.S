@@ -60,6 +60,16 @@ def test_client_normalizes_trailing_base_url(monkeypatch: pytest.MonkeyPatch) ->
     assert requests == ["http://127.0.0.1:11434/api/chat"]
 
 
+def test_chat_rejects_oversized_response(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("nums.ollama.CHAT_RESPONSE_MAX_BYTES", 32)
+    monkeypatch.setattr(
+        "nums.ollama.urllib.request.urlopen", lambda *args, **kwargs: io.BytesIO(b"x" * 33),
+    )
+
+    with pytest.raises(OllamaError, match="exceeded the 32-byte limit"):
+        OllamaClient("http://127.0.0.1:11434", "qwen").chat([], [])
+
+
 def test_model_check_treats_malformed_json_as_unready(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("nums.ollama.urllib.request.urlopen", lambda *args, **kwargs: io.BytesIO(b"not json"))
 
