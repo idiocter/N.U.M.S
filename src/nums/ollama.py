@@ -11,6 +11,7 @@ class OllamaError(RuntimeError):
 
 
 CHAT_RESPONSE_MAX_BYTES = 4 * 1024 * 1024
+TAGS_RESPONSE_MAX_BYTES = 2 * 1024 * 1024
 
 
 def _bounded_json(response: Any, max_bytes: int) -> Any:
@@ -71,10 +72,10 @@ class OllamaClient:
     def has_model(self) -> bool:
         try:
             with urllib.request.urlopen(f"{self.base_url}/api/tags", timeout=5) as response:
-                payload = json.load(response)
+                payload = _bounded_json(response, TAGS_RESPONSE_MAX_BYTES)
         except (
             urllib.error.URLError, TimeoutError, ConnectionError, OSError,
-            json.JSONDecodeError, UnicodeDecodeError,
+            json.JSONDecodeError, UnicodeDecodeError, OllamaError,
         ):
             return False
         if not isinstance(payload, dict) or not isinstance(payload.get("models"), list):

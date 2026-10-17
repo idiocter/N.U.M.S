@@ -85,6 +85,15 @@ def test_model_check_treats_socket_failure_as_unready(monkeypatch: pytest.Monkey
     assert not OllamaClient("http://127.0.0.1:11434", "qwen").has_model()
 
 
+def test_model_check_rejects_oversized_catalog(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("nums.ollama.TAGS_RESPONSE_MAX_BYTES", 16)
+    monkeypatch.setattr(
+        "nums.ollama.urllib.request.urlopen", lambda *args, **kwargs: io.BytesIO(b"x" * 17),
+    )
+
+    assert not OllamaClient("http://127.0.0.1:11434", "qwen").has_model()
+
+
 @pytest.mark.parametrize("tool_calls", ["wrong", [None], [{"function": {"name": "shell"}}]])
 def test_chat_rejects_malformed_tool_calls_before_execution(
     monkeypatch: pytest.MonkeyPatch, tool_calls: object
