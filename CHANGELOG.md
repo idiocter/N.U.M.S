@@ -6,6 +6,7 @@
 - Hardened the Ollama reachability probe to treat any socket error (including DNS failures) as unreachable instead of aborting startup.
 - Bounded the whisper-stream failure log tail to the final bytes so a large log is not fully read into memory.
 - Surfaced truncated or malformed Ollama HTTP responses as a clean error instead of an uncaught exception.
+- Carried the configured trace size limit into the installed LaunchAgent so a custom NUMS_TRACE_MAX_BYTES survives service installation.
 - Added bounded retries for transient Ollama failures during held-out evaluation.
 - Added private per-case checkpoints and resumable held-out model evaluation.
 - Validated complete held-out datasets before sending any evaluation requests to Ollama.

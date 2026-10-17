@@ -33,7 +33,18 @@ def test_service_plist_runs_current_environment_and_preserves_settings() -> None
     assert data["EnvironmentVariables"]["NUMS_SLEEP_PHRASES"] == "sleep nums|good night"
     assert data["EnvironmentVariables"]["NUMS_WHISPER_MODEL"] == "/tmp/voice.bin"
     assert data["EnvironmentVariables"]["PATH"] == os.environ.get("PATH", os.defpath)
+    assert "NUMS_TRACE_FILE" not in data["EnvironmentVariables"]
+    assert "NUMS_TRACE_MAX_BYTES" not in data["EnvironmentVariables"]
     assert data["KeepAlive"] is True
+
+
+def test_service_plist_carries_trace_limit_with_trace_file() -> None:
+    data = plistlib.loads(service_plist(Settings(
+        trace_file="/tmp/trace.jsonl", trace_max_bytes=2048,
+    )))
+
+    assert data["EnvironmentVariables"]["NUMS_TRACE_FILE"] == "/tmp/trace.jsonl"
+    assert data["EnvironmentVariables"]["NUMS_TRACE_MAX_BYTES"] == "2048"
 
 
 def test_failed_service_update_restores_previous_plist(

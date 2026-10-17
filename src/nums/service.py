@@ -42,6 +42,7 @@ def service_plist(settings: Settings) -> bytes:
         environment["NUMS_HISTORY_FILE"] = settings.history_file
     if settings.trace_file:
         environment["NUMS_TRACE_FILE"] = settings.trace_file
+        environment["NUMS_TRACE_MAX_BYTES"] = str(settings.trace_max_bytes)
     return plistlib.dumps({
         "Label": LABEL,
         "ProgramArguments": [sys.executable, "-m", "nums.cli", "--wake"],
