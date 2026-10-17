@@ -58,7 +58,10 @@ class Agent:
             settings.ollama_url, settings.model, timeout=settings.ollama_timeout_seconds
         )
         self.tools = MacTools(settings.action_mode)
-        self.history_store = HistoryStore(Path(settings.history_file)) if settings.history_file else None
+        self.history_store = (
+            HistoryStore(Path(settings.history_file), max_bytes=settings.max_context_chars * 4)
+            if settings.history_file else None
+        )
         self.trace_store = TraceStore(Path(settings.trace_file)) if settings.trace_file else None
         saved = self.history_store.load() if self.history_store else []
         self.system_message = {

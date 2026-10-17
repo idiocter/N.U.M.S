@@ -47,6 +47,14 @@ def test_history_refuses_symlink_input(tmp_path: Path) -> None:
         HistoryStore(link).load()
 
 
+def test_history_read_is_bounded(tmp_path: Path) -> None:
+    path = tmp_path / "history.json"
+    path.write_text(json.dumps([{"role": "user", "content": "x" * 100}]))
+
+    with pytest.raises(ValueError, match="exceeds the 32-byte limit"):
+        HistoryStore(path, max_bytes=32).load()
+
+
 def test_legacy_history_drops_unfinished_tool_turn(tmp_path: Path) -> None:
     path = tmp_path / "history.json"
     complete = [

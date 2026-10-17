@@ -11,8 +11,11 @@ from typing import Any
 
 
 class HistoryStore:
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, max_bytes: int = 1_000_000) -> None:
         self.path = path.expanduser()
+        if max_bytes < 1:
+            raise ValueError("history max_bytes must be positive")
+        self.max_bytes = max_bytes
 
     def load(self) -> list[dict[str, Any]]:
         if not self.path.exists():
@@ -21,8 +24,14 @@ class HistoryStore:
         if self.path.is_symlink() or not stat.S_ISREG(details.st_mode):
             raise ValueError(f"NUMS history path is not a regular file: {self.path}")
         try:
-            messages = json.loads(self.path.read_text())
-        except (OSError, json.JSONDecodeError) as exc:
+            with self.path.open("rb") as handle:
+                data = handle.read(self.max_bytes + 1)
+            if len(data) > self.max_bytes:
+                raise ValueError(
+                    f"NUMS history at {self.path} exceeds the {self.max_bytes}-byte limit"
+                )
+            messages = json.loads(data.decode("utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise ValueError(f"Cannot read NUMS history at {self.path}: {exc}") from exc
         if not isinstance(messages, list) or any(
             not isinstance(item, dict) or item.get("role") not in {"user", "assistant", "tool"}
