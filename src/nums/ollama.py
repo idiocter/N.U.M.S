@@ -12,6 +12,7 @@ class OllamaError(RuntimeError):
 
 CHAT_RESPONSE_MAX_BYTES = 4 * 1024 * 1024
 TAGS_RESPONSE_MAX_BYTES = 2 * 1024 * 1024
+ERROR_DETAIL_MAX_BYTES = 4096
 
 
 def _bounded_json(response: Any, max_bytes: int) -> Any:
@@ -41,7 +42,7 @@ class OllamaClient:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
                 result = _bounded_json(response, CHAT_RESPONSE_MAX_BYTES)
         except urllib.error.HTTPError as exc:
-            detail = exc.read().decode(errors="replace")[:1000]
+            detail = exc.read(ERROR_DETAIL_MAX_BYTES).decode(errors="replace")[:1000]
             raise OllamaError(f"Ollama returned HTTP {exc.code}: {detail}") from exc
         except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as exc:
             raise OllamaError(

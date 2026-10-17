@@ -36,6 +36,32 @@ def test_chat_explains_connection_failure(monkeypatch: pytest.MonkeyPatch) -> No
         OllamaClient("http://127.0.0.1:11434", "qwen").chat([], [])
 
 
+def test_chat_bounds_http_error_detail(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("nums.ollama.ERROR_DETAIL_MAX_BYTES", 8)
+    requested: list[int | None] = []
+
+    class RecordingBody:
+        def read(self, size: int | None = None) -> bytes:
+            requested.append(size)
+            body = b"detail-" * 1000
+            return body if size is None else body[:size]
+
+        def close(self) -> None:
+            pass
+
+    def raise_http(*args: object, **kwargs: object) -> None:
+        raise urllib.error.HTTPError(
+            "http://127.0.0.1:11434/api/chat", 500, "Server Error", {}, RecordingBody()
+        )
+
+    monkeypatch.setattr("nums.ollama.urllib.request.urlopen", raise_http)
+
+    with pytest.raises(OllamaError, match="Ollama returned HTTP 500: detail-d"):
+        OllamaClient("http://127.0.0.1:11434", "qwen").chat([], [])
+
+    assert requested == [8]
+
+
 def test_chat_explains_low_level_socket_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "nums.ollama.urllib.request.urlopen",

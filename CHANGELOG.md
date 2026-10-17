@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Bounded the Ollama HTTP error-response body read so a large error payload cannot be pulled into memory.
 - Added bounded retries for transient Ollama failures during held-out evaluation.
 - Added private per-case checkpoints and resumable held-out model evaluation.
 - Validated complete held-out datasets before sending any evaluation requests to Ollama.
