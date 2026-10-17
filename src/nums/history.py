@@ -87,8 +87,25 @@ class HistoryStore:
         if self.path.is_symlink() or not stat.S_ISREG(details.st_mode):
             raise ValueError(f"NUMS history path is not a regular file: {self.path}")
         try:
-            with self.path.open("rb") as handle:
-                data = handle.read(self.max_bytes + 1)
+            descriptor = os.open(
+                self.path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
+            )
+            try:
+                if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+                    raise ValueError(
+                        f"NUMS history path is not a regular file: {self.path}"
+                    )
+                chunks = []
+                remaining = self.max_bytes + 1
+                while remaining:
+                    chunk = os.read(descriptor, min(remaining, 64 * 1024))
+                    if not chunk:
+                        break
+                    chunks.append(chunk)
+                    remaining -= len(chunk)
+                data = b"".join(chunks)
+            finally:
+                os.close(descriptor)
             if len(data) > self.max_bytes:
                 raise ValueError(
                     f"NUMS history at {self.path} exceeds the {self.max_bytes}-byte limit"

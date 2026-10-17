@@ -1,4 +1,5 @@
 import json
+import os
 import stat
 from pathlib import Path
 from typing import Any
@@ -53,6 +54,22 @@ def test_history_read_is_bounded(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="exceeds the 32-byte limit"):
         HistoryStore(path, max_bytes=32).load()
+
+
+def test_history_open_uses_no_follow_flag(tmp_path: Path, monkeypatch) -> None:
+    path = tmp_path / "history.json"
+    path.write_text("[]")
+    original_open = os.open
+    flags = []
+
+    def recording_open(requested, requested_flags, *args):
+        flags.append(requested_flags)
+        return original_open(requested, requested_flags, *args)
+
+    monkeypatch.setattr("nums.history.os.open", recording_open)
+
+    assert HistoryStore(path).load() == []
+    assert flags[0] & os.O_NOFOLLOW
 
 
 @pytest.mark.parametrize(

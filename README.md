@@ -37,7 +37,8 @@ NUMS_HISTORY_FILE=~/.local/share/nums/history.json uv run nums
 
 This file includes prompts, model replies, and tool results. NUMS writes it
 atomically with owner-only permissions and refuses symlink or special-file
-history inputs. History loading is bounded relative to the configured context
+history inputs. History is opened with no-follow semantics and the opened file
+descriptor is verified to close path-swap races. Loading is bounded relative to the configured context
 budget so an unexpectedly large file cannot exhaust memory. Stored user,
 assistant, tool, and tool-call fields are validated before they reach the
 model. NUMS also validates complete user, assistant, and matching tool-result
