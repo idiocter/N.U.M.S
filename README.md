@@ -40,7 +40,9 @@ atomically with owner-only permissions and refuses symlink or special-file
 history inputs. History loading is bounded relative to the configured context
 budget so an unexpectedly large file cannot exhaust memory. Stored user,
 assistant, tool, and tool-call fields are validated before they reach the
-model. `NUMS_HISTORY_TURNS` controls how many
+model. NUMS also validates complete user, assistant, and matching tool-result
+sequences while still discarding a final turn interrupted by disconnection.
+`NUMS_HISTORY_TURNS` controls how many
 recent turns reach the model on each request (default: 8).
 `NUMS_MAX_CONTEXT_CHARS` also removes oldest complete turns when the saved
 conversation grows beyond its character budget (default: 60000).

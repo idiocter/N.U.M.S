@@ -41,6 +41,38 @@ def _valid_message(message: Any) -> bool:
     )
 
 
+def _complete_history(messages: list[dict[str, Any]], path: Path) -> list[dict[str, Any]]:
+    index = 0
+    while index < len(messages):
+        turn_start = index
+        if messages[index]["role"] != "user":
+            raise ValueError(f"Invalid NUMS history sequence at {path}")
+        index += 1
+        if index == len(messages):
+            return messages[:turn_start]
+        while True:
+            assistant = messages[index]
+            if assistant["role"] != "assistant":
+                raise ValueError(f"Invalid NUMS history sequence at {path}")
+            calls = assistant.get("tool_calls") or []
+            index += 1
+            if not calls:
+                break
+            for call in calls:
+                if index == len(messages):
+                    return messages[:turn_start]
+                tool_message = messages[index]
+                if (
+                    tool_message["role"] != "tool"
+                    or tool_message["tool_name"] != call["function"]["name"]
+                ):
+                    raise ValueError(f"Invalid NUMS history sequence at {path}")
+                index += 1
+            if index == len(messages):
+                return messages[:turn_start]
+    return messages
+
+
 class HistoryStore:
     def __init__(self, path: Path, max_bytes: int = 1_000_000) -> None:
         self.path = path.expanduser()
@@ -66,14 +98,7 @@ class HistoryStore:
             raise ValueError(f"Cannot read NUMS history at {self.path}: {exc}") from exc
         if not isinstance(messages, list) or any(not _valid_message(item) for item in messages):
             raise ValueError(f"Invalid NUMS history at {self.path}")
-        while messages and (
-            messages[-1]["role"] != "assistant" or messages[-1].get("tool_calls")
-        ):
-            starts = [index for index, item in enumerate(messages) if item["role"] == "user"]
-            if not starts:
-                raise ValueError(f"Invalid NUMS history at {self.path}")
-            messages = messages[:starts[-1]]
-        return messages
+        return _complete_history(messages, self.path)
 
     def save(self, messages: list[dict[str, Any]]) -> None:
         self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)

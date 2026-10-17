@@ -101,3 +101,30 @@ def test_legacy_history_drops_trailing_user_without_response(tmp_path: Path) -> 
     path.write_text(json.dumps([{"role": "user", "content": "unanswered"}]))
 
     assert HistoryStore(path).load() == []
+
+
+def test_history_rejects_invalid_message_order(tmp_path: Path) -> None:
+    path = tmp_path / "history.json"
+    path.write_text(json.dumps([
+        {"role": "user", "content": "read"},
+        {"role": "tool", "tool_name": "read_file", "content": "result"},
+        {"role": "assistant", "content": "done"},
+    ]))
+
+    with pytest.raises(ValueError, match="Invalid NUMS history sequence"):
+        HistoryStore(path).load()
+
+
+def test_history_rejects_mismatched_tool_result(tmp_path: Path) -> None:
+    path = tmp_path / "history.json"
+    path.write_text(json.dumps([
+        {"role": "user", "content": "read"},
+        {"role": "assistant", "tool_calls": [
+            {"function": {"name": "read_file", "arguments": {"path": "/tmp/a"}}}
+        ]},
+        {"role": "tool", "tool_name": "write_file", "content": "result"},
+        {"role": "assistant", "content": "done"},
+    ]))
+
+    with pytest.raises(ValueError, match="Invalid NUMS history sequence"):
+        HistoryStore(path).load()
