@@ -130,7 +130,8 @@ NUMS_MODEL=qwen2.5:3b-instruct uv run nums
 ```
 
 Set `NUMS_OLLAMA_TIMEOUT` to change the maximum seconds for one model response
-(default: 180). The login service keeps the value set when it is installed.
+(default: 180). Socket and transport failures are reported consistently as
+Ollama availability errors. The login service keeps the value set when it is installed.
 
 ## Mac access
 

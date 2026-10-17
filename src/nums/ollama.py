@@ -12,7 +12,7 @@ class OllamaError(RuntimeError):
 
 class OllamaClient:
     def __init__(self, base_url: str, model: str, timeout: int = 180) -> None:
-        self.base_url = base_url
+        self.base_url = base_url.rstrip("/")
         self.model = model
         self.timeout = timeout
 
@@ -32,7 +32,7 @@ class OllamaClient:
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode(errors="replace")[:1000]
             raise OllamaError(f"Ollama returned HTTP {exc.code}: {detail}") from exc
-        except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
+        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as exc:
             raise OllamaError(
                 f"Cannot reach Ollama at {self.base_url}. Start it with `ollama serve`."
             ) from exc
@@ -62,7 +62,10 @@ class OllamaClient:
         try:
             with urllib.request.urlopen(f"{self.base_url}/api/tags", timeout=5) as response:
                 payload = json.load(response)
-        except (urllib.error.URLError, TimeoutError, ConnectionError, json.JSONDecodeError, UnicodeDecodeError):
+        except (
+            urllib.error.URLError, TimeoutError, ConnectionError, OSError,
+            json.JSONDecodeError, UnicodeDecodeError,
+        ):
             return False
         if not isinstance(payload, dict) or not isinstance(payload.get("models"), list):
             return False

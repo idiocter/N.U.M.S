@@ -36,8 +36,41 @@ def test_chat_explains_connection_failure(monkeypatch: pytest.MonkeyPatch) -> No
         OllamaClient("http://127.0.0.1:11434", "qwen").chat([], [])
 
 
+def test_chat_explains_low_level_socket_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "nums.ollama.urllib.request.urlopen",
+        lambda *args, **kwargs: (_ for _ in ()).throw(OSError("socket closed")),
+    )
+
+    with pytest.raises(OllamaError, match="Cannot reach Ollama"):
+        OllamaClient("http://127.0.0.1:11434", "qwen").chat([], [])
+
+
+def test_client_normalizes_trailing_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    requests = []
+
+    def respond(request, **kwargs):
+        requests.append(request.full_url)
+        return io.BytesIO(b'{"message":{"role":"assistant","content":"ok"}}')
+
+    monkeypatch.setattr("nums.ollama.urllib.request.urlopen", respond)
+
+    OllamaClient("http://127.0.0.1:11434/", "qwen").chat([], [])
+
+    assert requests == ["http://127.0.0.1:11434/api/chat"]
+
+
 def test_model_check_treats_malformed_json_as_unready(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("nums.ollama.urllib.request.urlopen", lambda *args, **kwargs: io.BytesIO(b"not json"))
+
+    assert not OllamaClient("http://127.0.0.1:11434", "qwen").has_model()
+
+
+def test_model_check_treats_socket_failure_as_unready(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "nums.ollama.urllib.request.urlopen",
+        lambda *args, **kwargs: (_ for _ in ()).throw(OSError("socket closed")),
+    )
 
     assert not OllamaClient("http://127.0.0.1:11434", "qwen").has_model()
 
