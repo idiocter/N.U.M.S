@@ -65,7 +65,7 @@ def _validate_review_rows(rows: list[dict], path: Path) -> None:
                 raise ValueError(f"review {path}:{number}: {key} must be an object")
         if not isinstance(row.get("reviewed"), bool):
             raise ValueError(f"review {path}:{number}: reviewed must be a boolean")
-        for key in ("answer", "source_error", "review_notes", "group"):
+        for key in ("answer", "proposed_answer", "source_error", "review_notes", "group"):
             if row.get(key) is not None and not isinstance(row[key], str):
                 raise ValueError(f"review {path}:{number}: {key} must be a string or null")
         fingerprint = row.get("source_fingerprint")
@@ -105,6 +105,7 @@ def prepare(trace_path: Path, review_path: Path) -> int:
     for row in rows:
         row.setdefault("proposed_tool", "")
         row.setdefault("proposed_arguments", {})
+        row.setdefault("proposed_answer", row.get("answer"))
         row.setdefault("decision", "")
         row.setdefault("group", "")
         row.setdefault("review_notes", "")
@@ -168,6 +169,7 @@ def prepare(trace_path: Path, review_path: Path) -> int:
             "tool": first.get("tool", "none"),
             "arguments": first.get("arguments", {}),
             "answer": trace.get("reply") if not calls else None,
+            "proposed_answer": trace.get("reply") if not calls else None,
             "source_error": trace.get("error"),
             "reviewed": False,
             "decision": "",
@@ -186,6 +188,7 @@ def export(review_path: Path, output_path: Path) -> int:
     for row in rows:
         row.setdefault("proposed_tool", "")
         row.setdefault("proposed_arguments", {})
+        row.setdefault("proposed_answer", row.get("answer"))
         row.setdefault("decision", "")
         row.setdefault("group", "")
         row.setdefault("review_notes", "")
@@ -208,9 +211,24 @@ def export(review_path: Path, output_path: Path) -> int:
         if decision == "accept" and (
             row.get("tool") != row.get("proposed_tool")
             or row.get("arguments") != row.get("proposed_arguments")
+            or (
+                row.get("tool") == "none"
+                and row.get("answer") != row.get("proposed_answer")
+            )
         ):
             raise ValueError(
                 f"{row.get('id', 'review row')}: accept decision does not match the proposal"
+            )
+        if decision == "corrected" and (
+            row.get("tool") == row.get("proposed_tool")
+            and row.get("arguments") == row.get("proposed_arguments")
+            and (
+                row.get("tool") != "none"
+                or row.get("answer") == row.get("proposed_answer")
+            )
+        ):
+            raise ValueError(
+                f"{row.get('id', 'review row')}: corrected decision does not change the proposal"
             )
         example = {key: row[key] for key in ("id", "user", "tool", "arguments")}
         if row.get("group") is not None and row.get("group") != "":

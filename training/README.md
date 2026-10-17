@@ -44,7 +44,8 @@ optional `answer`, then set `reviewed` to `true` only after checking it. Set
 the dataset; rejected records require a nonempty `review_notes` explanation,
 remain reviewed, and are skipped during export.
 An `accept` decision is rejected if the label no
-longer matches the proposal. Failed model calls preserve their error and start
+longer matches the proposed tool, arguments, or no-tool answer. A `corrected`
+decision must make an actual change to that proposal. Failed model calls preserve their error and start
 with an empty proposed tool, so they cannot be mistaken for valid no-tool
 answers. Set the optional `group` during review for related paraphrases; export
 preserves it for split isolation. Preparation validates trace structure before

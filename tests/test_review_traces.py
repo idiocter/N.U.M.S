@@ -168,6 +168,34 @@ def test_accept_decision_must_match_model_proposal(tmp_path: Path) -> None:
         export(review, output)
 
 
+def test_corrected_decision_must_change_model_proposal(tmp_path: Path) -> None:
+    review = tmp_path / "review.jsonl"
+    output = tmp_path / "examples.jsonl"
+    review.write_text(json.dumps({
+        "id": "unchanged-correction", "user": "open Safari",
+        "proposed_tool": "open_item", "proposed_arguments": {"target": "Safari"},
+        "tool": "open_item", "arguments": {"target": "Safari"},
+        "reviewed": True, "decision": "corrected",
+    }) + "\n")
+
+    with pytest.raises(ValueError, match="corrected decision does not change"):
+        export(review, output)
+
+
+def test_accept_decision_checks_no_tool_answer(tmp_path: Path) -> None:
+    review = tmp_path / "review.jsonl"
+    output = tmp_path / "examples.jsonl"
+    review.write_text(json.dumps({
+        "id": "changed-answer", "user": "say hello",
+        "proposed_tool": "none", "proposed_arguments": {},
+        "proposed_answer": "Hello", "tool": "none", "arguments": {},
+        "answer": "Goodbye", "reviewed": True, "decision": "accept",
+    }) + "\n")
+
+    with pytest.raises(ValueError, match="accept decision does not match"):
+        export(review, output)
+
+
 def test_failed_trace_is_not_proposed_as_a_no_tool_label(tmp_path: Path) -> None:
     trace = tmp_path / "trace.jsonl"
     review = tmp_path / "review.jsonl"
