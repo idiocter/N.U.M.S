@@ -46,6 +46,8 @@ sequences while still discarding a final turn interrupted by disconnection.
 recent turns reach the model on each request (default: 8).
 `NUMS_MAX_CONTEXT_CHARS` also removes oldest complete turns when the saved
 conversation grows beyond its character budget (default: 60000).
+If one prompt plus the system instructions exceeds that budget, NUMS rejects
+the prompt locally before contacting Ollama and points to the setting to change.
 When loading an older history file, NUMS skips an unfinished final turn so a
 disconnected tool call does not affect the next request.
 If the model disconnects after a tool has run, NUMS records the partial work

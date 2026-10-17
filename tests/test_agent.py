@@ -69,6 +69,25 @@ def test_empty_model_response_has_a_spoken_fallback() -> None:
     assert agent.messages[-1]["content"] == "I couldn't produce a response."
 
 
+def test_oversized_prompt_stops_before_model_request() -> None:
+    class UnexpectedClient:
+        def chat(self, messages, tools):
+            pytest.fail("oversized prompt reached the model")
+
+    baseline = Agent(Settings())
+    system_size = len(json.dumps(baseline.system_message, ensure_ascii=False))
+    agent = Agent(Settings(max_context_chars=system_size + 40))
+    agent.client = UnexpectedClient()  # type: ignore[assignment]
+
+    reply = agent.run("x" * 100)
+
+    assert "too large" in reply
+    assert agent.last_run == {
+        "status": "context_limit", "steps": 0, "tool_calls": 0, "tool_errors": 0
+    }
+    assert agent.messages == [agent.system_message]
+
+
 def test_coding_context_includes_working_directory_and_survives_reset(tmp_path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     agent = Agent(Settings())

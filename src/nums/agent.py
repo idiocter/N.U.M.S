@@ -108,11 +108,24 @@ class Agent:
             self.messages = self.messages[:1] + self.messages[next_turn:]
 
     def run(self, prompt: str) -> str:
-        self._trim_history(prompt)
         self.trace_error = None
         self.last_run = {"status": "running", "steps": 0, "tool_calls": 0, "tool_errors": 0}
+        upcoming = {"role": "user", "content": prompt}
+        minimum_context = sum(
+            len(json.dumps(message, ensure_ascii=False))
+            for message in (self.system_message, upcoming)
+        )
+        if minimum_context > self.settings.max_context_chars:
+            self.last_run["status"] = "context_limit"
+            reply = (
+                "This request is too large for the configured context limit. "
+                "Shorten it or increase NUMS_MAX_CONTEXT_CHARS."
+            )
+            self._trace(prompt, [], reply, "context limit")
+            return reply
+        self._trim_history(prompt)
         history_length = len(self.messages)
-        self.messages.append({"role": "user", "content": prompt})
+        self.messages.append(upcoming)
         trace_calls: list[dict[str, Any]] = []
         last_signature: str | None = None
         last_result: str | None = None
