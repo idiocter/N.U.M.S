@@ -39,3 +39,21 @@ def test_model_timeout_can_be_configured(monkeypatch: pytest.MonkeyPatch) -> Non
     settings = Settings.from_env()
 
     assert settings.ollama_timeout_seconds == 45
+
+
+def test_history_and_trace_cannot_share_a_file(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    shared = tmp_path / "state.json"
+    monkeypatch.setenv("NUMS_HISTORY_FILE", str(shared))
+    monkeypatch.setenv("NUMS_TRACE_FILE", str(tmp_path / ".." / tmp_path.name / "state.json"))
+
+    with pytest.raises(ValueError, match="must be different files"):
+        Settings.from_env()
+
+
+def test_distinct_history_and_trace_files_are_accepted(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    monkeypatch.setenv("NUMS_HISTORY_FILE", str(tmp_path / "history.json"))
+    monkeypatch.setenv("NUMS_TRACE_FILE", str(tmp_path / "trace.jsonl"))
+
+    settings = Settings.from_env()
+
+    assert settings.history_file != settings.trace_file

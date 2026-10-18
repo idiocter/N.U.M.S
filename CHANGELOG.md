@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Rejected configurations that point NUMS_HISTORY_FILE and NUMS_TRACE_FILE at the same file.
 - Capped the file size `replace_in_file` loads so a huge file cannot exhaust memory.
 - Bounded the Ollama HTTP error-response body read so a large error payload cannot be pulled into memory.
 - Hardened the Ollama reachability probe to treat any socket error (including DNS failures) as unreachable instead of aborting startup.

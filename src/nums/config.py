@@ -78,6 +78,12 @@ class Settings:
         )
         if not sleep_phrases:
             raise ValueError("NUMS_SLEEP_PHRASES must include at least one phrase")
+        history_file = os.getenv("NUMS_HISTORY_FILE")
+        trace_file = os.getenv("NUMS_TRACE_FILE")
+        if history_file and trace_file and os.path.realpath(
+            os.path.expanduser(history_file)
+        ) == os.path.realpath(os.path.expanduser(trace_file)):
+            raise ValueError("NUMS_HISTORY_FILE and NUMS_TRACE_FILE must be different files")
         return cls(
             model=model,
             ollama_url=url,
