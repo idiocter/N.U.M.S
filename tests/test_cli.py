@@ -260,3 +260,35 @@ def test_say_swallows_speech_failures(monkeypatch: pytest.MonkeyPatch, failure: 
     monkeypatch.setattr("nums.cli.subprocess.run", fail)
 
     _say("hello")
+
+
+def test_blank_one_shot_request_is_rejected_before_starting_ollama(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums", "  ", ""])
+    monkeypatch.setattr("nums.cli.Settings.from_env", lambda: Settings())
+    monkeypatch.setattr("nums.cli.ensure_ollama_running", lambda settings: pytest.fail("started ollama"))
+
+    with pytest.raises(SystemExit, match="request is empty"):
+        main()
+
+
+def test_one_shot_request_is_trimmed(monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    prompts = []
+
+    class FakeAgent:
+        def __init__(self, settings: Settings) -> None:
+            pass
+
+        def run(self, prompt: str) -> str:
+            prompts.append(prompt)
+            return "done"
+
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums", " open", "Safari "])
+    monkeypatch.setattr("nums.cli.Settings.from_env", lambda: Settings())
+    monkeypatch.setattr("nums.cli.Agent", FakeAgent)
+    monkeypatch.setattr("nums.cli.ensure_ollama_running", lambda settings: None)
+    monkeypatch.setattr("nums.cli.verify_text_model", lambda settings: None)
+
+    main()
+
+    assert prompts == ["open Safari"]
+    assert capsys.readouterr().out.strip() == "done"

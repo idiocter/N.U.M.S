@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Rejected blank one-shot requests before starting Ollama and trimmed surrounding whitespace from the prompt.
 - Reported unreadable history paths as a clean configuration error and closed the exists-then-stat race on load.
 - Bounded spoken replies with a timeout, guarded option-like text, and stopped a missing `say` command from ending a session.
 - Rejected configurations that point NUMS_HISTORY_FILE and NUMS_TRACE_FILE at the same file.

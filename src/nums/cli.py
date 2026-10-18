@@ -240,6 +240,9 @@ def main() -> None:
         print(f"Stopped and removed {uninstall_service()}")
         return
 
+    one_shot = " ".join(args.prompt).strip()
+    if args.prompt and not one_shot:
+        raise SystemExit("The request is empty. Provide text to run, or omit it for interactive mode.")
     if args.voice:
         prepare_voice(settings)
     ensure_ollama_running(settings)
@@ -257,7 +260,7 @@ def main() -> None:
     speak = settings.speak or args.speak
     if args.prompt:
         try:
-            response = agent.run(" ".join(args.prompt))
+            response = agent.run(one_shot)
         except OllamaError as exc:
             raise SystemExit(str(exc)) from exc
         print(response)
