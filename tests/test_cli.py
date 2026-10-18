@@ -1,9 +1,10 @@
+import subprocess
 from contextlib import nullcontext
 
 import pytest
 
 from nums.cli import (
-    _ollama_reachable, doctor, ensure_ollama_running, main, prepare_voice,
+    _ollama_reachable, _say, doctor, ensure_ollama_running, main, prepare_voice,
     verify_text_model, verify_voice_model, wake_mode,
 )
 from nums.config import Settings
@@ -238,3 +239,24 @@ def test_voice_model_probe_reports_ollama_load_error(monkeypatch: pytest.MonkeyP
 
     with pytest.raises(SystemExit, match="Metal allocation failed"):
         verify_voice_model(Settings())
+
+
+def test_say_guards_option_like_text_and_uses_a_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = []
+    monkeypatch.setattr(
+        "nums.cli.subprocess.run", lambda command, **kwargs: calls.append((command, kwargs))
+    )
+
+    _say("-v hello")
+
+    assert calls == [(["say", "--", "-v hello"], {"check": False, "timeout": 120})]
+
+
+@pytest.mark.parametrize("failure", [FileNotFoundError("say"), subprocess.TimeoutExpired("say", 120)])
+def test_say_swallows_speech_failures(monkeypatch: pytest.MonkeyPatch, failure: Exception) -> None:
+    def fail(*args: object, **kwargs: object) -> None:
+        raise failure
+
+    monkeypatch.setattr("nums.cli.subprocess.run", fail)
+
+    _say("hello")

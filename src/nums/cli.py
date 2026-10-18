@@ -32,6 +32,15 @@ LOGO = r"""
 """
 
 
+def _say(text: str) -> None:
+    """Speak text aloud; a missing or stuck `say` must never abort the session."""
+    try:
+        # "--" keeps replies that begin with "-" from being parsed as options.
+        subprocess.run(["say", "--", text], check=False, timeout=120)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
 def doctor(settings: Settings) -> int:
     print(f"Python: {sys.version.split()[0]}")
     print(f"Ollama: {shutil.which('ollama') or 'not found'}")
@@ -158,18 +167,18 @@ def wake_mode(agent: Agent, settings: Settings) -> None:
                     continue
                 if event.kind == "sleep":
                     print("NUMS > Going to sleep.\n")
-                    subprocess.run(["say", "Good night."], check=False)
+                    _say("Good night.")
                     continue
                 print(f"You > {event.text}")
                 try:
                     response = agent.run(event.text)
                 except OllamaError as exc:
                     print(f"NUMS error > {exc}\n")
-                    subprocess.run(["say", "I could not reach the local model."], check=False)
+                    _say("I could not reach the local model.")
                     detector.command_completed()
                     continue
                 print(f"NUMS > {response}\n")
-                subprocess.run(["say", response], check=False)
+                _say(response)
                 detector.command_completed()
     except KeyboardInterrupt:
         print("\nNUMS wake listener stopped.")
@@ -253,7 +262,7 @@ def main() -> None:
             raise SystemExit(str(exc)) from exc
         print(response)
         if speak:
-            subprocess.run(["say", response], check=False)
+            _say(response)
         return
 
     print(LOGO)
@@ -294,7 +303,7 @@ def main() -> None:
             continue
         print(f"NUMS > {response}\n")
         if speak:
-            subprocess.run(["say", response], check=False)
+            _say(response)
 
 
 if __name__ == "__main__":
