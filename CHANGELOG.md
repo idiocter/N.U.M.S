@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Reported unreadable history paths as a clean configuration error and closed the exists-then-stat race on load.
 - Bounded spoken replies with a timeout, guarded option-like text, and stopped a missing `say` command from ending a session.
 - Rejected configurations that point NUMS_HISTORY_FILE and NUMS_TRACE_FILE at the same file.
 - Capped the file size `replace_in_file` loads so a huge file cannot exhaust memory.

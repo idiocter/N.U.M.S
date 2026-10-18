@@ -81,10 +81,13 @@ class HistoryStore:
         self.max_bytes = max_bytes
 
     def load(self) -> list[dict[str, Any]]:
-        if not self.path.exists():
+        try:
+            details = self.path.lstat()
+        except FileNotFoundError:
             return []
-        details = self.path.lstat()
-        if self.path.is_symlink() or not stat.S_ISREG(details.st_mode):
+        except OSError as exc:
+            raise ValueError(f"Cannot read NUMS history at {self.path}: {exc}") from exc
+        if stat.S_ISLNK(details.st_mode) or not stat.S_ISREG(details.st_mode):
             raise ValueError(f"NUMS history path is not a regular file: {self.path}")
         try:
             descriptor = os.open(

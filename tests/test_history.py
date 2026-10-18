@@ -159,3 +159,19 @@ def test_invalid_save_keeps_previous_history(tmp_path: Path) -> None:
         HistoryStore(path).save([{"role": "user", "content": "unfinished"}])
 
     assert path.read_text() == original
+
+
+def test_load_reports_unreadable_path_as_value_error(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    def deny(self: Path, *args: object, **kwargs: object) -> None:
+        raise PermissionError("denied")
+
+    monkeypatch.setattr(Path, "lstat", deny)
+
+    with pytest.raises(ValueError, match="Cannot read NUMS history.*denied"):
+        HistoryStore(tmp_path / "history.json").load()
+
+
+def test_load_missing_file_is_empty(tmp_path: Path) -> None:
+    assert HistoryStore(tmp_path / "missing.json").load() == []
