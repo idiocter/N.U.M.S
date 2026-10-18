@@ -431,6 +431,21 @@ def test_replace_in_file_preserves_surrounding_text_permissions_and_newlines(tmp
     assert stat.S_IMODE(path.stat().st_mode) == 0o640
 
 
+def test_replace_in_file_rejects_oversized_file_without_writing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr("nums.tools.REPLACE_FILE_MAX_CHARS", 16)
+    path = tmp_path / "big.txt"
+    path.write_text("needle " + "x" * 100)
+
+    result = json.loads(MacTools().execute("replace_in_file", {
+        "path": str(path), "old_text": "needle", "new_text": "pin",
+    }))
+
+    assert "16-character limit" in result["error"]
+    assert path.read_text().startswith("needle ")
+
+
 @pytest.mark.parametrize("old_text", ["", "missing", "same"])
 def test_replace_in_file_rejects_unsafe_matches_without_writing(tmp_path: Path, old_text: str) -> None:
     path = tmp_path / "module.py"

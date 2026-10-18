@@ -349,6 +349,9 @@ def validate_tool_arguments(name: str, args: Any) -> str | None:
     return None
 
 
+REPLACE_FILE_MAX_CHARS = 5_000_000
+
+
 def _bounded_integer(raw: str, name: str, minimum: int, maximum: int) -> int:
     try:
         value = int(raw)
@@ -861,7 +864,11 @@ class MacTools:
             raise ValueError("old_text must not be empty")
         path = requested.resolve() if requested.is_symlink() else requested
         with path.open("r", encoding="utf-8", newline="") as handle:
-            content = handle.read()
+            content = handle.read(REPLACE_FILE_MAX_CHARS + 1)
+        if len(content) > REPLACE_FILE_MAX_CHARS:
+            raise ValueError(
+                f"file exceeds the {REPLACE_FILE_MAX_CHARS}-character limit for replace_in_file"
+            )
         occurrences = content.count(old)
         if occurrences != 1:
             raise ValueError(f"old_text must occur exactly once; found {occurrences}")
