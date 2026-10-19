@@ -115,7 +115,10 @@ def build(source: Path, destination: Path) -> dict[str, int]:
     groups = {name: [] for name in ("train", "valid", "test")}
     manifest_path = destination / "split_manifest.json"
     if manifest_path.exists():
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError(f"Invalid split manifest at {manifest_path}: {exc}") from exc
         if isinstance(manifest, dict) and manifest.get("version") == 2:
             assignments = manifest.get("assignments")
         else:
@@ -125,9 +128,12 @@ def build(source: Path, destination: Path) -> dict[str, int]:
         for name in groups:
             prior = destination / f"{name}.jsonl"
             if prior.exists():
-                for line in prior.read_text(encoding="utf-8").splitlines():
-                    if line.strip():
-                        assignments[json.loads(line)["id"]] = name
+                try:
+                    for line in prior.read_text(encoding="utf-8").splitlines():
+                        if line.strip():
+                            assignments[json.loads(line)["id"]] = name
+                except (OSError, UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError) as exc:
+                    raise ValueError(f"Invalid prior split at {prior}: {exc}") from exc
     if not isinstance(assignments, dict) or any(not isinstance(key, str) for key in assignments):
         raise ValueError(f"Invalid split manifest at {manifest_path}")
     for value in assignments.values():

@@ -179,3 +179,21 @@ def test_no_tool_example_with_arguments_is_rejected(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="must have empty arguments"):
         load_examples(source, minimum=1)
+
+
+def test_corrupt_split_manifest_is_a_clean_error(tmp_path: Path) -> None:
+    destination = tmp_path / "splits"
+    build(SOURCE, destination)
+    (destination / "split_manifest.json").write_text("{not json")
+
+    with pytest.raises(ValueError, match="Invalid split manifest"):
+        build(SOURCE, destination)
+
+
+def test_corrupt_legacy_split_is_a_clean_error(tmp_path: Path) -> None:
+    destination = tmp_path / "splits"
+    destination.mkdir()
+    (destination / "train.jsonl").write_text('{"no_id": true}\n')
+
+    with pytest.raises(ValueError, match="Invalid prior split"):
+        build(SOURCE, destination)
