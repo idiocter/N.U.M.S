@@ -372,3 +372,18 @@ def test_invalid_json_tool_arguments_are_reported_to_model() -> None:
 
     assert agent.run("read my file") == "I could not read that file."
     assert agent.last_run["tool_errors"] == 1
+
+
+def test_unsupported_model_message_fields_are_not_kept() -> None:
+    class ThinkingClient:
+        def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
+            return {"message": {
+                "role": "assistant", "content": "Done.",
+                "thinking": "long private reasoning " * 100, "images": ["x"],
+            }}
+
+    agent = Agent(Settings())
+    agent.client = ThinkingClient()  # type: ignore[assignment]
+
+    assert agent.run("hello") == "Done."
+    assert agent.messages[-1] == {"role": "assistant", "content": "Done."}

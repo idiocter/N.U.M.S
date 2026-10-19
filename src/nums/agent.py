@@ -141,7 +141,13 @@ class Agent:
                 response = self.client.chat(
                     self.messages, available_tool_schemas(self.settings.action_mode)
                 )
-                message = response.get("message", {})
+                raw_message = response.get("message", {})
+                # Keep only fields NUMS understands; extras such as "thinking"
+                # would otherwise bloat the context and the saved history.
+                message = {
+                    key: raw_message[key]
+                    for key in ("role", "content", "tool_calls") if key in raw_message
+                }
                 self.messages.append(message)
                 calls = message.get("tool_calls") or []
                 if not calls:
