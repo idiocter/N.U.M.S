@@ -292,3 +292,29 @@ def test_one_shot_request_is_trimmed(monkeypatch: pytest.MonkeyPatch, capsys) ->
 
     assert prompts == ["open Safari"]
     assert capsys.readouterr().out.strip() == "done"
+
+
+def test_pull_explains_missing_ollama_command(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums", "--pull"])
+    monkeypatch.setattr("nums.cli.Settings.from_env", lambda: Settings())
+    monkeypatch.setattr("nums.cli.ensure_ollama_running", lambda settings: None)
+    monkeypatch.setattr("nums.cli.shutil.which", lambda _: None)
+    monkeypatch.setattr("nums.cli.subprocess.call", lambda *args, **kwargs: pytest.fail("pulled"))
+
+    with pytest.raises(SystemExit, match="ollama command is missing"):
+        main()
+
+
+def test_pull_runs_the_resolved_ollama_command(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums", "--pull"])
+    monkeypatch.setattr("nums.cli.Settings.from_env", lambda: Settings(model="qwen:test"))
+    monkeypatch.setattr("nums.cli.ensure_ollama_running", lambda settings: None)
+    monkeypatch.setattr("nums.cli.shutil.which", lambda _: "/opt/bin/ollama")
+    monkeypatch.setattr("nums.cli.subprocess.call", lambda command: commands.append(command) or 0)
+
+    with pytest.raises(SystemExit) as excinfo:
+        main()
+
+    assert excinfo.value.code == 0
+    assert commands == [["/opt/bin/ollama", "pull", "qwen:test"]]

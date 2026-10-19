@@ -211,7 +211,10 @@ def main() -> None:
         raise SystemExit(str(exc)) from exc
     if args.pull:
         ensure_ollama_running(settings)
-        raise SystemExit(subprocess.call(["ollama", "pull", settings.model]))
+        executable = shutil.which("ollama")
+        if executable is None:
+            raise SystemExit("The ollama command is missing; install it to pull models.")
+        raise SystemExit(subprocess.call([executable, "pull", settings.model]))
     if args.setup_voice:
         print(f"Downloading local wake model to {settings.whisper_model}")
         download_voice_model(settings.whisper_model)
