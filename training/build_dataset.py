@@ -56,6 +56,8 @@ def load_examples(path: Path, minimum: int = 15) -> list[dict]:
                 raise ValueError("invalid tool or arguments")
             if name == "none" and not (isinstance(item.get("answer"), str) and item["answer"].strip()):
                 raise ValueError("a no-tool example needs a nonempty answer")
+            if name == "none" and arguments:
+                raise ValueError("a no-tool example must have empty arguments")
             if name != "none":
                 argument_error = validate_tool_arguments(name, arguments)
                 if argument_error:

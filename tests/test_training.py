@@ -169,3 +169,13 @@ def test_dataset_files_are_read_as_utf8(monkeypatch: pytest.MonkeyPatch, tmp_pat
     build(SOURCE, tmp_path / "splits")
 
     assert encodings and set(encodings) == {"utf-8"}
+
+
+def test_no_tool_example_with_arguments_is_rejected(tmp_path: Path) -> None:
+    source = tmp_path / "bad.jsonl"
+    source.write_text(
+        '{"id":"bad","user":"hello","tool":"none","arguments":{"path":"/tmp"},"answer":"Hi."}\n'
+    )
+
+    with pytest.raises(ValueError, match="must have empty arguments"):
+        load_examples(source, minimum=1)

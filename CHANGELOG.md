@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Rejected no-tool training labels that carry tool arguments, which would teach contradictory targets.
 - Read training datasets, split manifests, traces, and reports as UTF-8 regardless of the system locale.
 - Explained a missing `ollama` command during `--pull` instead of failing with a traceback.
 - Normalized apostrophes in configured wake and sleep phrases so they match transcripts, which are stripped of apostrophes.
