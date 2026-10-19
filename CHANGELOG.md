@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Refused named pipes and other non-regular files in file reads so a stuck pipe cannot hang the agent.
 - Rejected blank one-shot requests before starting Ollama and trimmed surrounding whitespace from the prompt.
 - Reported unreadable history paths as a clean configuration error and closed the exists-then-stat race on load.
 - Bounded spoken replies with a timeout, guarded option-like text, and stopped a missing `say` command from ending a session.

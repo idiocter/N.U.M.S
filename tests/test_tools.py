@@ -1,5 +1,6 @@
 import io
 import json
+import os
 import platform
 import stat
 import subprocess
@@ -217,7 +218,7 @@ def test_file_read_is_bounded_before_truncation(monkeypatch: pytest.MonkeyPatch)
             assert size == 12001
             return super().read(size)
 
-    monkeypatch.setattr("nums.tools.Path.open", lambda *args, **kwargs: GuardedReader("x" * 20000))
+    monkeypatch.setattr("nums.tools._open_regular_text", lambda path: GuardedReader("x" * 20000))
 
     result = MacTools().read_file({"path": "/unused/large.txt"})
 
@@ -1210,3 +1211,19 @@ def test_trash_path_moves_broken_symlink(monkeypatch: pytest.MonkeyPatch, tmp_pa
 
     assert Path(result["recoverable_at"]).is_symlink()
     assert not link.is_symlink()
+
+
+@pytest.mark.parametrize("tool", ["read_file", "read_lines"])
+def test_read_tools_reject_pipes_instead_of_blocking(tmp_path: Path, tool: str) -> None:
+    pipe = tmp_path / "pipe"
+    os.mkfifo(pipe)
+
+    result = json.loads(MacTools().execute(tool, {"path": str(pipe)}))
+
+    assert result["error"] == "ValueError: path must be a regular file"
+
+
+def test_read_file_rejects_directories(tmp_path: Path) -> None:
+    result = json.loads(MacTools().execute("read_file", {"path": str(tmp_path)}))
+
+    assert "error" in result

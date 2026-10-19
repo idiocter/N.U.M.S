@@ -11,7 +11,7 @@ import stat
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Any, Callable
+from typing import IO, Any, Callable
 from urllib.parse import urlparse
 
 from .mac_ui import (
@@ -352,6 +352,18 @@ def validate_tool_arguments(name: str, args: Any) -> str | None:
 REPLACE_FILE_MAX_CHARS = 5_000_000
 
 
+def _open_regular_text(requested: str) -> IO[str]:
+    """Open a regular file for reading; pipes and devices would block or never end."""
+    descriptor = os.open(Path(requested).expanduser(), os.O_RDONLY | os.O_NONBLOCK)
+    try:
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            raise ValueError("path must be a regular file")
+        return os.fdopen(descriptor, encoding="utf-8", errors="replace")
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
 def _bounded_integer(raw: str, name: str, minimum: int, maximum: int) -> int:
     try:
         value = int(raw)
@@ -510,7 +522,7 @@ class MacTools:
         if not raw_offset.isdecimal():
             raise ValueError("offset must be a nonnegative character position")
         offset = int(raw_offset)
-        with Path(args["path"]).expanduser().open(encoding="utf-8", errors="replace") as handle:
+        with _open_regular_text(args["path"]) as handle:
             remaining = offset
             while remaining:
                 skipped = handle.read(min(remaining, 8192))
@@ -536,7 +548,7 @@ class MacTools:
         lines: list[dict[str, Any]] = []
         characters = 0
         next_line = None
-        with Path(args["path"]).expanduser().open(encoding="utf-8", errors="replace") as handle:
+        with _open_regular_text(args["path"]) as handle:
             for number, raw_line in enumerate(handle, start=1):
                 if number < start:
                     continue
