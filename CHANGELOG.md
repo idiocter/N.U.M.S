@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Read training datasets, split manifests, traces, and reports as UTF-8 regardless of the system locale.
 - Explained a missing `ollama` command during `--pull` instead of failing with a traceback.
 - Normalized apostrophes in configured wake and sleep phrases so they match transcripts, which are stripped of apostrophes.
 - Rejected an empty NUMS_WHISPER_MODEL instead of silently resolving it to the current directory.

@@ -46,7 +46,7 @@ def _dataset_digest(cases: list[dict[str, Any]]) -> str:
 def load_cases(data: Path) -> list[dict[str, Any]]:
     cases = []
     seen = set()
-    for number, line in enumerate(data.read_text().splitlines(), 1):
+    for number, line in enumerate(data.read_text(encoding="utf-8").splitlines(), 1):
         if not line.strip():
             continue
         try:
@@ -333,7 +333,7 @@ def main() -> None:
         parser.error("--resume requires --json-out")
     prior = None
     if args.resume and args.json_out.exists():
-        prior = json.loads(args.json_out.read_text())
+        prior = json.loads(args.json_out.read_text(encoding="utf-8"))
     report = evaluate(
         args.data, args.model, args.url, prior=prior,
         checkpoint=args.json_out if args.resume else None, retries=args.retries,

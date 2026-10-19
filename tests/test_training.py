@@ -152,3 +152,20 @@ def test_seed_examples_cover_every_runtime_tool_at_least_twice() -> None:
     assert report["no_tool_examples"] == 10
     assert report["missing"] == []
     assert report["underrepresented"] == []
+
+
+def test_dataset_files_are_read_as_utf8(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    encodings = []
+    original = Path.read_text
+
+    def spy(self: Path, *args: object, **kwargs: object) -> str:
+        encodings.append(kwargs.get("encoding"))
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", spy)
+
+    load_examples(SOURCE)
+    build(SOURCE, tmp_path / "splits")
+    build(SOURCE, tmp_path / "splits")
+
+    assert encodings and set(encodings) == {"utf-8"}

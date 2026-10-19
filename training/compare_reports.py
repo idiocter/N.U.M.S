@@ -122,8 +122,8 @@ def main() -> None:
     args = parser.parse_args()
     try:
         eligible, reasons = compare(
-            json.loads(args.baseline.read_text()),
-            json.loads(args.candidate.read_text()),
+            json.loads(args.baseline.read_text(encoding="utf-8")),
+            json.loads(args.candidate.read_text(encoding="utf-8")),
         )
     except (OSError, ValueError) as exc:
         parser.error(str(exc))
