@@ -356,3 +356,22 @@ def test_stream_reads_again_after_transcript_file_is_rewritten(
     assert next(transcripts) == "first longer phrase"
     assert next(transcripts) == "second"
     transcripts.close()
+
+
+def test_configured_sleep_phrase_with_apostrophe_matches() -> None:
+    detector = WakePhraseDetector(sleep_phrases=("let's sleep",))
+    detector.cooldown_seconds = 0
+    detector.feed("Hey numnum")
+
+    event = detector.feed("Let's sleep")
+
+    assert event is not None
+    assert event.kind == "sleep"
+
+
+def test_configured_wake_phrase_with_apostrophe_matches() -> None:
+    event = WakePhraseDetector("hey what's up").feed("Hey what's up, open Safari")
+
+    assert event is not None
+    assert event.kind == "command"
+    assert event.text == "open Safari"

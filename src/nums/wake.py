@@ -18,6 +18,11 @@ VOICE_MODEL_URL = (
 MIN_VOICE_MODEL_BYTES = 50_000_000
 
 
+def _without_apostrophes(text: str) -> str:
+    """Match how transcripts are normalized so configured phrases can still fire."""
+    return text.replace("'", "").replace("’", "")
+
+
 @dataclass(frozen=True)
 class WakeEvent:
     kind: str
@@ -58,7 +63,7 @@ class WakePhraseDetector:
         session_timeout_seconds: int = 300,
         sleep_phrases: tuple[str, ...] | None = None,
     ) -> None:
-        self.phrase = phrase.casefold().strip()
+        self.phrase = _without_apostrophes(phrase.casefold().strip())
         self.active_session = False
         self.last_transcript = ""
         self.last_command = ""
@@ -84,7 +89,7 @@ class WakePhraseDetector:
         self.wake_pattern = re.compile(
             rf"^(?:{alternatives})\b[\s,.:;!?-]*(.*)", re.I
         )
-        sleep_variants = set(sleep_phrases or ()) | {
+        sleep_variants = {_without_apostrophes(item) for item in sleep_phrases or ()} | {
             "aight baby girl lets sleep",
             "eight baby girl lets sleep",
             "8 baby girl lets sleep",

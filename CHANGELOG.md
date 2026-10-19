@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Normalized apostrophes in configured wake and sleep phrases so they match transcripts, which are stripped of apostrophes.
 - Rejected an empty NUMS_WHISPER_MODEL instead of silently resolving it to the current directory.
 - Passed spoken text to `say` after an option separator so replies beginning with a dash are read aloud, not parsed as flags.
 - Refused named pipes and other non-regular files in file reads so a stuck pipe cannot hang the agent.
