@@ -233,7 +233,11 @@ def main() -> None:
     parser.add_argument("source", type=Path)
     parser.add_argument("destination", type=Path)
     args = parser.parse_args()
-    print(build(args.source, args.destination))
+    try:
+        counts = build(args.source, args.destination)
+    except (OSError, ValueError) as exc:
+        raise SystemExit(str(exc)) from exc
+    print(counts)
 
 
 if __name__ == "__main__":

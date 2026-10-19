@@ -250,7 +250,10 @@ def main() -> None:
     export_parser.add_argument("review", type=Path)
     export_parser.add_argument("output", type=Path)
     args = parser.parse_args()
-    count = prepare(args.trace, args.review) if args.command == "prepare" else export(args.review, args.output)
+    try:
+        count = prepare(args.trace, args.review) if args.command == "prepare" else export(args.review, args.output)
+    except (OSError, ValueError) as exc:
+        raise SystemExit(str(exc)) from exc
     print(f"{count} records written")
 
 

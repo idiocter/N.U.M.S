@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Made the dataset, coverage, and trace-review commands print a clear message instead of a traceback on invalid input.
 - Reported corrupt split manifests and prior split files as clear errors instead of raw JSON tracebacks.
 - Rejected no-tool training labels that carry tool arguments, which would teach contradictory targets.
 - Read training datasets, split manifests, traces, and reports as UTF-8 regardless of the system locale.

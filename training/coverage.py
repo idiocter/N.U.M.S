@@ -41,7 +41,10 @@ def main() -> None:
     args = parser.parse_args()
     if args.minimum_per_tool < 1:
         raise SystemExit("--minimum-per-tool must be positive")
-    report = summarize(args.source, args.minimum_per_tool)
+    try:
+        report = summarize(args.source, args.minimum_per_tool)
+    except (OSError, ValueError) as exc:
+        raise SystemExit(str(exc)) from exc
     print(json.dumps(report, indent=2))
     if args.require_complete and (report["missing"] or report["underrepresented"]):
         raise SystemExit(1)

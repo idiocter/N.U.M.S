@@ -197,3 +197,20 @@ def test_corrupt_legacy_split_is_a_clean_error(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="Invalid prior split"):
         build(SOURCE, destination)
+
+
+def test_dataset_cli_exits_with_message_on_bad_input(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    from training import build_dataset, coverage
+
+    bad = tmp_path / "bad.jsonl"
+    bad.write_text("{not json}\n")
+
+    monkeypatch.setattr("sys.argv", ["build_dataset", str(bad), str(tmp_path / "out")])
+    with pytest.raises(SystemExit) as build_exit:
+        build_dataset.main()
+    monkeypatch.setattr("sys.argv", ["coverage", str(bad)])
+    with pytest.raises(SystemExit) as coverage_exit:
+        coverage.main()
+
+    assert ":1:" in str(build_exit.value)
+    assert ":1:" in str(coverage_exit.value)
