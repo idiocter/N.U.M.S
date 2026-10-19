@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Created the wake listener lock file and its directory with owner-only permissions.
 - Reported a corrupt or unreadable evaluation checkpoint with a clear message instead of a traceback.
 - Made the dataset, coverage, and trace-review commands print a clear message instead of a traceback on invalid input.
 - Reported corrupt split manifests and prior split files as clear errors instead of raw JSON tracebacks.

@@ -35,8 +35,9 @@ class ListenerLock:
         self.handle = None
 
     def __enter__(self) -> "ListenerLock":
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.handle = self.path.open("a+")
+        os.fchmod(self.handle.fileno(), 0o600)
         try:
             fcntl.flock(self.handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:

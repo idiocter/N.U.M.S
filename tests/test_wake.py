@@ -1,4 +1,5 @@
 import os
+import stat
 from pathlib import Path
 
 import pytest
@@ -375,3 +376,11 @@ def test_configured_wake_phrase_with_apostrophe_matches() -> None:
     assert event is not None
     assert event.kind == "command"
     assert event.text == "open Safari"
+
+
+def test_listener_lock_is_private(tmp_path: Path) -> None:
+    lock_path = tmp_path / "state" / "listener.lock"
+
+    with ListenerLock(lock_path):
+        assert stat.S_IMODE(lock_path.stat().st_mode) == 0o600
+        assert stat.S_IMODE(lock_path.parent.stat().st_mode) == 0o700
