@@ -462,3 +462,24 @@ class _JsonResponse:
 
     def read(self, *args, **kwargs) -> bytes:
         return json.dumps(self.value).encode()
+
+
+def test_resume_with_corrupt_checkpoint_exits_with_message(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    from training import evaluate as evaluate_module
+
+    report = tmp_path / "report.json"
+    report.write_text("{truncated")
+    monkeypatch.setattr(
+        "sys.argv",
+        ["evaluate", str(tmp_path / "data.jsonl"), "--model", "qwen", "--json-out", str(report), "--resume"],
+    )
+    monkeypatch.setattr(
+        evaluate_module, "evaluate", lambda *args, **kwargs: pytest.fail("evaluated")
+    )
+
+    with pytest.raises(SystemExit) as excinfo:
+        evaluate_module.main()
+
+    assert "Expecting" in str(excinfo.value) or "property name" in str(excinfo.value)

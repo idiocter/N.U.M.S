@@ -332,12 +332,15 @@ def main() -> None:
     if args.resume and args.json_out is None:
         parser.error("--resume requires --json-out")
     prior = None
-    if args.resume and args.json_out.exists():
-        prior = json.loads(args.json_out.read_text(encoding="utf-8"))
-    report = evaluate(
-        args.data, args.model, args.url, prior=prior,
-        checkpoint=args.json_out if args.resume else None, retries=args.retries,
-    )
+    try:
+        if args.resume and args.json_out.exists():
+            prior = json.loads(args.json_out.read_text(encoding="utf-8"))
+        report = evaluate(
+            args.data, args.model, args.url, prior=prior,
+            checkpoint=args.json_out if args.resume else None, retries=args.retries,
+        )
+    except (OSError, ValueError) as exc:
+        raise SystemExit(str(exc)) from exc
     if not report["total"]:
         raise SystemExit("empty evaluation set")
     if args.json_out:
