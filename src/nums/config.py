@@ -78,6 +78,9 @@ class Settings:
         )
         if not sleep_phrases:
             raise ValueError("NUMS_SLEEP_PHRASES must include at least one phrase")
+        whisper_model = os.getenv("NUMS_WHISPER_MODEL", cls.whisper_model).strip()
+        if not whisper_model:
+            raise ValueError("NUMS_WHISPER_MODEL cannot be empty")
         history_file = os.getenv("NUMS_HISTORY_FILE")
         trace_file = os.getenv("NUMS_TRACE_FILE")
         if history_file and trace_file and os.path.realpath(
@@ -109,8 +112,6 @@ class Settings:
             sleep_phrases=sleep_phrases,
             speak=speak == "1",
             wake_phrase=phrase,
-            whisper_model=os.path.expanduser(
-                os.getenv("NUMS_WHISPER_MODEL", cls.whisper_model)
-            ),
+            whisper_model=os.path.expanduser(whisper_model),
             capture_device=_integer("NUMS_CAPTURE_DEVICE", cls.capture_device, -1),
         )

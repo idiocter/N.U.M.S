@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Rejected an empty NUMS_WHISPER_MODEL instead of silently resolving it to the current directory.
 - Passed spoken text to `say` after an option separator so replies beginning with a dash are read aloud, not parsed as flags.
 - Refused named pipes and other non-regular files in file reads so a stuck pipe cannot hang the agent.
 - Rejected blank one-shot requests before starting Ollama and trimmed surrounding whitespace from the prompt.

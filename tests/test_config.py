@@ -57,3 +57,11 @@ def test_distinct_history_and_trace_files_are_accepted(monkeypatch: pytest.Monke
     settings = Settings.from_env()
 
     assert settings.history_file != settings.trace_file
+
+
+@pytest.mark.parametrize("value", ["", "   "])
+def test_empty_whisper_model_is_rejected(monkeypatch: pytest.MonkeyPatch, value: str) -> None:
+    monkeypatch.setenv("NUMS_WHISPER_MODEL", value)
+
+    with pytest.raises(ValueError, match="NUMS_WHISPER_MODEL cannot be empty"):
+        Settings.from_env()
