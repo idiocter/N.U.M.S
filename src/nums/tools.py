@@ -1202,7 +1202,7 @@ class MacTools:
         ], timeout=20)
 
     def speak(self, args: dict[str, Any]) -> str:
-        return _run(["say", args["text"]])
+        return _run(["say", "--", args["text"]])
 
     def notify(self, args: dict[str, Any]) -> str:
         return _run(["osascript", "-e", NOTIFY_SCRIPT, args["message"], args["title"]])

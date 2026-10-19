@@ -1227,3 +1227,14 @@ def test_read_file_rejects_directories(tmp_path: Path) -> None:
     result = json.loads(MacTools().execute("read_file", {"path": str(tmp_path)}))
 
     assert "error" in result
+
+
+def test_speak_passes_option_like_text_after_separator(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr(
+        "nums.tools._run", lambda command, **kwargs: commands.append(command) or "{}"
+    )
+
+    MacTools().speak({"text": "-v Alex hello"})
+
+    assert commands == [["say", "--", "-v Alex hello"]]

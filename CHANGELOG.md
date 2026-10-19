@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Passed spoken text to `say` after an option separator so replies beginning with a dash are read aloud, not parsed as flags.
 - Refused named pipes and other non-regular files in file reads so a stuck pipe cannot hang the agent.
 - Rejected blank one-shot requests before starting Ollama and trimmed surrounding whitespace from the prompt.
 - Reported unreadable history paths as a clean configuration error and closed the exists-then-stat race on load.
