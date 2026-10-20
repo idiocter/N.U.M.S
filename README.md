@@ -66,7 +66,12 @@ In the interactive terminal, `/status` shows the current model and history
 location plus the last run's steps, tool calls, and errors. `/reset` clears the
 conversation (including the optional history file), and `/help` lists the commands.
 If optional trace writing fails, `/status` reports the trace error while the
-assistant still returns its response.
+assistant still returns its response. Unrecognized slash commands such as a
+mistyped `/quit` are reported instead of being sent to the model. Press Ctrl+C
+while a request is running to stop it and return to the prompt; the partial turn
+is discarded so history never keeps an unanswered tool call. `NUMS_MAX_CONTEXT_CHARS`
+must leave room for the system prompt (NUMS reports the minimum at startup), and
+`NUMS_HISTORY_FILE` and `NUMS_TRACE_FILE` must be different files.
 
 ## Wake phrase
 
@@ -159,7 +164,11 @@ uv run nums "In /absolute/path/to/project, fix the failing parser test, run that
 ```
 
 For a focused edit, `replace_in_file` replaces one exact text span and refuses
-missing or repeated matches. `git_status` shows changed and untracked files;
+missing or repeated matches, and files over 5,000,000 characters. `read_file`
+and `read_lines` accept only regular files, so a named pipe cannot hang a
+request. Command output is streamed through a bounded buffer that keeps the
+beginning and end, and a timed-out command is stopped together with any
+background processes it started. `git_status` shows changed and untracked files;
 `git_diff` shows tracked changes against `HEAD`; `git_log` shows bounded recent
 history for a repository or one path; `git_show` inspects one validated revision
 and its patch; `git_branches` lists local and remote tips with upstreams;

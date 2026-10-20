@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Documented slash-command handling, Ctrl+C behavior, configuration constraints, and the new file and command output limits.
 - Synced the history directory after the atomic rename so a saved conversation survives sudden power loss.
 - Added policy tests that keep access-mode tool sets, schemas, handlers, and the tools offered to the model consistent.
 - Reported `--voice-test` microphone or whisper-stream failures with a clear message instead of a traceback.
