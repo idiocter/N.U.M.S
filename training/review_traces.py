@@ -79,6 +79,18 @@ def _validate_review_rows(rows: list[dict], path: Path) -> None:
             )
 
 
+def _apply_review_defaults(rows: list[dict]) -> None:
+    """Fill fields that older review files omit so every row has the same shape."""
+    for row in rows:
+        row.setdefault("proposed_tool", "")
+        row.setdefault("proposed_arguments", {})
+        row.setdefault("proposed_answer", row.get("answer"))
+        row.setdefault("decision", "")
+        row.setdefault("group", "")
+        row.setdefault("review_notes", "")
+        row.setdefault("source_error", None)
+
+
 def _write_private_jsonl(path: Path, rows: list[dict], validate: bool = False) -> None:
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     temporary = None
@@ -102,14 +114,7 @@ def _write_private_jsonl(path: Path, rows: list[dict], validate: bool = False) -
 
 def prepare(trace_path: Path, review_path: Path) -> int:
     rows = _read_jsonl(review_path, "review") if review_path.exists() else []
-    for row in rows:
-        row.setdefault("proposed_tool", "")
-        row.setdefault("proposed_arguments", {})
-        row.setdefault("proposed_answer", row.get("answer"))
-        row.setdefault("decision", "")
-        row.setdefault("group", "")
-        row.setdefault("review_notes", "")
-        row.setdefault("source_error", None)
+    _apply_review_defaults(rows)
     _validate_review_rows(rows, review_path)
     existing_ids = {row["id"] for row in rows}
     existing_fingerprints = {
@@ -185,14 +190,7 @@ def prepare(trace_path: Path, review_path: Path) -> int:
 def export(review_path: Path, output_path: Path) -> int:
     examples = []
     rows = _read_jsonl(review_path, "review")
-    for row in rows:
-        row.setdefault("proposed_tool", "")
-        row.setdefault("proposed_arguments", {})
-        row.setdefault("proposed_answer", row.get("answer"))
-        row.setdefault("decision", "")
-        row.setdefault("group", "")
-        row.setdefault("review_notes", "")
-        row.setdefault("source_error", None)
+    _apply_review_defaults(rows)
     _validate_review_rows(rows, review_path)
     for row in rows:
         if row.get("reviewed") is not True:
