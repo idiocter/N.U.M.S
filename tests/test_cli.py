@@ -489,3 +489,27 @@ def test_sound_cue_failure_is_ignored(monkeypatch: pytest.MonkeyPatch, failure: 
     monkeypatch.setattr("nums.cli.subprocess.run", fail)
 
     _play_sound("/System/Library/Sounds/Glass.aiff")
+
+
+def test_failed_service_install_exits_with_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail(settings: Settings) -> None:
+        raise subprocess.CalledProcessError(5, ["launchctl", "bootstrap"])
+
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums", "--install-service"])
+    monkeypatch.setattr("nums.cli.Settings.from_env", lambda: Settings())
+    monkeypatch.setattr("nums.cli.install_service", fail)
+
+    with pytest.raises(SystemExit, match="Could not install the NUMS service"):
+        main()
+
+
+def test_failed_service_removal_exits_with_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail() -> None:
+        raise PermissionError("operation not permitted")
+
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums", "--uninstall-service"])
+    monkeypatch.setattr("nums.cli.Settings.from_env", lambda: Settings())
+    monkeypatch.setattr("nums.cli.uninstall_service", fail)
+
+    with pytest.raises(SystemExit, match="Could not remove the NUMS service.*not permitted"):
+        main()

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Reported failed LaunchAgent installation or removal with a clear message instead of a traceback.
 - Bounded the wake chime with a timeout and ignored a missing `afplay` so audio problems cannot end the listener.
 - Kept the wake listener running when saving history or traces fails during a spoken request.
 - Kept the interactive session running when saving history or traces fails during a request.

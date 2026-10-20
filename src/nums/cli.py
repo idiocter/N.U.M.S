@@ -249,10 +249,18 @@ def main() -> None:
         print(service_plist(settings).decode(), end="")
         return
     if args.install_service:
-        print(f"Installed and started {install_service(settings)}")
+        try:
+            path = install_service(settings)
+        except (OSError, subprocess.CalledProcessError) as exc:
+            raise SystemExit(f"Could not install the NUMS service: {exc}") from exc
+        print(f"Installed and started {path}")
         return
     if args.uninstall_service:
-        print(f"Stopped and removed {uninstall_service()}")
+        try:
+            path = uninstall_service()
+        except OSError as exc:
+            raise SystemExit(f"Could not remove the NUMS service: {exc}") from exc
+        print(f"Stopped and removed {path}")
         return
 
     minimum_context = len(SYSTEM_PROMPT) + CONTEXT_HEADROOM_CHARS
