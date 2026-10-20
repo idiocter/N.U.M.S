@@ -431,3 +431,40 @@ def test_storage_failure_does_not_end_the_session(
     assert runs == ["first", "second"]
     assert f"NUMS error > {failure}" in output
     assert "NUMS > fine" in output
+
+
+@pytest.mark.parametrize("failure", [OSError("disk full"), ValueError("bad history")])
+def test_wake_listener_survives_storage_errors(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], failure: Exception
+) -> None:
+    transcripts = iter(["hey numnum, open Safari", "open Notes"])
+    spoken = []
+
+    class FakeStream:
+        def __init__(self, *args: object) -> None:
+            pass
+
+        def transcripts(self):
+            try:
+                yield next(transcripts)
+            except StopIteration:
+                raise KeyboardInterrupt
+
+        def stop(self) -> None:
+            pass
+
+    class FailingAgent:
+        def run(self, prompt: str) -> str:
+            raise failure
+
+    monkeypatch.setattr("nums.cli.ListenerLock", nullcontext)
+    monkeypatch.setattr("nums.cli.WhisperStream", FakeStream)
+    monkeypatch.setattr("nums.cli._say", spoken.append)
+    monkeypatch.setattr("nums.cli.subprocess.run", lambda *args, **kwargs: None)
+
+    wake_mode(FailingAgent(), Settings())  # type: ignore[arg-type]
+
+    output = capsys.readouterr().out
+    assert f"NUMS error > {failure}" in output
+    assert "NUMS wake listener stopped" in output
+    assert spoken == ["I hit an internal error."] * 2

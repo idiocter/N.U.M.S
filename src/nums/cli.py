@@ -176,9 +176,11 @@ def wake_mode(agent: Agent, settings: Settings) -> None:
                 print(f"You > {event.text}")
                 try:
                     response = agent.run(event.text)
-                except OllamaError as exc:
+                except (OllamaError, OSError, ValueError) as exc:
+                    # A storage failure must not end the always-on listener.
                     print(f"NUMS error > {exc}\n")
-                    _say("I could not reach the local model.")
+                    _say("I could not reach the local model." if isinstance(exc, OllamaError)
+                         else "I hit an internal error.")
                     detector.command_completed()
                     continue
                 print(f"NUMS > {response}\n")

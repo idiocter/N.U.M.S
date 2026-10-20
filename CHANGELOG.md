@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Kept the wake listener running when saving history or traces fails during a spoken request.
 - Kept the interactive session running when saving history or traces fails during a request.
 - Started the agent even when the current working directory has been deleted instead of crashing during setup.
 - Failed at startup with the required minimum when NUMS_MAX_CONTEXT_CHARS cannot hold the system prompt, instead of rejecting every request later.
