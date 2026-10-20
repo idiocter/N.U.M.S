@@ -483,3 +483,30 @@ def test_resume_with_corrupt_checkpoint_exits_with_message(
         evaluate_module.main()
 
     assert "Expecting" in str(excinfo.value) or "property name" in str(excinfo.value)
+
+
+def test_oversized_model_response_is_recorded_as_an_error(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    case = {
+        "id": "right",
+        "messages": [
+            {"role": "user", "content": "status"},
+            _assistant_call("system_info", {}),
+        ],
+        "tools": [_tool("system_info")],
+        "expected_tool": "system_info",
+        "expected_arguments": {},
+    }
+    data = tmp_path / "cases.jsonl"
+    data.write_text(json.dumps(case) + "\n")
+    monkeypatch.setattr("training.evaluate.RESPONSE_MAX_BYTES", 16)
+    monkeypatch.setattr(
+        "training.evaluate.urllib.request.urlopen",
+        lambda *args, **kwargs: nullcontext(_JsonResponse({"pad": "x" * 100})),
+    )
+
+    report = evaluate(data, "qwen", "http://127.0.0.1:11434")
+
+    assert "byte limit" in report["cases"][0]["error"]
+    assert report["tool_correct"] == 0

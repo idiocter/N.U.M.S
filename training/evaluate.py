@@ -15,6 +15,7 @@ from typing import Any
 
 
 RETRYABLE_HTTP_STATUS = {408, 429, 500, 502, 503, 504}
+RESPONSE_MAX_BYTES = 4 * 1024 * 1024
 
 
 def _is_transient_request_error(exc: BaseException) -> bool:
@@ -232,7 +233,10 @@ def evaluate(
         for attempt in range(retries + 1):
             try:
                 with urllib.request.urlopen(request, timeout=180) as response:
-                    result = json.load(response)
+                    body = response.read(RESPONSE_MAX_BYTES + 1)
+                    if len(body) > RESPONSE_MAX_BYTES:
+                        raise ValueError(f"response exceeded the {RESPONSE_MAX_BYTES}-byte limit")
+                    result = json.loads(body.decode("utf-8"))
                     if not isinstance(result, dict) or not isinstance(result.get("message"), dict):
                         raise ValueError("missing assistant message")
                     calls = result["message"].get("tool_calls") or []

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Bounded held-out evaluation responses so an oversized model reply is recorded as a case error instead of exhausting memory.
 - Dropped unsupported model message fields such as reasoning text before they reach context, history, or traces.
 - Created the wake listener lock file and its directory with owner-only permissions.
 - Reported a corrupt or unreadable evaluation checkpoint with a clear message instead of a traceback.
