@@ -513,3 +513,15 @@ def test_failed_service_removal_exits_with_message(monkeypatch: pytest.MonkeyPat
 
     with pytest.raises(SystemExit, match="Could not remove the NUMS service.*not permitted"):
         main()
+
+
+def test_failed_voice_model_download_exits_with_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail(path: str) -> None:
+        raise subprocess.CalledProcessError(22, ["curl"])
+
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums", "--setup-voice"])
+    monkeypatch.setattr("nums.cli.Settings.from_env", lambda: Settings())
+    monkeypatch.setattr("nums.cli.download_voice_model", fail)
+
+    with pytest.raises(SystemExit, match="Could not set up the Whisper voice model"):
+        main()

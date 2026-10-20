@@ -229,7 +229,10 @@ def main() -> None:
         raise SystemExit(subprocess.call([executable, "pull", settings.model]))
     if args.setup_voice:
         print(f"Downloading local wake model to {settings.whisper_model}")
-        download_voice_model(settings.whisper_model)
+        try:
+            download_voice_model(settings.whisper_model)
+        except (OSError, RuntimeError, subprocess.CalledProcessError) as exc:
+            raise SystemExit(f"Could not set up the Whisper voice model: {exc}") from exc
         print("Wake model ready.")
         return
     if args.doctor:
