@@ -320,7 +320,8 @@ def main() -> None:
         except KeyboardInterrupt:
             print("\nRequest interrupted.\n")
             continue
-        except OllamaError as exc:
+        except (OllamaError, OSError, ValueError) as exc:
+            # OSError and ValueError cover history or trace storage failures.
             print(f"NUMS error > {exc}\n")
             continue
         print(f"NUMS > {response}\n")

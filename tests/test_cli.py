@@ -393,3 +393,41 @@ def test_context_limit_too_small_for_the_system_prompt_fails_at_startup(monkeypa
 
     with pytest.raises(SystemExit, match="NUMS_MAX_CONTEXT_CHARS must be at least"):
         main()
+
+
+@pytest.mark.parametrize("failure", [OSError("disk full"), ValueError("Cannot save incomplete NUMS history")])
+def test_storage_failure_does_not_end_the_session(
+    monkeypatch: pytest.MonkeyPatch, capsys, failure: Exception
+) -> None:
+    prompts = iter(["first", "second"])
+    runs = []
+
+    class FakeAgent:
+        def __init__(self, settings: Settings) -> None:
+            pass
+
+        def run(self, prompt: str) -> str:
+            runs.append(prompt)
+            if prompt == "first":
+                raise failure
+            return "fine"
+
+    def read_prompt(_: str) -> str:
+        try:
+            return next(prompts)
+        except StopIteration:
+            raise EOFError from None
+
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums"])
+    monkeypatch.setattr("nums.cli.Settings.from_env", lambda: Settings())
+    monkeypatch.setattr("nums.cli.Agent", FakeAgent)
+    monkeypatch.setattr("nums.cli.ensure_ollama_running", lambda settings: None)
+    monkeypatch.setattr("nums.cli.verify_text_model", lambda settings: None)
+    monkeypatch.setattr("builtins.input", read_prompt)
+
+    main()
+
+    output = capsys.readouterr().out
+    assert runs == ["first", "second"]
+    assert f"NUMS error > {failure}" in output
+    assert "NUMS > fine" in output
