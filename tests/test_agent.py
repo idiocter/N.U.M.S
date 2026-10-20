@@ -387,3 +387,33 @@ def test_unsupported_model_message_fields_are_not_kept() -> None:
 
     assert agent.run("hello") == "Done."
     assert agent.messages[-1] == {"role": "assistant", "content": "Done."}
+
+
+def test_interrupted_request_rolls_back_the_partial_turn() -> None:
+    class InterruptingClient:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
+            self.calls += 1
+            if self.calls == 1:
+                return {"message": {"role": "assistant", "content": "First answer."}}
+            if self.calls == 2:
+                return {"message": {"role": "assistant", "content": "", "tool_calls": [
+                    {"function": {"name": "system_info", "arguments": {}}}
+                ]}}
+            if self.calls == 3:
+                raise KeyboardInterrupt
+            return {"message": {"role": "assistant", "content": "Third answer."}}
+
+    agent = Agent(Settings())
+    agent.client = InterruptingClient()  # type: ignore[assignment]
+    agent.run("first")
+    settled = [dict(message) for message in agent.messages]
+
+    with pytest.raises(KeyboardInterrupt):
+        agent.run("second")
+
+    assert agent.messages == settled
+    assert agent.last_run["status"] == "interrupted"
+    assert agent.run("third") == "Third answer."

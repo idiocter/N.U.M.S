@@ -252,6 +252,12 @@ class Agent:
                         self._save_history()
                         self._trace(prompt, trace_calls, reply, "repeated tool-call cycle")
                         return reply
+        except KeyboardInterrupt:
+            # Drop the partial turn so history never holds an unanswered tool call.
+            self.last_run["status"] = "interrupted"
+            del self.messages[history_length:]
+            self._trace(prompt, trace_calls, None, "interrupted")
+            raise
         except OllamaError as exc:
             self.last_run["status"] = "model_error"
             if executed_calls:
