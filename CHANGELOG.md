@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Bounded the wake chime with a timeout and ignored a missing `afplay` so audio problems cannot end the listener.
 - Kept the wake listener running when saving history or traces fails during a spoken request.
 - Kept the interactive session running when saving history or traces fails during a request.
 - Started the agent even when the current working directory has been deleted instead of crashing during setup.

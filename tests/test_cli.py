@@ -4,7 +4,7 @@ from contextlib import nullcontext
 import pytest
 
 from nums.cli import (
-    _ollama_reachable, _say, doctor, ensure_ollama_running, main, prepare_voice,
+    _ollama_reachable, _play_sound, _say, doctor, ensure_ollama_running, main, prepare_voice,
     verify_text_model, verify_voice_model, wake_mode,
 )
 from nums.config import Settings
@@ -468,3 +468,24 @@ def test_wake_listener_survives_storage_errors(
     assert f"NUMS error > {failure}" in output
     assert "NUMS wake listener stopped" in output
     assert spoken == ["I hit an internal error."] * 2
+
+
+def test_sound_cue_uses_a_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = []
+    monkeypatch.setattr(
+        "nums.cli.subprocess.run", lambda command, **kwargs: calls.append((command, kwargs))
+    )
+
+    _play_sound("/System/Library/Sounds/Glass.aiff")
+
+    assert calls == [(["afplay", "/System/Library/Sounds/Glass.aiff"], {"check": False, "timeout": 30})]
+
+
+@pytest.mark.parametrize("failure", [FileNotFoundError("afplay"), subprocess.TimeoutExpired("afplay", 30)])
+def test_sound_cue_failure_is_ignored(monkeypatch: pytest.MonkeyPatch, failure: Exception) -> None:
+    def fail(*args: object, **kwargs: object) -> None:
+        raise failure
+
+    monkeypatch.setattr("nums.cli.subprocess.run", fail)
+
+    _play_sound("/System/Library/Sounds/Glass.aiff")

@@ -45,6 +45,14 @@ def _say(text: str) -> None:
         pass
 
 
+def _play_sound(path: str) -> None:
+    """Play a short cue; audio problems must never end the wake listener."""
+    try:
+        subprocess.run(["afplay", path], check=False, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
 def doctor(settings: Settings) -> int:
     print(f"Python: {sys.version.split()[0]}")
     print(f"Ollama: {shutil.which('ollama') or 'not found'}")
@@ -165,9 +173,7 @@ def wake_mode(agent: Agent, settings: Settings) -> None:
                     continue
                 if event.kind == "wake":
                     print("NUMS > Online. Keep talking until you send me to sleep.")
-                    subprocess.run(
-                        ["afplay", "/System/Library/Sounds/Glass.aiff"], check=False
-                    )
+                    _play_sound("/System/Library/Sounds/Glass.aiff")
                     continue
                 if event.kind == "sleep":
                     print("NUMS > Going to sleep.\n")
