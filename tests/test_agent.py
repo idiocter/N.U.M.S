@@ -417,3 +417,14 @@ def test_interrupted_request_rolls_back_the_partial_turn() -> None:
     assert agent.messages == settled
     assert agent.last_run["status"] == "interrupted"
     assert agent.run("third") == "Third answer."
+
+
+def test_agent_starts_when_the_working_directory_is_gone(monkeypatch: pytest.MonkeyPatch) -> None:
+    def gone() -> None:
+        raise FileNotFoundError("cwd removed")
+
+    monkeypatch.setattr("nums.agent.Path.cwd", gone)
+
+    agent = Agent(Settings())
+
+    assert 'Current working directory: "unavailable"' in agent.system_message["content"]
