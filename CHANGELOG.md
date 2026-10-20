@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added policy tests that keep access-mode tool sets, schemas, handlers, and the tools offered to the model consistent.
 - Reported `--voice-test` microphone or whisper-stream failures with a clear message instead of a traceback.
 - Reported a failed `--setup-voice` download with a clear message instead of a traceback.
 - Reported failed LaunchAgent installation or removal with a clear message instead of a traceback.
