@@ -353,3 +353,34 @@ def test_interrupting_a_request_keeps_the_session_running(monkeypatch: pytest.Mo
     assert runs == ["slow request", "quick request"]
     assert "Request interrupted" in output
     assert "NUMS > done" in output
+
+
+def test_mistyped_slash_command_is_not_sent_to_the_model(monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    prompts = iter(["/quite", "/tmp/notes.txt"])
+    runs = []
+
+    class FakeAgent:
+        def __init__(self, settings: Settings) -> None:
+            pass
+
+        def run(self, prompt: str) -> str:
+            runs.append(prompt)
+            return "ok"
+
+    def read_prompt(_: str) -> str:
+        try:
+            return next(prompts)
+        except StopIteration:
+            raise EOFError from None
+
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums"])
+    monkeypatch.setattr("nums.cli.Settings.from_env", lambda: Settings())
+    monkeypatch.setattr("nums.cli.Agent", FakeAgent)
+    monkeypatch.setattr("nums.cli.ensure_ollama_running", lambda settings: None)
+    monkeypatch.setattr("nums.cli.verify_text_model", lambda settings: None)
+    monkeypatch.setattr("builtins.input", read_prompt)
+
+    main()
+
+    assert "Unknown command /quite" in capsys.readouterr().out
+    assert runs == ["/tmp/notes.txt"]

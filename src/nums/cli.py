@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import shutil
 import subprocess
 import sys
@@ -301,6 +302,9 @@ def main() -> None:
         if prompt == "/reset":
             agent.reset()
             print("Conversation cleared.\n")
+            continue
+        if re.fullmatch(r"/[A-Za-z][A-Za-z-]*", prompt):
+            print(f"Unknown command {prompt}. Type /help for commands.\n")
             continue
         try:
             response = agent.run(prompt)
