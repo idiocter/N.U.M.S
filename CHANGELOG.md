@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Treated truncated Ollama HTTP reads during evaluation as retryable request failures instead of aborting the run.
 - Bounded held-out evaluation responses so an oversized model reply is recorded as a case error instead of exhausting memory.
 - Dropped unsupported model message fields such as reasoning text before they reach context, history, or traces.
 - Created the wake listener lock file and its directory with owner-only permissions.

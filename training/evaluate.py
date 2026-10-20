@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import http.client
 import json
 import os
 import tempfile
@@ -259,7 +260,7 @@ def evaluate(
                 actual = None
                 error = f"Invalid model response: {exc}"
                 break
-            except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            except (urllib.error.URLError, TimeoutError, OSError, http.client.HTTPException) as exc:
                 calls = []
                 function = {}
                 actual = None

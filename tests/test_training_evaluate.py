@@ -510,3 +510,30 @@ def test_oversized_model_response_is_recorded_as_an_error(
 
     assert "byte limit" in report["cases"][0]["error"]
     assert report["tool_correct"] == 0
+
+
+def test_truncated_http_response_is_retried(monkeypatch, tmp_path) -> None:
+    import http.client
+
+    data = tmp_path / "test.jsonl"
+    data.write_text(json.dumps({
+        "id": "cut", "messages": [{"role": "user"}, {"role": "assistant"}],
+        "tools": [], "expected_tool": "none", "expected_arguments": {},
+    }) + "\n")
+    responses = iter([
+        http.client.IncompleteRead(b"partial"),
+        _JsonResponse({"message": {"content": "hello"}}),
+    ])
+
+    def open_next(*args, **kwargs):
+        response = next(responses)
+        if isinstance(response, Exception):
+            raise response
+        return nullcontext(response)
+
+    monkeypatch.setattr("training.evaluate.urllib.request.urlopen", open_next)
+
+    report = evaluate(data, "test-model", "http://ollama.test", retries=1)
+
+    assert report["cases"][0]["error"] is None
+    assert report["cases"][0]["attempts"] == 2
