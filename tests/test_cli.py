@@ -384,3 +384,12 @@ def test_mistyped_slash_command_is_not_sent_to_the_model(monkeypatch: pytest.Mon
 
     assert "Unknown command /quite" in capsys.readouterr().out
     assert runs == ["/tmp/notes.txt"]
+
+
+def test_context_limit_too_small_for_the_system_prompt_fails_at_startup(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums", "hello"])
+    monkeypatch.setattr("nums.cli.Settings.from_env", lambda: Settings(max_context_chars=1000))
+    monkeypatch.setattr("nums.cli.ensure_ollama_running", lambda settings: pytest.fail("started ollama"))
+
+    with pytest.raises(SystemExit, match="NUMS_MAX_CONTEXT_CHARS must be at least"):
+        main()

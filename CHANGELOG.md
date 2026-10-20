@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Failed at startup with the required minimum when NUMS_MAX_CONTEXT_CHARS cannot hold the system prompt, instead of rejecting every request later.
 - Reported mistyped slash commands as unknown instead of sending them to the model as requests.
 - Returned to the prompt when Ctrl+C interrupts a running request instead of ending the interactive session.
 - Rolled back the partial turn when a request is interrupted so history never keeps an unanswered tool call.

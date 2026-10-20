@@ -10,7 +10,7 @@ import urllib.request
 from pathlib import Path
 from urllib.parse import urlparse
 
-from .agent import Agent
+from .agent import SYSTEM_PROMPT, Agent
 from .config import Settings
 from .diagnostics import probe_mac_ui, probe_model_tool_call, self_test, voice_test
 from .ollama import OllamaClient, OllamaError
@@ -22,6 +22,9 @@ from .wake import (
     download_voice_model,
     voice_dependencies,
 )
+
+
+CONTEXT_HEADROOM_CHARS = 1000
 
 
 LOGO = r"""
@@ -244,6 +247,12 @@ def main() -> None:
         print(f"Stopped and removed {uninstall_service()}")
         return
 
+    minimum_context = len(SYSTEM_PROMPT) + CONTEXT_HEADROOM_CHARS
+    if settings.max_context_chars < minimum_context:
+        raise SystemExit(
+            f"NUMS_MAX_CONTEXT_CHARS must be at least {minimum_context} "
+            "to fit the system prompt and a request."
+        )
     one_shot = " ".join(args.prompt).strip()
     if args.prompt and not one_shot:
         raise SystemExit("The request is empty. Provide text to run, or omit it for interactive mode.")
