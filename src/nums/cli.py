@@ -243,7 +243,10 @@ def main() -> None:
         raise SystemExit(0 if passed else 1)
     if args.voice_test:
         print("Listening for up to 15 seconds. Say a short sentence.")
-        transcript = voice_test(settings)
+        try:
+            transcript = voice_test(settings)
+        except RuntimeError as exc:
+            raise SystemExit(str(exc)) from exc
         if transcript is None:
             raise SystemExit("No speech was transcribed.")
         print(f"Transcript: {transcript}")

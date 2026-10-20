@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Reported `--voice-test` microphone or whisper-stream failures with a clear message instead of a traceback.
 - Reported a failed `--setup-voice` download with a clear message instead of a traceback.
 - Reported failed LaunchAgent installation or removal with a clear message instead of a traceback.
 - Bounded the wake chime with a timeout and ignored a missing `afplay` so audio problems cannot end the listener.

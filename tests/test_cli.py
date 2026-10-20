@@ -525,3 +525,15 @@ def test_failed_voice_model_download_exits_with_message(monkeypatch: pytest.Monk
 
     with pytest.raises(SystemExit, match="Could not set up the Whisper voice model"):
         main()
+
+
+def test_voice_test_failure_exits_with_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail(settings: Settings) -> None:
+        raise RuntimeError("whisper-stream is missing; run `brew install whisper-cpp`")
+
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums", "--voice-test"])
+    monkeypatch.setattr("nums.cli.Settings.from_env", lambda: Settings())
+    monkeypatch.setattr("nums.cli.voice_test", fail)
+
+    with pytest.raises(SystemExit, match="whisper-stream is missing"):
+        main()
