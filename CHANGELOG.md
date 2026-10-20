@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Streamed command output through a bounded head-and-tail buffer, closed child stdin, and killed the whole process group on timeout so noisy or backgrounding commands cannot exhaust memory or hang a tool call.
 - Treated truncated Ollama HTTP reads during evaluation as retryable request failures instead of aborting the run.
 - Bounded held-out evaluation responses so an oversized model reply is recorded as a case error instead of exhausting memory.
 - Dropped unsupported model message fields such as reasoning text before they reach context, history, or traces.

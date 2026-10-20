@@ -1103,7 +1103,7 @@ def test_nonzero_process_exit_is_reported_as_error(monkeypatch: pytest.MonkeyPat
         stdout = ""
         stderr = "permission denied"
 
-    monkeypatch.setattr("nums.tools.subprocess.run", lambda *args, **kwargs: Result())
+    monkeypatch.setattr("nums.tools._bounded_run", lambda *args, **kwargs: Result())
 
     result = json.loads(_run(["open", "missing"]))
 
@@ -1118,7 +1118,7 @@ def test_large_command_output_reports_truncation(monkeypatch: pytest.MonkeyPatch
         stdout = "x" * 12001
         stderr = ""
 
-    monkeypatch.setattr("nums.tools.subprocess.run", lambda *args, **kwargs: Result())
+    monkeypatch.setattr("nums.tools._bounded_run", lambda *args, **kwargs: Result())
 
     result = json.loads(_run(["say", "hello"]))
 
@@ -1134,7 +1134,7 @@ def test_large_command_output_keeps_failure_context_at_both_ends(
         stdout = "first failure\n" + "x" * 20000
         stderr = "\nlast failure"
 
-    monkeypatch.setattr("nums.tools.subprocess.run", lambda *args, **kwargs: Result())
+    monkeypatch.setattr("nums.tools._bounded_run", lambda *args, **kwargs: Result())
 
     result = json.loads(_run(["pytest"]))
 
@@ -1147,7 +1147,7 @@ def test_command_timeout_returns_partial_output(monkeypatch: pytest.MonkeyPatch)
     def timeout(*args: object, **kwargs: object) -> None:
         raise subprocess.TimeoutExpired("pytest", 5, output=b"test started\n")
 
-    monkeypatch.setattr("nums.tools.subprocess.run", timeout)
+    monkeypatch.setattr("nums.tools._bounded_run", timeout)
 
     result = json.loads(_run(["pytest"], timeout=5))
 
@@ -1238,3 +1238,26 @@ def test_speak_passes_option_like_text_after_separator(monkeypatch: pytest.Monke
     MacTools().speak({"text": "-v Alex hello"})
 
     assert commands == [["say", "--", "-v Alex hello"]]
+
+
+def test_runaway_command_output_is_bounded_while_streaming() -> None:
+    result = json.loads(_run([
+        "/bin/sh", "-c", "head -c 20000000 /dev/zero | tr '\\0' x; echo done-marker 1>&2",
+    ]))
+
+    assert result["exit_code"] == 0
+    assert result["truncated"] is True
+    assert len(result["output"]) <= 12000
+    assert result["output"].endswith("done-marker")
+
+
+def test_timeout_kills_background_children_and_returns_promptly() -> None:
+    import time
+
+    started = time.monotonic()
+    result = json.loads(_run(["/bin/sh", "-c", "echo started; sleep 30 & sleep 30"], timeout=1))
+
+    assert time.monotonic() - started < 10
+    assert result["exit_code"] is None
+    assert "started" in result["output"]
+    assert "timed out after 1 seconds" in result["error"]

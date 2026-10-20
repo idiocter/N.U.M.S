@@ -2,14 +2,17 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import dataclass
 from fnmatch import fnmatchcase
 import os
 import platform
 import re
 import shutil
+import signal
 import stat
 import subprocess
 import tempfile
+import threading
 from pathlib import Path
 from typing import IO, Any, Callable
 from urllib.parse import urlparse
@@ -388,9 +391,86 @@ def _bounded_output(output: str) -> tuple[str, bool]:
     return output[:6000] + marker + output[-(6000 - len(marker)):], True
 
 
+CAPTURE_KEEP_BYTES = 64 * 1024
+
+
+@dataclass
+class _Completed:
+    returncode: int
+    stdout: str
+    stderr: str
+
+
+class _BoundedBuffer:
+    """Keep only the first and last bytes of a stream so noisy commands stay cheap."""
+
+    def __init__(self, keep: int) -> None:
+        self.keep = keep
+        self.head = bytearray()
+        self.tail = bytearray()
+        self.lock = threading.Lock()
+
+    def feed(self, chunk: bytes) -> None:
+        with self.lock:
+            if len(self.head) < self.keep:
+                take = self.keep - len(self.head)
+                self.head += chunk[:take]
+                chunk = chunk[take:]
+            if chunk:
+                self.tail += chunk
+                if len(self.tail) > self.keep:
+                    del self.tail[:-self.keep]
+
+    def value(self) -> bytes:
+        with self.lock:
+            return bytes(self.head) + bytes(self.tail)
+
+
+def _drain(stream: IO[bytes], buffer: _BoundedBuffer) -> None:
+    try:
+        while chunk := stream.read1(65536):
+            buffer.feed(chunk)
+    except (OSError, ValueError):
+        pass
+
+
+def _bounded_run(command: list[str], cwd: str | None = None, timeout: int = 120) -> _Completed:
+    process = subprocess.Popen(
+        command, cwd=cwd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE, start_new_session=True,
+    )
+    buffers = (_BoundedBuffer(CAPTURE_KEEP_BYTES), _BoundedBuffer(CAPTURE_KEEP_BYTES))
+    threads = [
+        threading.Thread(target=_drain, args=(stream, buffer), daemon=True)
+        for stream, buffer in zip((process.stdout, process.stderr), buffers)
+    ]
+    for thread in threads:
+        thread.start()
+    timed_out = False
+    try:
+        process.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        timed_out = True
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        process.wait()
+    for thread in threads:
+        thread.join(timeout=5)
+    stdout, stderr = buffers[0].value(), buffers[1].value()
+    if timed_out:
+        raise subprocess.TimeoutExpired(command, timeout, output=stdout, stderr=stderr)
+    return _Completed(
+        process.returncode,
+        stdout.decode("utf-8", errors="replace"),
+        stderr.decode("utf-8", errors="replace"),
+    )
+
+
 def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
     try:
-        result = subprocess.run(command, cwd=cwd, text=True, capture_output=True, timeout=timeout)
+        result = _bounded_run(command, cwd=cwd, timeout=timeout)
     except subprocess.TimeoutExpired as exc:
         stdout = exc.stdout or b""
         stderr = exc.stderr or b""
