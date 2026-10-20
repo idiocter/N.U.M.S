@@ -137,6 +137,11 @@ class HistoryStore:
                 handle.flush()
                 os.fsync(handle.fileno())
             os.replace(temporary, self.path)
+            directory = os.open(self.path.parent, os.O_RDONLY)
+            try:
+                os.fsync(directory)  # persist the rename, not just the file contents
+            finally:
+                os.close(directory)
         finally:
             if temporary is not None:
                 temporary.unlink(missing_ok=True)

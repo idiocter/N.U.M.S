@@ -175,3 +175,20 @@ def test_load_reports_unreadable_path_as_value_error(
 
 def test_load_missing_file_is_empty(tmp_path: Path) -> None:
     assert HistoryStore(tmp_path / "missing.json").load() == []
+
+
+def test_save_syncs_the_directory_after_the_atomic_rename(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    events = []
+    real_fsync, real_replace = os.fsync, os.replace
+    monkeypatch.setattr("nums.history.os.fsync", lambda fd: events.append("fsync") or real_fsync(fd))
+    monkeypatch.setattr(
+        "nums.history.os.replace", lambda a, b: events.append("replace") or real_replace(a, b)
+    )
+
+    HistoryStore(tmp_path / "history.json").save([
+        {"role": "user", "content": "hi"}, {"role": "assistant", "content": "hello"},
+    ])
+
+    assert events == ["fsync", "replace", "fsync"]
