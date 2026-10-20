@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Returned to the prompt when Ctrl+C interrupts a running request instead of ending the interactive session.
 - Rolled back the partial turn when a request is interrupted so history never keeps an unanswered tool call.
 - Streamed command output through a bounded head-and-tail buffer, closed child stdin, and killed the whole process group on timeout so noisy or backgrounding commands cannot exhaust memory or hang a tool call.
 - Treated truncated Ollama HTTP reads during evaluation as retryable request failures instead of aborting the run.

@@ -304,6 +304,9 @@ def main() -> None:
             continue
         try:
             response = agent.run(prompt)
+        except KeyboardInterrupt:
+            print("\nRequest interrupted.\n")
+            continue
         except OllamaError as exc:
             print(f"NUMS error > {exc}\n")
             continue

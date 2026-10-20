@@ -318,3 +318,38 @@ def test_pull_runs_the_resolved_ollama_command(monkeypatch: pytest.MonkeyPatch) 
 
     assert excinfo.value.code == 0
     assert commands == [["/opt/bin/ollama", "pull", "qwen:test"]]
+
+
+def test_interrupting_a_request_keeps_the_session_running(monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    prompts = iter(["slow request", "quick request"])
+    runs = []
+
+    class FakeAgent:
+        def __init__(self, settings: Settings) -> None:
+            pass
+
+        def run(self, prompt: str) -> str:
+            runs.append(prompt)
+            if prompt == "slow request":
+                raise KeyboardInterrupt
+            return "done"
+
+    def read_prompt(_: str) -> str:
+        try:
+            return next(prompts)
+        except StopIteration:
+            raise EOFError from None
+
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums"])
+    monkeypatch.setattr("nums.cli.Settings.from_env", lambda: Settings())
+    monkeypatch.setattr("nums.cli.Agent", FakeAgent)
+    monkeypatch.setattr("nums.cli.ensure_ollama_running", lambda settings: None)
+    monkeypatch.setattr("nums.cli.verify_text_model", lambda settings: None)
+    monkeypatch.setattr("builtins.input", read_prompt)
+
+    main()
+
+    output = capsys.readouterr().out
+    assert runs == ["slow request", "quick request"]
+    assert "Request interrupted" in output
+    assert "NUMS > done" in output
