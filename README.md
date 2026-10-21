@@ -272,6 +272,32 @@ AppleScript, UI actions, and Trash) or `NUMS_ACTION_MODE=read_only` (inspection
 and information tools only). The default remains `unrestricted` for
 compatibility with existing NUMS behavior.
 
+## Configuration
+
+Every setting is an environment variable read at startup; invalid values stop NUMS
+with a message naming the variable.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `NUMS_MODEL` | `qwen2.5:1.5b-instruct` | Ollama model name |
+| `NUMS_OLLAMA_URL` | `http://127.0.0.1:11434` | Ollama host and optional port, with no path |
+| `NUMS_OLLAMA_TIMEOUT` | `180` | Seconds to wait for one model response |
+| `NUMS_ACTION_MODE` | `unrestricted` | `read_only`, `standard`, or `unrestricted` tool access |
+| `NUMS_MAX_STEPS` | `8` | Model round trips allowed per request |
+| `NUMS_MAX_TOOL_CALLS` | `16` | Tool actions allowed per request |
+| `NUMS_REPEAT_TOOL_LIMIT` | `2` | Identical results tolerated before a request stops |
+| `NUMS_HISTORY_FILE` | unset | Opt-in file that keeps conversation history |
+| `NUMS_HISTORY_TURNS` | `8` | Recent turns sent to the model |
+| `NUMS_MAX_CONTEXT_CHARS` | `60000` | Context budget; must fit the system prompt |
+| `NUMS_TRACE_FILE` | unset | Opt-in private log of tool decisions; must differ from the history file |
+| `NUMS_TRACE_MAX_BYTES` | `10000000` | Size cap for the trace file |
+| `NUMS_SPEAK` | `0` | `1` reads responses aloud |
+| `NUMS_WAKE_PHRASE` | `hey numnum` | Phrase that starts a voice session |
+| `NUMS_SLEEP_PHRASES` | `go to sleep\|good night nums\|aight baby girl lets sleep` | Phrases that end a voice session, separated by `\|` |
+| `NUMS_SESSION_TIMEOUT` | `300` | Idle seconds before a voice session ends |
+| `NUMS_WHISPER_MODEL` | `~/.cache/nums/ggml-base.en.bin` | Whisper model file for wake listening |
+| `NUMS_CAPTURE_DEVICE` | `-1` | Microphone device index; `-1` uses the default |
+
 ## Diagnostics
 
 ```bash
