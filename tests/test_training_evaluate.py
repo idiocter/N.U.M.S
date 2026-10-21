@@ -537,3 +537,23 @@ def test_truncated_http_response_is_retried(monkeypatch, tmp_path) -> None:
 
     assert report["cases"][0]["error"] is None
     assert report["cases"][0]["attempts"] == 2
+
+
+def test_report_path_cannot_overwrite_the_dataset(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    from training import evaluate as evaluate_module
+
+    data = tmp_path / "test.jsonl"
+    data.write_text("original labels\n")
+    monkeypatch.setattr(
+        "sys.argv",
+        ["evaluate", str(data), "--model", "qwen", "--json-out", str(tmp_path / "." / "test.jsonl")],
+    )
+    monkeypatch.setattr(
+        evaluate_module, "evaluate", lambda *args, **kwargs: pytest.fail("evaluated")
+    )
+
+    with pytest.raises(SystemExit) as excinfo:
+        evaluate_module.main()
+
+    assert excinfo.value.code == 2
+    assert data.read_text() == "original labels\n"

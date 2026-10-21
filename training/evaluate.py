@@ -336,6 +336,8 @@ def main() -> None:
     args = parser.parse_args()
     if args.resume and args.json_out is None:
         parser.error("--resume requires --json-out")
+    if args.json_out is not None and args.json_out.resolve() == args.data.resolve():
+        parser.error("--json-out must not be the evaluation dataset")
     prior = None
     try:
         if args.resume and args.json_out.exists():
