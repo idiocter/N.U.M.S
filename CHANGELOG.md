@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Refused to build training splits when the labeled source file is one of the generated outputs.
 - Refused an evaluation report path that would overwrite the evaluation dataset.
 - Refused named pipes and other non-regular files in `append_file` so a pipe with no reader cannot hang a request.
 - Documented slash-command handling, Ctrl+C behavior, configuration constraints, and the new file and command output limits.

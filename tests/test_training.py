@@ -214,3 +214,16 @@ def test_dataset_cli_exits_with_message_on_bad_input(monkeypatch: pytest.MonkeyP
 
     assert ":1:" in str(build_exit.value)
     assert ":1:" in str(coverage_exit.value)
+
+
+def test_build_refuses_to_overwrite_its_own_source(tmp_path: Path) -> None:
+    destination = tmp_path / "splits"
+    destination.mkdir()
+    source = destination / "train.jsonl"
+    source.write_text(SOURCE.read_text(encoding="utf-8"), encoding="utf-8")
+    original = source.read_text(encoding="utf-8")
+
+    with pytest.raises(ValueError, match="would overwrite the labels"):
+        build(source, destination)
+
+    assert source.read_text(encoding="utf-8") == original

@@ -108,6 +108,10 @@ def convert(item: dict) -> dict:
 
 
 def build(source: Path, destination: Path) -> dict[str, int]:
+    generated = [destination / f"{name}.jsonl" for name in ("train", "valid", "test")]
+    generated.append(destination / "split_manifest.json")
+    if source.resolve() in {path.resolve() for path in generated}:
+        raise ValueError(f"{source} is generated output and would overwrite the labels it reads")
     examples = sorted(
         load_examples(source, minimum=15),
         key=lambda item: hashlib.sha256(item["id"].encode()).hexdigest(),
