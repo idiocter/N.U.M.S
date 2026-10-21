@@ -112,7 +112,13 @@ def _write_private_jsonl(path: Path, rows: list[dict], validate: bool = False) -
             temporary.unlink(missing_ok=True)
 
 
+def _require_distinct(source: Path, output: Path, kind: str) -> None:
+    if source.resolve() == output.resolve():
+        raise ValueError(f"the {kind} output must be a different file than its input: {source}")
+
+
 def prepare(trace_path: Path, review_path: Path) -> int:
+    _require_distinct(trace_path, review_path, "review")
     rows = _read_jsonl(review_path, "review") if review_path.exists() else []
     _apply_review_defaults(rows)
     _validate_review_rows(rows, review_path)
@@ -188,6 +194,7 @@ def prepare(trace_path: Path, review_path: Path) -> int:
 
 
 def export(review_path: Path, output_path: Path) -> int:
+    _require_distinct(review_path, output_path, "export")
     examples = []
     rows = _read_jsonl(review_path, "review")
     _apply_review_defaults(rows)

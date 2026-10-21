@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Refused trace review and export paths that would overwrite their own input files.
 - Refused to build training splits when the labeled source file is one of the generated outputs.
 - Refused an evaluation report path that would overwrite the evaluation dataset.
 - Refused named pipes and other non-regular files in `append_file` so a pipe with no reader cannot hang a request.

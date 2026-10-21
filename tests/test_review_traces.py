@@ -283,3 +283,18 @@ def test_malformed_review_json_reports_its_line(tmp_path: Path) -> None:
         export(review, output)
 
     assert not output.exists()
+
+
+def test_review_and_export_refuse_to_overwrite_their_inputs(tmp_path: Path) -> None:
+    trace = tmp_path / "trace.jsonl"
+    review = tmp_path / "review.jsonl"
+    trace.write_text("original trace\n")
+    review.write_text("original review\n")
+
+    with pytest.raises(ValueError, match="different file"):
+        prepare(trace, tmp_path / "." / "trace.jsonl")
+    with pytest.raises(ValueError, match="different file"):
+        export(review, tmp_path / "." / "review.jsonl")
+
+    assert trace.read_text() == "original trace\n"
+    assert review.read_text() == "original review\n"
