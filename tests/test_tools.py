@@ -1261,3 +1261,22 @@ def test_timeout_kills_background_children_and_returns_promptly() -> None:
     assert result["exit_code"] is None
     assert "started" in result["output"]
     assert "timed out after 1 seconds" in result["error"]
+
+
+def test_append_file_rejects_pipes_instead_of_blocking(tmp_path: Path) -> None:
+    pipe = tmp_path / "pipe"
+    os.mkfifo(pipe)
+
+    result = json.loads(MacTools().execute("append_file", {"path": str(pipe), "content": "x"}))
+
+    assert "error" in result
+
+
+def test_append_file_still_appends_to_regular_files(tmp_path: Path) -> None:
+    path = tmp_path / "log.txt"
+    path.write_text("one\n")
+
+    result = json.loads(MacTools().execute("append_file", {"path": str(path), "content": "two\n"}))
+
+    assert result["bytes"] == 4
+    assert path.read_text() == "one\ntwo\n"

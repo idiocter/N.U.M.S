@@ -845,8 +845,13 @@ class MacTools:
         path = requested.resolve() if requested.is_symlink() else requested
         path.parent.mkdir(parents=True, exist_ok=True)
         data = args["content"].encode("utf-8")
-        descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+        # O_NONBLOCK makes a pipe with no reader fail instead of hanging the open.
+        descriptor = os.open(
+            path, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NONBLOCK, 0o600
+        )
         try:
+            if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+                raise ValueError("path must be a regular file")
             view = memoryview(data)
             while view:
                 written = os.write(descriptor, view)
