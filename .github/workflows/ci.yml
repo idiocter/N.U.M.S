@@ -25,4 +25,6 @@ jobs:
           enable-cache: true
       - run: uv sync --locked --dev
       - run: uv run pytest -q
+      - run: uv run nums --help
+      - run: uv run nums --print-service
       - run: uv build

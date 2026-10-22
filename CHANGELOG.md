@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added CI smoke checks that run the installed `nums` command so a broken entry point fails before release.
 - Added Python 3.14, the version used for local development, to the CI test matrix.
 - Added documentation tests that require every setting in the configuration reference and verify its documented defaults.
 - Added a configuration reference listing every environment variable with its default, including settings that were previously undocumented.
