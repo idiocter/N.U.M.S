@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added Python 3.14, the version used for local development, to the CI test matrix.
 - Added documentation tests that require every setting in the configuration reference and verify its documented defaults.
 - Added a configuration reference listing every environment variable with its default, including settings that were previously undocumented.
 - Refused trace review and export paths that would overwrite their own input files.
