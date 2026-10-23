@@ -1280,3 +1280,62 @@ def test_append_file_still_appends_to_regular_files(tmp_path: Path) -> None:
 
     assert result["bytes"] == 4
     assert path.read_text() == "one\ntwo\n"
+
+
+def test_copy_path_rejects_special_files_without_creating_a_destination(tmp_path: Path) -> None:
+    pipe = tmp_path / "pipe"
+    os.mkfifo(pipe)
+    destination = tmp_path / "copy"
+
+    result = json.loads(MacTools().execute("copy_path", {
+        "source": str(pipe), "destination": str(destination),
+    }))
+
+    assert "source must be a file, directory, or symlink" in result["error"]
+    assert not destination.exists()
+
+
+def test_failed_file_copy_leaves_no_partial_destination(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    source = tmp_path / "source.txt"
+    source.write_text("data")
+    destination = tmp_path / "copy.txt"
+
+    def fail_midway(src: object, dst: object, **kwargs: object) -> None:
+        Path(str(dst)).write_text("da")
+        raise OSError("disk full")
+
+    monkeypatch.setattr("nums.tools.shutil.copy2", fail_midway)
+
+    result = json.loads(MacTools().execute("copy_path", {
+        "source": str(source), "destination": str(destination),
+    }))
+
+    assert "disk full" in result["error"]
+    assert not destination.exists()
+    assert source.read_text() == "data"
+
+
+def test_failed_directory_copy_removes_the_partial_tree(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    source = tmp_path / "tree"
+    source.mkdir()
+    (source / "file.txt").write_text("data")
+    destination = tmp_path / "tree-copy"
+
+    def fail_midway(src: object, dst: object, **kwargs: object) -> None:
+        Path(str(dst)).mkdir()
+        (Path(str(dst)) / "half.txt").write_text("x")
+        raise OSError("permission denied")
+
+    monkeypatch.setattr("nums.tools.shutil.copytree", fail_midway)
+
+    result = json.loads(MacTools().execute("copy_path", {
+        "source": str(source), "destination": str(destination),
+    }))
+
+    assert "permission denied" in result["error"]
+    assert not destination.exists()
+    assert (source / "file.txt").read_text() == "data"
