@@ -537,3 +537,98 @@ def test_voice_test_failure_exits_with_message(monkeypatch: pytest.MonkeyPatch) 
 
     with pytest.raises(SystemExit, match="whisper-stream is missing"):
         main()
+
+
+def _patch_startup(monkeypatch: pytest.MonkeyPatch, settings: Settings, agent_class: type) -> None:
+    monkeypatch.setattr("nums.cli.Settings.from_env", lambda: settings)
+    monkeypatch.setattr("nums.cli.Agent", agent_class)
+    monkeypatch.setattr("nums.cli.ensure_ollama_running", lambda settings: None)
+    monkeypatch.setattr("nums.cli.verify_text_model", lambda settings: None)
+
+
+def test_interactive_help_status_and_reset_commands(monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    prompts = iter(["/help", "/status", "/reset", "/quit", "never reached"])
+    resets = []
+
+    class FakeAgent:
+        messages = [{"role": "system"}, {"role": "user"}, {"role": "assistant"}]
+        last_run = {"status": "completed", "steps": 2, "tool_calls": 1, "tool_errors": 0}
+        trace_error = "trace limit reached"
+
+        def __init__(self, settings: Settings) -> None:
+            pass
+
+        def reset(self) -> None:
+            resets.append(True)
+
+        def run(self, prompt: str) -> str:
+            pytest.fail("commands must not reach the model")
+
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums"])
+    _patch_startup(monkeypatch, Settings(model="qwen:test", action_mode="standard"), FakeAgent)
+    monkeypatch.setattr("builtins.input", lambda _: next(prompts))
+
+    main()
+
+    output = capsys.readouterr().out
+    assert "/reset — clear conversation" in output
+    assert "Model: qwen:test | Mode: standard | History: memory only | Messages: 2" in output
+    assert "Last run: completed | Steps: 2 | Tools: 1 | Tool errors: 0" in output
+    assert "Trace error: trace limit reached" in output
+    assert "Conversation cleared." in output
+    assert resets == [True]
+
+
+def test_one_shot_request_prints_and_speaks_the_response(monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    spoken = []
+
+    class FakeAgent:
+        def __init__(self, settings: Settings) -> None:
+            pass
+
+        def run(self, prompt: str) -> str:
+            return f"answer to {prompt}"
+
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums", "--speak", "what", "time"])
+    _patch_startup(monkeypatch, Settings(), FakeAgent)
+    monkeypatch.setattr("nums.cli._say", spoken.append)
+
+    main()
+
+    assert capsys.readouterr().out.strip() == "answer to what time"
+    assert spoken == ["answer to what time"]
+
+
+def test_one_shot_model_failure_exits_with_the_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FailingAgent:
+        def __init__(self, settings: Settings) -> None:
+            pass
+
+        def run(self, prompt: str) -> str:
+            raise OllamaError("Ollama disconnected")
+
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums", "hello"])
+    _patch_startup(monkeypatch, Settings(), FailingAgent)
+
+    with pytest.raises(SystemExit, match="Ollama disconnected"):
+        main()
+
+
+def test_voice_mode_prepares_checks_then_listens_in_order(monkeypatch: pytest.MonkeyPatch) -> None:
+    events = []
+
+    class FakeAgent:
+        def __init__(self, settings: Settings) -> None:
+            events.append("agent")
+
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums", "--voice"])
+    monkeypatch.setattr("nums.cli.Settings.from_env", lambda: Settings())
+    monkeypatch.setattr("nums.cli.Agent", FakeAgent)
+    monkeypatch.setattr("nums.cli.prepare_voice", lambda settings: events.append("prepare"))
+    monkeypatch.setattr("nums.cli.ensure_ollama_running", lambda settings: events.append("ollama"))
+    monkeypatch.setattr("nums.cli.verify_voice_model", lambda settings: events.append("verify"))
+    monkeypatch.setattr("nums.cli.wake_mode", lambda agent, settings: events.append("listen"))
+
+    main()
+
+    assert events == ["prepare", "ollama", "verify", "agent", "listen"]

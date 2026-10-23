@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added tests for interactive commands, spoken one-shot requests, model failure exits, and the voice-mode startup order.
 - Added tests that failed file and directory copies leave no partial destination and that special files are rejected.
 - Added tests for rejecting undersized voice model downloads and for gracefully then forcefully stopping the microphone stream.
 - Added tests for the report comparison, trace review, and coverage commands, including their exit codes and error messages.
