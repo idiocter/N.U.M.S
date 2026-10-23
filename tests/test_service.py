@@ -7,7 +7,7 @@ import sys
 import pytest
 
 from nums.config import Settings
-from nums.service import LABEL, install_service, service_plist
+from nums.service import LABEL, install_service, service_plist, uninstall_service
 
 
 def test_service_plist_runs_current_environment_and_preserves_settings() -> None:
@@ -91,3 +91,33 @@ def test_failed_first_service_install_removes_plist(
         install_service(Settings())
 
     assert not path.exists()
+
+
+def test_uninstall_stops_the_service_then_removes_the_plist(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    path = tmp_path / "LaunchAgents" / "nums.plist"
+    path.parent.mkdir()
+    path.write_bytes(service_plist(Settings()))
+    events = []
+
+    def fake_run(command: list[str], **kwargs: object) -> None:
+        events.append((command[:2], path.exists(), kwargs.get("check")))
+
+    monkeypatch.setattr("nums.service.service_path", lambda: path)
+    monkeypatch.setattr("nums.service.subprocess.run", fake_run)
+
+    assert uninstall_service() == path
+
+    assert events == [(["launchctl", "bootout"], True, False)]
+    assert not path.exists()
+
+
+def test_uninstall_tolerates_a_service_that_was_never_installed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    path = tmp_path / "missing.plist"
+    monkeypatch.setattr("nums.service.service_path", lambda: path)
+    monkeypatch.setattr("nums.service.subprocess.run", lambda *args, **kwargs: None)
+
+    assert uninstall_service() == path
