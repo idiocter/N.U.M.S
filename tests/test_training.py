@@ -227,3 +227,30 @@ def test_build_refuses_to_overwrite_its_own_source(tmp_path: Path) -> None:
         build(source, destination)
 
     assert source.read_text(encoding="utf-8") == original
+
+
+def test_coverage_command_reports_complete_and_incomplete_sets(
+    monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    from training.coverage import main
+
+    monkeypatch.setattr("sys.argv", ["coverage", str(SOURCE)])
+    main()
+    report = json.loads(capsys.readouterr().out)
+    assert report["missing"] == [] and report["underrepresented"] == []
+
+    monkeypatch.setattr(
+        "sys.argv", ["coverage", str(SOURCE), "--minimum-per-tool", "999", "--require-complete"]
+    )
+    with pytest.raises(SystemExit) as excinfo:
+        main()
+    assert excinfo.value.code == 1
+
+
+def test_coverage_command_rejects_a_nonpositive_minimum(monkeypatch: pytest.MonkeyPatch) -> None:
+    from training.coverage import main
+
+    monkeypatch.setattr("sys.argv", ["coverage", str(SOURCE), "--minimum-per-tool", "0"])
+
+    with pytest.raises(SystemExit, match="must be positive"):
+        main()

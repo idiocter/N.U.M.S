@@ -133,3 +133,50 @@ def test_comparison_rejects_invalid_report_version() -> None:
 
     with pytest.raises(ValueError, match="unsupported evaluation report version"):
         compare(baseline, candidate)
+
+
+def _write(path, report: dict) -> str:
+    import json
+
+    path.write_text(json.dumps(report))
+    return str(path)
+
+
+def test_cli_reports_an_improved_candidate(monkeypatch: pytest.MonkeyPatch, tmp_path, capsys) -> None:
+    from training.compare_reports import main
+
+    baseline = _write(tmp_path / "base.json", {"cases": [_case("a", "read_file", False)]})
+    candidate = _write(tmp_path / "cand.json", {"cases": [_case("a", "read_file", True)]})
+    monkeypatch.setattr("sys.argv", ["compare_reports", baseline, candidate])
+
+    main()
+
+    assert "Candidate improved" in capsys.readouterr().out
+
+
+def test_cli_exits_nonzero_for_a_regressed_candidate(monkeypatch: pytest.MonkeyPatch, tmp_path, capsys) -> None:
+    from training.compare_reports import main
+
+    baseline = _write(tmp_path / "base.json", {"cases": [_case("a", "read_file", True)]})
+    candidate = _write(tmp_path / "cand.json", {"cases": [_case("a", "read_file", False)]})
+    monkeypatch.setattr("sys.argv", ["compare_reports", baseline, candidate])
+
+    with pytest.raises(SystemExit) as excinfo:
+        main()
+
+    assert excinfo.value.code == 1
+    assert "Candidate is not ready" in capsys.readouterr().out
+
+
+def test_cli_rejects_unreadable_and_invalid_reports(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    from training.compare_reports import main
+
+    good = _write(tmp_path / "good.json", {"cases": [_case("a", "read_file", True)]})
+    broken = tmp_path / "broken.json"
+    broken.write_text("{not json")
+
+    for baseline in (str(tmp_path / "missing.json"), str(broken)):
+        monkeypatch.setattr("sys.argv", ["compare_reports", baseline, good])
+        with pytest.raises(SystemExit) as excinfo:
+            main()
+        assert excinfo.value.code == 2

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added tests for the report comparison, trace review, and coverage commands, including their exit codes and error messages.
 - Added tests for the model tool-call and Mac UI diagnostic probes, including failure message precedence.
 - Added tests for LaunchAgent removal, including a service that was never installed.
 - Added a test for stopping alternating identical tool calls that make no progress.

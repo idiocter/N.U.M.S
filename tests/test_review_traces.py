@@ -298,3 +298,40 @@ def test_review_and_export_refuse_to_overwrite_their_inputs(tmp_path: Path) -> N
 
     assert trace.read_text() == "original trace\n"
     assert review.read_text() == "original review\n"
+
+
+def test_review_command_prepares_then_exports(monkeypatch: pytest.MonkeyPatch, tmp_path, capsys) -> None:
+    from training.review_traces import main
+
+    trace = tmp_path / "trace.jsonl"
+    review = tmp_path / "review.jsonl"
+    output = tmp_path / "examples.jsonl"
+    trace.write_text(json.dumps({
+        "at": "2026-01-01T00:00:00+00:00", "prompt": "open Safari",
+        "tool_calls": [{"tool": "open_item", "arguments": {"target": "Safari"}}],
+        "reply": "done", "error": None,
+    }) + "\n")
+
+    monkeypatch.setattr("sys.argv", ["review_traces", "prepare", str(trace), str(review)])
+    main()
+    assert "1 records written" in capsys.readouterr().out
+
+    row = json.loads(review.read_text())
+    row.update(reviewed=True, decision="accept")
+    review.write_text(json.dumps(row) + "\n")
+    monkeypatch.setattr("sys.argv", ["review_traces", "export", str(review), str(output)])
+    main()
+
+    assert "1 records written" in capsys.readouterr().out
+    assert json.loads(output.read_text())["tool"] == "open_item"
+
+
+def test_review_command_exits_with_message_for_bad_input(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    from training.review_traces import main
+
+    trace = tmp_path / "trace.jsonl"
+    trace.write_text("{not json}\n")
+    monkeypatch.setattr("sys.argv", ["review_traces", "prepare", str(trace), str(tmp_path / "review.jsonl")])
+
+    with pytest.raises(SystemExit, match="invalid JSON"):
+        main()
