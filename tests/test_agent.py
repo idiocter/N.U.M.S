@@ -428,3 +428,34 @@ def test_agent_starts_when_the_working_directory_is_gone(monkeypatch: pytest.Mon
     agent = Agent(Settings())
 
     assert 'Current working directory: "unavailable"' in agent.system_message["content"]
+
+
+def test_alternating_identical_tool_calls_stop_as_a_cycle(tmp_path) -> None:
+    first, second = tmp_path / "a.txt", tmp_path / "b.txt"
+    first.write_text("one")
+    second.write_text("two")
+
+    def call(path: object) -> dict[str, Any]:
+        return {"function": {"name": "path_info", "arguments": {"path": str(path)}}}
+
+    class CyclingClient:
+        def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
+            return {"message": {
+                "role": "assistant", "content": "",
+                "tool_calls": [call(first), call(second)] * 3,
+            }}
+
+    agent = Agent(Settings(repeat_tool_limit=2))
+    agent.client = CyclingClient()  # type: ignore[assignment]
+
+    reply = agent.run("inspect both files")
+
+    assert "repeated the same result" in reply
+    assert agent.last_run["status"] == "no_progress"
+    skipped = [
+        message for message in agent.messages
+        if message.get("role") == "tool" and "repeated tool-call cycle" in message["content"]
+    ]
+    assert len(skipped) == 1  # the call after the third identical result
+    answered = [message for message in agent.messages if message.get("role") == "tool"]
+    assert len(answered) == 6
