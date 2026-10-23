@@ -384,3 +384,87 @@ def test_listener_lock_is_private(tmp_path: Path) -> None:
     with ListenerLock(lock_path):
         assert stat.S_IMODE(lock_path.stat().st_mode) == 0o600
         assert stat.S_IMODE(lock_path.parent.stat().st_mode) == 0o700
+
+
+def test_small_voice_download_is_rejected_and_never_installed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    def short_download(command: list[str], **kwargs: object) -> None:
+        Path(command[command.index("--output") + 1]).write_bytes(b"<html>error page</html>")
+
+    monkeypatch.setattr("nums.wake.subprocess.run", short_download)
+    model = tmp_path / "voice.bin"
+
+    with pytest.raises(RuntimeError, match="unexpectedly small"):
+        download_voice_model(str(model))
+
+    assert not model.exists()
+    assert model.with_suffix(".bin.part").exists()
+
+
+def test_complete_voice_download_replaces_the_partial_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    def full_download(command: list[str], **kwargs: object) -> None:
+        with Path(command[command.index("--output") + 1]).open("wb") as handle:
+            handle.truncate(50_000_000)
+
+    monkeypatch.setattr("nums.wake.subprocess.run", full_download)
+    model = tmp_path / "nested" / "voice.bin"
+
+    assert download_voice_model(str(model)) == model
+    assert model.stat().st_size == 50_000_000
+    assert not model.with_suffix(".bin.part").exists()
+
+
+class _FakeProcess:
+    def __init__(self, running: bool, stubborn: bool = False) -> None:
+        self.running = running
+        self.stubborn = stubborn
+        self.events: list[str] = []
+
+    def poll(self) -> int | None:
+        return None if self.running else 0
+
+    def terminate(self) -> None:
+        self.events.append("terminate")
+
+    def kill(self) -> None:
+        self.events.append("kill")
+        self.stubborn = False
+
+    def wait(self, timeout: float | None = None) -> int:
+        if self.stubborn and timeout is not None:
+            import subprocess
+
+            raise subprocess.TimeoutExpired("whisper-stream", timeout)
+        self.events.append("wait")
+        return 0
+
+
+def test_stop_terminates_a_running_stream_gracefully() -> None:
+    stream = WhisperStream("/unused")
+    stream.process = _FakeProcess(running=True)  # type: ignore[assignment]
+
+    stream.stop()
+
+    assert stream.process.events == ["terminate", "wait"]  # type: ignore[union-attr]
+
+
+def test_stop_kills_a_stream_that_ignores_terminate() -> None:
+    stream = WhisperStream("/unused")
+    stream.process = _FakeProcess(running=True, stubborn=True)  # type: ignore[assignment]
+
+    stream.stop()
+
+    assert stream.process.events == ["terminate", "kill", "wait"]  # type: ignore[union-attr]
+
+
+def test_stop_leaves_an_already_finished_stream_alone() -> None:
+    stream = WhisperStream("/unused")
+    stream.process = _FakeProcess(running=False)  # type: ignore[assignment]
+
+    stream.stop()
+    WhisperStream("/unused").stop()
+
+    assert stream.process.events == []  # type: ignore[union-attr]

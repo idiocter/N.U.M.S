@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added tests for rejecting undersized voice model downloads and for gracefully then forcefully stopping the microphone stream.
 - Added tests for the report comparison, trace review, and coverage commands, including their exit codes and error messages.
 - Added tests for the model tool-call and Mac UI diagnostic probes, including failure message precedence.
 - Added tests for LaunchAgent removal, including a service that was never installed.
