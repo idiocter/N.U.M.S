@@ -1339,3 +1339,75 @@ def test_failed_directory_copy_removes_the_partial_tree(
     assert "permission denied" in result["error"]
     assert not destination.exists()
     assert (source / "file.txt").read_text() == "data"
+
+
+WINDOW_BASE = {"app": "Notes", "window": "Draft"}
+
+
+@pytest.mark.parametrize(
+    ("tool", "extra"),
+    [
+        ("focus_app_window", {}),
+        ("close_app_window", {}),
+        ("set_app_window_minimized", {"state": "on"}),
+        ("set_app_window_fullscreen", {"state": "off"}),
+        ("move_app_window", {"x": "10", "y": "20"}),
+        ("resize_app_window", {"width": "400", "height": "300"}),
+    ],
+)
+@pytest.mark.parametrize(
+    ("override", "message"),
+    [
+        ({"app": "   "}, "must not be empty"),
+        ({"window": ""}, "must not be empty"),
+        ({"index": "0"}, "positive window number"),
+        ({"index": "first"}, "positive window number"),
+    ],
+)
+def test_window_tools_reject_bad_targets_before_running_anything(
+    monkeypatch: pytest.MonkeyPatch, tool: str, extra: dict, override: dict, message: str
+) -> None:
+    monkeypatch.setattr("nums.tools._run", lambda *args, **kwargs: pytest.fail("ran osascript"))
+    handler = getattr(MacTools(), tool)
+
+    with pytest.raises(ValueError, match=message):
+        handler({**WINDOW_BASE, **extra, **override})
+
+
+@pytest.mark.parametrize("tool", ["set_app_window_minimized", "set_app_window_fullscreen"])
+def test_window_state_tools_require_on_or_off(monkeypatch: pytest.MonkeyPatch, tool: str) -> None:
+    monkeypatch.setattr("nums.tools._run", lambda *args, **kwargs: pytest.fail("ran osascript"))
+
+    with pytest.raises(ValueError, match="state must be on or off"):
+        getattr(MacTools(), tool)({**WINDOW_BASE, "state": "toggle"})
+
+
+@pytest.mark.parametrize(
+    ("tool", "args", "message"),
+    [
+        ("move_app_window", {"x": "10001", "y": "0"}, "x must be between -10000 and 10000"),
+        ("move_app_window", {"x": "0", "y": "-10001"}, "y must be between -10000 and 10000"),
+        ("move_app_window", {"x": "left", "y": "0"}, "x must be an integer"),
+        ("resize_app_window", {"width": "99", "height": "300"}, "width must be between 100 and 10000"),
+        ("resize_app_window", {"width": "400", "height": "10001"}, "height must be between 100 and 10000"),
+        ("resize_app_window", {"width": "wide", "height": "300"}, "width must be an integer"),
+    ],
+)
+def test_window_geometry_is_bounded(
+    monkeypatch: pytest.MonkeyPatch, tool: str, args: dict, message: str
+) -> None:
+    monkeypatch.setattr("nums.tools._run", lambda *a, **k: pytest.fail("ran osascript"))
+
+    with pytest.raises(ValueError, match=message):
+        getattr(MacTools(), tool)({**WINDOW_BASE, **args})
+
+
+def test_valid_window_geometry_reaches_the_script(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
+
+    MacTools().move_app_window({**WINDOW_BASE, "x": "-10000", "y": "10000"})
+    MacTools().resize_app_window({**WINDOW_BASE, "width": "100", "height": "10000"})
+
+    assert commands[0][-5:] == ["Notes", "Draft", "", "-10000", "10000"]
+    assert commands[1][-5:] == ["Notes", "Draft", "", "100", "10000"]
