@@ -1476,3 +1476,61 @@ def test_text_tools_pick_append_or_replace_mode(
 
     assert commands[0][-1] == mode
     assert commands[0][3:6] == ["Notes", "Draft", "hello"]
+
+
+@pytest.mark.parametrize(
+    ("tool", "args", "message"),
+    [
+        ("activate_app", {"app": " "}, "app must not be empty"),
+        ("list_app_windows", {"app": ""}, "app must not be empty"),
+        ("inspect_focused_app_element", {"app": "  "}, "app must not be empty"),
+        ("inspect_app_ui", {"app": " "}, "app must not be empty"),
+        ("inspect_app_ui", {"app": "Notes", "offset": "-1"}, "offset must be nonnegative"),
+        ("inspect_app_ui", {"app": "Notes", "limit": "0"}, "limit must be between 1 and 120"),
+        ("inspect_app_ui", {"app": "Notes", "limit": "121"}, "limit must be between 1 and 120"),
+        ("inspect_app_menu", {"app": " "}, "app must not be empty"),
+        ("inspect_app_menu", {"app": "Notes", "submenu": "Recent"}, "submenu requires a menu"),
+        ("click_app_menu_item", {"app": "Notes", "menu": "File", "item": " "}, "must not be empty"),
+        ("wait_for_app_window", {"app": "Notes", "window": " "}, "must not be empty"),
+        ("wait_for_app_window", {"app": "Notes", "window": "A", "state": "visible"}, "state must be exists or absent"),
+        ("wait_for_app_window", {"app": "Notes", "window": "A", "timeout": "0"}, "between 1 and 30 seconds"),
+        ("wait_for_app_window", {"app": "Notes", "window": "A", "timeout": "31"}, "between 1 and 30 seconds"),
+        ("wait_for_app_element", {"app": "Notes", "window": "A", "role": "AXButton", "label": " "}, "must not be empty"),
+        ("wait_for_app_element", {"app": "Notes", "window": "A", "role": "AXButton", "label": "Save", "state": "hidden"}, "state must be exists, enabled, disabled, or absent"),
+        ("wait_for_app_element", {"app": "Notes", "window": "A", "role": "AXButton", "label": "Save", "timeout": "soon"}, "between 1 and 30 seconds"),
+        ("wait_for_app_menu_item", {"app": "Notes", "menu": "File", "item": ""}, "must not be empty"),
+        ("wait_for_app_menu_item", {"app": "Notes", "menu": "File", "item": "Save", "state": "gone"}, "state must be exists, enabled, disabled, or absent"),
+        ("wait_for_app_menu_item", {"app": "Notes", "menu": "File", "item": "Save", "timeout": "99"}, "between 1 and 30 seconds"),
+        ("press_app_key", {"app": " ", "window": "A", "key": "a"}, "must not be empty"),
+        ("press_app_key", {"app": "Notes", "window": "A", "key": "ab"}, "one character or a supported key name"),
+        ("press_app_key", {"app": "Notes", "window": "A", "key": "a", "modifiers": "hyper"}, "modifiers must be unique names"),
+        ("press_app_key", {"app": "Notes", "window": "A", "key": "a", "modifiers": "shift,shift"}, "modifiers must be unique names"),
+    ],
+)
+def test_inspection_wait_and_key_tools_reject_invalid_arguments(
+    monkeypatch: pytest.MonkeyPatch, tool: str, args: dict, message: str
+) -> None:
+    monkeypatch.setattr("nums.tools._run", lambda *a, **k: pytest.fail("ran osascript"))
+
+    with pytest.raises(ValueError, match=message):
+        getattr(MacTools(), tool)(args)
+
+
+@pytest.mark.parametrize(
+    ("tool", "args", "timeout"),
+    [
+        ("wait_for_app_window", {"app": "Notes", "window": "A", "timeout": "30"}, 35),
+        ("wait_for_app_window", {"app": "Notes", "window": "A"}, 15),
+        ("wait_for_app_element", {"app": "Notes", "window": "A", "role": "AXButton", "label": "Save", "timeout": "1"}, 6),
+        ("wait_for_app_menu_item", {"app": "Notes", "menu": "File", "item": "Save", "timeout": "20"}, 25),
+    ],
+)
+def test_wait_tools_allow_the_script_its_wait_plus_margin(
+    monkeypatch: pytest.MonkeyPatch, tool: str, args: dict, timeout: int
+) -> None:
+    calls = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: calls.append(kwargs) or "ok")
+
+    getattr(MacTools(), tool)(args)
+
+    assert calls == [{"timeout": timeout}]

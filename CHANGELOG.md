@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added tests for inspection, wait, menu, and key tool validation and for giving wait scripts their full wait plus a safety margin.
 - Added tests that element, toggle, slider, and text tools reject ambiguous or invalid targets and choose append or replace typing correctly.
 - Added tests that every window tool rejects bad targets, states, and out-of-range geometry before running any script.
 - Added tests for interactive commands, spoken one-shot requests, model failure exits, and the voice-mode startup order.
