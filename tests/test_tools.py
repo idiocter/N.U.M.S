@@ -1534,3 +1534,61 @@ def test_wait_tools_allow_the_script_its_wait_plus_margin(
     getattr(MacTools(), tool)(args)
 
     assert calls == [{"timeout": timeout}]
+
+
+def test_trash_path_reports_a_missing_source(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr("nums.tools.Path.home", lambda: tmp_path)
+
+    result = json.loads(MacTools().execute("trash_path", {"path": str(tmp_path / "ghost.txt")}))
+
+    assert result["error"].startswith("FileNotFoundError")
+    assert not (tmp_path / ".Trash").exists()
+
+
+def test_trash_path_refuses_the_trash_and_its_parents(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    (home / ".Trash").mkdir(parents=True)
+    (home / ".Trash" / "kept.txt").write_text("kept")
+    monkeypatch.setattr("nums.tools.Path.home", lambda: home)
+
+    for path in (home / ".Trash", home, tmp_path):
+        result = json.loads(MacTools().execute("trash_path", {"path": str(path)}))
+        assert "Cannot move the Trash or its parent" in result["error"]
+
+    assert (home / ".Trash" / "kept.txt").read_text() == "kept"
+    assert home.exists()
+
+
+def test_trash_path_numbers_repeated_names_and_keeps_dotfile_names(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setattr("nums.tools.Path.home", lambda: home)
+    locations = []
+
+    for round_number in range(3):
+        (home / ".zshrc").write_text(f"round {round_number}")
+        (home / "report.txt").write_text(f"round {round_number}")
+        for name in (".zshrc", "report.txt"):
+            result = json.loads(MacTools().trash_path({"path": str(home / name)}))
+            locations.append(Path(result["recoverable_at"]).name)
+
+    assert locations == [
+        ".zshrc", "report.txt", ".zshrc-1", "report-1.txt", ".zshrc-2", "report-2.txt",
+    ]
+    assert (home / ".Trash" / "report-2.txt").read_text() == "round 2"
+    assert stat.S_IMODE((home / ".Trash").stat().st_mode) == 0o700
+
+
+def test_trash_path_moves_a_whole_directory_tree(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    project = home / "project"
+    (project / "src").mkdir(parents=True)
+    (project / "src" / "main.py").write_text("print('hi')")
+    monkeypatch.setattr("nums.tools.Path.home", lambda: home)
+
+    result = json.loads(MacTools().trash_path({"path": str(project)}))
+
+    assert not project.exists()
+    assert (Path(result["recoverable_at"]) / "src" / "main.py").read_text() == "print('hi')"
