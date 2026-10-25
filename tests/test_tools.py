@@ -1411,3 +1411,68 @@ def test_valid_window_geometry_reaches_the_script(monkeypatch: pytest.MonkeyPatc
 
     assert commands[0][-5:] == ["Notes", "Draft", "", "-10000", "10000"]
     assert commands[1][-5:] == ["Notes", "Draft", "", "100", "10000"]
+
+
+ELEMENT_BASE = {"app": "Notes", "window": "Draft"}
+
+
+@pytest.mark.parametrize(
+    ("tool", "args", "message"),
+    [
+        ("click_app_element", {"role": "AXButton"}, "label or inspected index is required"),
+        ("click_app_element", {"role": "AXButton", "index": "0"}, "positive element number"),
+        ("click_app_element", {"role": " ", "label": "Save"}, "must not be empty"),
+        ("show_app_element_menu", {"role": "AXButton"}, "label or inspected index is required"),
+        ("show_app_element_menu", {"role": "AXButton", "index": "x"}, "positive element number"),
+        ("select_app_popup_item", {"item": "Large"}, "label or inspected index is required"),
+        ("select_app_popup_item", {"item": " ", "label": "Size"}, "must not be empty"),
+        ("select_app_popup_item", {"item": "Large", "index": "0"}, "positive element number"),
+        ("select_app_radio", {}, "label or inspected index is required"),
+        ("select_app_radio", {"index": "-1"}, "positive element number"),
+        ("set_app_toggle", {"role": "AXButton", "state": "on", "label": "A"}, "role must be"),
+        ("set_app_toggle", {"role": "AXCheckBox", "state": "maybe", "label": "A"}, "state must be on or off"),
+        ("set_app_toggle", {"role": "AXCheckBox", "state": "on"}, "label or inspected index is required"),
+        ("set_app_toggle", {"role": "AXCheckBox", "state": "on", "index": "0"}, "positive element number"),
+        ("adjust_app_control", {"role": "AXButton", "direction": "increase", "label": "A"}, "role must be"),
+        ("adjust_app_control", {"role": "AXSlider", "direction": "sideways", "label": "A"}, "direction must be"),
+        ("adjust_app_control", {"role": "AXSlider", "direction": "increase"}, "label or inspected index is required"),
+        ("adjust_app_control", {"role": "AXSlider", "direction": "increase", "label": "A", "steps": "0"}, "steps must be between 1 and 20"),
+        ("adjust_app_control", {"role": "AXSlider", "direction": "increase", "label": "A", "steps": "21"}, "steps must be between 1 and 20"),
+        ("type_in_app", {"text": ""}, "must not be empty"),
+        ("type_in_app", {"text": "hi", "label": "Body"}, "label requires a role"),
+        ("type_in_app", {"text": "hi", "role": "AXButton", "label": "Body"}, "role must be"),
+        ("type_in_app", {"text": "hi", "index": "1"}, "index requires a text field"),
+        ("type_in_app", {"text": "hi", "role": "AXTextField", "index": "0"}, "index requires a text field"),
+        ("type_in_app", {"text": "hi", "role": "AXTextArea"}, "requires a label or inspected index"),
+        ("replace_app_text", {"text": "hi", "role": "AXButton", "label": "Body"}, "role must be"),
+        ("replace_app_text", {"text": "hi", "role": "AXTextField"}, "label or inspected index is required"),
+        ("replace_app_text", {"text": "hi", "role": "AXTextField", "index": "0"}, "positive element number"),
+    ],
+)
+def test_element_tools_reject_bad_targets_before_running_anything(
+    monkeypatch: pytest.MonkeyPatch, tool: str, args: dict, message: str
+) -> None:
+    monkeypatch.setattr("nums.tools._run", lambda *a, **k: pytest.fail("ran osascript"))
+
+    with pytest.raises(ValueError, match=message):
+        getattr(MacTools(), tool)({**ELEMENT_BASE, **args})
+
+
+@pytest.mark.parametrize(
+    ("tool", "args", "mode"),
+    [
+        ("type_in_app", {"text": "hello"}, "append"),
+        ("type_in_app", {"text": "hello", "role": "AXTextField", "label": "Title"}, "append"),
+        ("replace_app_text", {"text": "hello", "role": "AXTextArea", "index": "2"}, "replace"),
+    ],
+)
+def test_text_tools_pick_append_or_replace_mode(
+    monkeypatch: pytest.MonkeyPatch, tool: str, args: dict, mode: str
+) -> None:
+    commands = []
+    monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
+
+    getattr(MacTools(), tool)({**ELEMENT_BASE, **args})
+
+    assert commands[0][-1] == mode
+    assert commands[0][3:6] == ["Notes", "Draft", "hello"]
