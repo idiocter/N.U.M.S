@@ -7,7 +7,7 @@ import sys
 import pytest
 
 from nums.config import Settings
-from nums.service import LABEL, install_service, service_plist, uninstall_service
+from nums.service import LABEL, install_service, service_path, service_plist, uninstall_service
 
 
 def test_service_plist_runs_current_environment_and_preserves_settings() -> None:
@@ -121,3 +121,60 @@ def test_uninstall_tolerates_a_service_that_was_never_installed(
     monkeypatch.setattr("nums.service.subprocess.run", lambda *args, **kwargs: None)
 
     assert uninstall_service() == path
+
+
+def test_service_lives_in_the_users_launch_agents(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    monkeypatch.setattr("nums.service.Path.home", lambda: tmp_path)
+
+    assert service_path() == tmp_path / "Library" / "LaunchAgents" / f"{LABEL}.plist"
+
+
+def test_first_install_writes_a_private_plist_and_only_bootstraps(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    path = tmp_path / "LaunchAgents" / "nums.plist"
+    calls = []
+    monkeypatch.setattr("nums.service.service_path", lambda: path)
+    monkeypatch.setattr(
+        "nums.service.subprocess.run", lambda command, **kwargs: calls.append((command, kwargs))
+    )
+
+    assert install_service(Settings(model="qwen:new")) == path
+
+    assert [command[1] for command, _ in calls] == ["bootstrap"]
+    command, kwargs = calls[0]
+    assert command[2] == f"gui/{os.getuid()}" and command[3] == str(path)
+    assert kwargs == {"check": True}
+    assert stat.S_IMODE(path.stat().st_mode) == 0o600
+    assert plistlib.loads(path.read_bytes())["EnvironmentVariables"]["NUMS_MODEL"] == "qwen:new"
+    assert list(path.parent.glob(".nums.plist.*")) == []
+
+
+def test_reinstall_stops_the_old_service_before_loading_the_new_one(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    path = tmp_path / "nums.plist"
+    path.write_bytes(service_plist(Settings(model="qwen:old")))
+    events = []
+
+    def fake_run(command: list[str], **kwargs: object) -> None:
+        events.append((command[1], plistlib.loads(path.read_bytes())["EnvironmentVariables"]["NUMS_MODEL"]))
+
+    monkeypatch.setattr("nums.service.service_path", lambda: path)
+    monkeypatch.setattr("nums.service.subprocess.run", fake_run)
+
+    install_service(Settings(model="qwen:new"))
+
+    assert events == [("bootout", "qwen:new"), ("bootstrap", "qwen:new")]
+
+
+def test_plist_logs_to_the_users_library_and_restarts_on_exit(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    monkeypatch.setattr("nums.service.Path.home", lambda: tmp_path)
+
+    data = plistlib.loads(service_plist(Settings()))
+
+    log = str(tmp_path / "Library" / "Logs" / "NUMS.log")
+    assert data["StandardOutPath"] == data["StandardErrorPath"] == log
+    assert data["RunAtLoad"] is True and data["KeepAlive"] is True
+    assert data["ThrottleInterval"] == 10
+    assert "NUMS_HISTORY_FILE" not in data["EnvironmentVariables"]
