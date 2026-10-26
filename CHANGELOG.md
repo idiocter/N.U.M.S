@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added tests that invalid traces and malformed review rows are rejected without touching review or export files.
 - Added tests for every held-out evaluation case validation rule, including reported line numbers.
 - Added tests for every evaluation report validation rule and for the reasons a candidate model is held back.
 - Added tests for Trash protection, missing sources, repeated-name numbering, dotfile names, and moving whole directory trees.

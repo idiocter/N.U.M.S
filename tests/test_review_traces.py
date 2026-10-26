@@ -335,3 +335,99 @@ def test_review_command_exits_with_message_for_bad_input(monkeypatch: pytest.Mon
 
     with pytest.raises(SystemExit, match="invalid JSON"):
         main()
+
+
+def _trace(**changes: object) -> dict:
+    trace = {
+        "at": "2026-01-01T00:00:00+00:00", "prompt": "open Safari",
+        "tool_calls": [{"tool": "open_item", "arguments": {"target": "Safari"}}],
+        "reply": "done", "error": None,
+    }
+    trace.update(changes)
+    return trace
+
+
+@pytest.mark.parametrize(
+    ("trace", "message"),
+    [
+        (_trace(prompt=""), "prompt must be a nonempty string"),
+        (_trace(prompt=3), "prompt must be a nonempty string"),
+        (_trace(tool_calls="x"), "tool_calls must be a list"),
+        (_trace(tool_calls=["x"]), "each tool call needs a nonempty tool"),
+        (_trace(tool_calls=[{"tool": "", "arguments": {}}]), "each tool call needs a nonempty tool"),
+        (_trace(tool_calls=[{"tool": "t", "arguments": "raw"}]), "tool call arguments must be an object"),
+        (_trace(reply=5), "reply must be a string or null"),
+        (_trace(error=["x"]), "error must be a string or null"),
+    ],
+)
+def test_prepare_rejects_invalid_traces_without_writing_a_review_file(
+    tmp_path: Path, trace: dict, message: str
+) -> None:
+    source = tmp_path / "trace.jsonl"
+    review = tmp_path / "review.jsonl"
+    source.write_text(json.dumps(_trace()) + "\n" + json.dumps(trace) + "\n")
+
+    with pytest.raises(ValueError, match=rf"trace.*:2: {message}"):
+        prepare(source, review)
+
+    assert not review.exists()
+
+
+def test_prepare_rejects_non_object_trace_records(tmp_path: Path) -> None:
+    source = tmp_path / "trace.jsonl"
+    source.write_text("[1]\n")
+
+    with pytest.raises(ValueError, match=r":1: record must be a JSON object"):
+        prepare(source, tmp_path / "review.jsonl")
+
+
+def _review_row(**changes: object) -> dict:
+    row = {
+        "id": "trace-1", "user": "open Safari",
+        "proposed_tool": "open_item", "proposed_arguments": {"target": "Safari"},
+        "tool": "open_item", "arguments": {"target": "Safari"},
+        "reviewed": False, "decision": "",
+    }
+    row.update(changes)
+    return row
+
+
+@pytest.mark.parametrize(
+    ("row", "message"),
+    [
+        (_review_row(id=""), "id must be a nonempty string"),
+        (_review_row(user="  "), "user must be a nonempty string"),
+        (_review_row(tool=None), "tool must be a string"),
+        (_review_row(decision=1), "decision must be a string"),
+        (_review_row(arguments=[]), "arguments must be an object"),
+        (_review_row(proposed_arguments="x"), "proposed_arguments must be an object"),
+        (_review_row(reviewed="yes"), "reviewed must be a boolean"),
+        (_review_row(answer=3), "answer must be a string or null"),
+        (_review_row(review_notes=[]), "review_notes must be a string or null"),
+        (_review_row(source_fingerprint="XYZ"), "16-character hex digest"),
+        (_review_row(source_fingerprint="ABCDEF0123456789"), "16-character hex digest"),
+    ],
+)
+def test_malformed_review_rows_are_rejected_by_prepare_and_export(
+    tmp_path: Path, row: dict, message: str
+) -> None:
+    review = tmp_path / "review.jsonl"
+    review.write_text(json.dumps(row) + "\n")
+    (tmp_path / "trace.jsonl").write_text("")
+    before = review.read_text()
+
+    with pytest.raises(ValueError, match=message):
+        prepare(tmp_path / "trace.jsonl", review)
+    with pytest.raises(ValueError, match=message):
+        export(review, tmp_path / "out.jsonl")
+
+    assert review.read_text() == before
+    assert not (tmp_path / "out.jsonl").exists()
+
+
+def test_duplicate_review_ids_are_rejected(tmp_path: Path) -> None:
+    review = tmp_path / "review.jsonl"
+    review.write_text(json.dumps(_review_row()) + "\n" + json.dumps(_review_row()) + "\n")
+
+    with pytest.raises(ValueError, match="duplicate id: trace-1"):
+        export(review, tmp_path / "out.jsonl")
