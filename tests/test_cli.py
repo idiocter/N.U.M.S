@@ -632,3 +632,100 @@ def test_voice_mode_prepares_checks_then_listens_in_order(monkeypatch: pytest.Mo
     main()
 
     assert events == ["prepare", "ollama", "verify", "agent", "listen"]
+
+
+def test_doctor_passes_when_everything_is_ready(monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    monkeypatch.setattr("nums.cli.OllamaClient.has_model", lambda self: True)
+    monkeypatch.setattr("nums.cli.probe_model_tool_call", lambda settings: (True, None))
+    monkeypatch.setattr("nums.cli.voice_dependencies", lambda path: (True, False))
+    monkeypatch.setattr("nums.cli.probe_mac_ui", lambda: (True, None))
+
+    assert doctor(Settings(model="qwen:test")) == 0
+
+    output = capsys.readouterr().out
+    assert "Model: qwen:test" in output
+    assert "Model listed by Ollama: yes" in output
+    assert "Model tool call: ok" in output
+    assert "Whisper stream: yes" in output and "Wake model: no" in output
+    assert "Mac app UI: ok" in output
+
+
+def test_doctor_fails_when_mac_ui_is_blocked(monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    monkeypatch.setattr("nums.cli.OllamaClient.has_model", lambda self: True)
+    monkeypatch.setattr("nums.cli.probe_model_tool_call", lambda settings: (True, None))
+    monkeypatch.setattr("nums.cli.voice_dependencies", lambda path: (True, True))
+    monkeypatch.setattr("nums.cli.probe_mac_ui", lambda: (False, "grant Accessibility access"))
+
+    assert doctor(Settings()) == 1
+    assert "Mac app UI: failed (grant Accessibility access)" in capsys.readouterr().out
+
+
+def test_prepare_voice_requires_whisper_and_downloads_a_missing_model(
+    monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    monkeypatch.setattr("nums.cli.voice_dependencies", lambda path: (False, False))
+    with pytest.raises(SystemExit, match="brew install whisper-cpp"):
+        prepare_voice(Settings())
+
+    downloads = []
+    monkeypatch.setattr("nums.cli.voice_dependencies", lambda path: (True, False))
+    monkeypatch.setattr("nums.cli.download_voice_model", downloads.append)
+    prepare_voice(Settings(whisper_model="/models/voice.bin"))
+    assert downloads == ["/models/voice.bin"]
+    assert "Whisper voice model ready." in capsys.readouterr().out
+
+    monkeypatch.setattr("nums.cli.voice_dependencies", lambda path: (True, True))
+    monkeypatch.setattr("nums.cli.download_voice_model", lambda path: pytest.fail("downloaded"))
+    prepare_voice(Settings())
+
+
+def test_voice_model_check_reports_a_model_that_cannot_answer(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail(self, messages, tools):
+        raise OllamaError("model failed to load")
+
+    monkeypatch.setattr("nums.cli.OllamaClient.chat", fail)
+    with pytest.raises(SystemExit, match="not ready for voice mode: model failed to load"):
+        verify_voice_model(Settings())
+
+    monkeypatch.setattr("nums.cli.OllamaClient.chat", lambda self, messages, tools: {"message": {}})
+    verify_voice_model(Settings())
+
+
+def test_ollama_start_fails_clearly_without_the_command(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("nums.cli._ollama_reachable", lambda _: False)
+    monkeypatch.setattr("nums.cli.shutil.which", lambda _: None)
+
+    with pytest.raises(SystemExit, match="Ollama is missing"):
+        ensure_ollama_running(Settings())
+
+
+@pytest.mark.parametrize("url", ["http://192.168.1.5:11434", "http://localhost:9999", "https://localhost:11434"])
+def test_only_the_default_local_ollama_is_ever_started(monkeypatch: pytest.MonkeyPatch, url: str) -> None:
+    monkeypatch.setattr("nums.cli._ollama_reachable", lambda _: False)
+    monkeypatch.setattr("nums.cli.shutil.which", lambda _: pytest.fail("looked for ollama"))
+
+    with pytest.raises(SystemExit, match="Cannot reach Ollama"):
+        ensure_ollama_running(Settings(ollama_url=url))
+
+
+def test_ollama_launch_failure_and_early_exit_are_reported(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    monkeypatch.setattr("nums.cli._ollama_reachable", lambda _: False)
+    monkeypatch.setattr("nums.cli.shutil.which", lambda _: "/usr/local/bin/ollama")
+    monkeypatch.setattr("nums.cli.Path.home", lambda: tmp_path)
+    monkeypatch.setattr("nums.cli.time.sleep", lambda _: None)
+
+    def cannot_launch(*args: object, **kwargs: object) -> None:
+        raise PermissionError("operation not permitted")
+
+    monkeypatch.setattr("nums.cli.subprocess.Popen", cannot_launch)
+    with pytest.raises(SystemExit, match="Could not start Ollama: .*not permitted"):
+        ensure_ollama_running(Settings())
+
+    class CrashedProcess:
+        def poll(self) -> int:
+            return 1
+
+    monkeypatch.setattr("nums.cli.subprocess.Popen", lambda *args, **kwargs: CrashedProcess())
+    with pytest.raises(SystemExit, match="Ollama did not start. Check .*NUMS-Ollama.log"):
+        ensure_ollama_running(Settings())
+    assert (tmp_path / "Library" / "Logs").is_dir()
