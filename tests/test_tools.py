@@ -1592,3 +1592,136 @@ def test_trash_path_moves_a_whole_directory_tree(monkeypatch: pytest.MonkeyPatch
 
     assert not project.exists()
     assert (Path(result["recoverable_at"]) / "src" / "main.py").read_text() == "print('hi')"
+
+
+def test_read_file_offsets_and_boundaries(tmp_path: Path) -> None:
+    tools = MacTools()
+    exact = tmp_path / "exact.txt"
+    exact.write_text("a" * 12000)
+    over = tmp_path / "over.txt"
+    over.write_text("b" * 12001)
+
+    assert tools.read_file({"path": str(exact)}) == "a" * 12000
+    truncated = tools.read_file({"path": str(over)})
+    assert truncated.startswith("b" * 12000) and "continue with offset 12000" in truncated
+    assert tools.read_file({"path": str(over), "offset": "12000"}) == "b"
+    assert tools.read_file({"path": str(over), "offset": "99999"}) == ""
+    with pytest.raises(ValueError, match="offset must be a nonnegative character position"):
+        tools.read_file({"path": str(exact), "offset": "-1"})
+    with pytest.raises(FileNotFoundError):
+        tools.read_file({"path": str(tmp_path / "missing.txt")})
+
+
+def test_read_file_replaces_invalid_utf8(tmp_path: Path) -> None:
+    path = tmp_path / "binary.txt"
+    path.write_bytes(b"ok \xff\xfe end")
+
+    assert MacTools().read_file({"path": str(path)}) == "ok �� end"
+
+
+@pytest.mark.parametrize(
+    ("args", "message"),
+    [
+        ({"start_line": "0"}, "start_line must be a positive line number"),
+        ({"start_line": "first"}, "start_line must be a positive line number"),
+        ({"count": "0"}, "count must be between 1 and 100"),
+        ({"count": "101"}, "count must be between 1 and 100"),
+        ({"count": "many"}, "count must be between 1 and 100"),
+    ],
+)
+def test_read_lines_validates_its_window(tmp_path: Path, args: dict, message: str) -> None:
+    path = tmp_path / "lines.txt"
+    path.write_text("one\n")
+
+    with pytest.raises(ValueError, match=message):
+        MacTools().read_lines({"path": str(path), **args})
+
+
+def test_read_lines_pages_clips_and_reports_the_next_line(tmp_path: Path) -> None:
+    path = tmp_path / "lines.txt"
+    path.write_text("".join(f"line {number}\n" for number in range(1, 251)))
+    tools = MacTools()
+
+    first = json.loads(tools.read_lines({"path": str(path), "count": "100"}))
+    assert [row["number"] for row in first["lines"]] == list(range(1, 101))
+    assert first["next_line"] == 101
+    last = json.loads(tools.read_lines({"path": str(path), "start_line": "201", "count": "100"}))
+    assert len(last["lines"]) == 50 and "next_line" not in last
+    beyond = json.loads(tools.read_lines({"path": str(path), "start_line": "999"}))
+    assert beyond == {"lines": []}
+
+    long_path = tmp_path / "long.txt"
+    long_path.write_text("x" * 5000 + "\nshort\r\n")
+    clipped = json.loads(tools.read_lines({"path": str(long_path)}))
+    assert clipped["lines"][0]["truncated"] is True and len(clipped["lines"][0]["text"]) == 2000
+    assert clipped["lines"][1] == {"number": 2, "text": "short", "truncated": False}
+
+
+def test_read_lines_stops_at_the_character_budget(tmp_path: Path) -> None:
+    path = tmp_path / "wide.txt"
+    path.write_text("".join(("y" * 1900) + "\n" for _ in range(20)))
+
+    result = json.loads(MacTools().read_lines({"path": str(path), "count": "100"}))
+
+    assert sum(len(row["text"]) for row in result["lines"]) <= 12000
+    assert result["next_line"] == len(result["lines"]) + 1
+
+
+def test_list_directory_orders_pages_and_validates(tmp_path: Path) -> None:
+    for name in ("beta.txt", "Alpha.txt", ".hidden"):
+        (tmp_path / name).write_text("x")
+    for name in ("zeta", "Docs"):
+        (tmp_path / name).mkdir()
+    tools = MacTools()
+
+    listing = json.loads(tools.list_directory({"path": str(tmp_path)}))
+
+    assert [item["name"] for item in listing["items"]] == [
+        "Docs", "zeta", ".hidden", "Alpha.txt", "beta.txt",
+    ]
+    assert [item["type"] for item in listing["items"]][:2] == ["directory", "directory"]
+    assert listing["total"] == 5 and listing["truncated"] is False
+
+    for number in range(520):
+        (tmp_path / f"file-{number:04d}.log").write_text("")
+    page = json.loads(tools.list_directory({"path": str(tmp_path)}))
+    assert len(page["items"]) == 500 and page["truncated"] and page["next_offset"] == 500
+    rest = json.loads(tools.list_directory({"path": str(tmp_path), "offset": "500"}))
+    assert len(rest["items"]) == 25 and not rest["truncated"]
+    with pytest.raises(ValueError, match="offset must be a nonnegative item position"):
+        tools.list_directory({"path": str(tmp_path), "offset": "-3"})
+    with pytest.raises(FileNotFoundError):
+        tools.list_directory({"path": str(tmp_path / "missing")})
+
+
+def test_hash_file_returns_known_digest_and_rejects_directories(tmp_path: Path) -> None:
+    path = tmp_path / "abc.txt"
+    path.write_bytes(b"abc")
+
+    result = json.loads(MacTools().hash_file({"path": str(path)}))
+
+    assert result["sha256"] == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    assert result["bytes"] == 3
+    with pytest.raises(ValueError, match="path must be a file"):
+        MacTools().hash_file({"path": str(tmp_path)})
+
+
+def test_path_info_describes_each_kind_of_path(tmp_path: Path) -> None:
+    tools = MacTools()
+    file = tmp_path / "note.txt"
+    file.write_text("hello")
+    file.chmod(0o640)
+    link = tmp_path / "link"
+    link.symlink_to(file)
+    broken = tmp_path / "broken"
+    broken.symlink_to(tmp_path / "gone")
+
+    info = json.loads(tools.path_info({"path": str(file)}))
+    assert (info["type"], info["bytes"], info["permissions"]) == ("file", 5, "0o640")
+    assert json.loads(tools.path_info({"path": str(tmp_path)}))["type"] == "directory"
+    link_info = json.loads(tools.path_info({"path": str(link)}))
+    assert link_info["type"] == "symlink"
+    assert link_info["target"] == str(file)
+    assert json.loads(tools.path_info({"path": str(broken)}))["target"] == str(tmp_path / "gone")
+    with pytest.raises(FileNotFoundError):
+        tools.path_info({"path": str(tmp_path / "nothing")})
