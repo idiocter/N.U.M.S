@@ -182,3 +182,108 @@ def test_model_check_rejects_malformed_tags(monkeypatch: pytest.MonkeyPatch) -> 
     )
 
     assert not OllamaClient("http://127.0.0.1:11434", "qwen").has_model()
+
+
+def _serve(monkeypatch: pytest.MonkeyPatch, payload: object, seen: list | None = None) -> None:
+    def respond(request, **kwargs):
+        if seen is not None:
+            seen.append(request)
+        return io.BytesIO(json.dumps(payload).encode())
+
+    monkeypatch.setattr("nums.ollama.urllib.request.urlopen", respond)
+
+
+@pytest.mark.parametrize(
+    ("payload", "message"),
+    [
+        ([], "without an assistant message"),
+        ({"message": "text"}, "without an assistant message"),
+        ({"message": {"role": "assistant", "content": 5}}, "invalid assistant content"),
+        ({"message": {"role": "assistant", "tool_calls": "x"}}, "malformed tool calls"),
+        ({"message": {"role": "assistant", "tool_calls": ["x"]}}, "malformed tool calls"),
+        ({"message": {"role": "assistant", "tool_calls": [{"function": "x"}]}}, "malformed tool calls"),
+        ({"message": {"role": "assistant", "tool_calls": [{"function": {"name": "", "arguments": {}}}]}}, "malformed tool calls"),
+        ({"message": {"role": "assistant", "tool_calls": [{"function": {"name": 7, "arguments": {}}}]}}, "malformed tool calls"),
+        ({"message": {"role": "assistant", "tool_calls": [{"function": {"name": "t", "arguments": 3}}]}}, "malformed tool calls"),
+        ({"message": {"role": "assistant", "tool_calls": [{"function": {"name": "t"}}]}}, "malformed tool calls"),
+    ],
+)
+def test_chat_rejects_malformed_replies(monkeypatch: pytest.MonkeyPatch, payload: object, message: str) -> None:
+    _serve(monkeypatch, payload)
+
+    with pytest.raises(OllamaError, match=message):
+        OllamaClient("http://127.0.0.1:11434", "qwen").chat([], [])
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        {"role": "assistant", "content": None},
+        {"role": "assistant", "content": "hi", "tool_calls": None},
+        {"role": "assistant", "tool_calls": [{"function": {"name": "t", "arguments": {"a": "1"}}}]},
+        {"role": "assistant", "tool_calls": [{"function": {"name": "t", "arguments": '{"a": "1"}'}}]},
+    ],
+)
+def test_chat_accepts_well_formed_replies(monkeypatch: pytest.MonkeyPatch, message: dict) -> None:
+    _serve(monkeypatch, {"message": message, "done": True})
+
+    result = OllamaClient("http://127.0.0.1:11434", "qwen").chat([], [])
+
+    assert result["message"] == message
+
+
+def test_chat_sends_a_non_streaming_json_request(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen = []
+    _serve(monkeypatch, {"message": {"role": "assistant", "content": "ok"}}, seen)
+    messages = [{"role": "user", "content": "héllo"}]
+    tools = [{"type": "function", "function": {"name": "t"}}]
+
+    OllamaClient("http://127.0.0.1:11434", "qwen:test", timeout=7).chat(messages, tools)
+
+    request = seen[0]
+    assert request.get_method() == "POST"
+    assert request.get_header("Content-type") == "application/json"
+    assert json.loads(request.data) == {
+        "model": "qwen:test", "messages": messages, "tools": tools, "stream": False,
+    }
+
+
+def test_http_error_reports_status_and_detail(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail(*args: object, **kwargs: object) -> None:
+        raise urllib.error.HTTPError(
+            "http://127.0.0.1:11434/api/chat", 404, "Not Found", {}, io.BytesIO(b'{"error":"model not found"}'),
+        )
+
+    monkeypatch.setattr("nums.ollama.urllib.request.urlopen", fail)
+
+    with pytest.raises(OllamaError, match=r"HTTP 404: .*model not found"):
+        OllamaClient("http://127.0.0.1:11434", "qwen").chat([], [])
+
+
+@pytest.mark.parametrize(
+    ("model", "names", "expected"),
+    [
+        ("qwen", ["qwen"], True),
+        ("qwen", ["qwen:latest"], True),
+        ("qwen:1.5b", ["qwen:1.5b-instruct"], False),
+        ("qwen:1.5b-instruct", ["qwen:1.5b"], False),
+        ("qwen", ["other", "qwen2"], False),
+        ("qwen", [], False),
+    ],
+)
+def test_model_presence_requires_an_exact_name(
+    monkeypatch: pytest.MonkeyPatch, model: str, names: list, expected: bool
+) -> None:
+    _serve(monkeypatch, {"models": [{"name": name} for name in names]})
+
+    assert OllamaClient("http://127.0.0.1:11434", model).has_model() is expected
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [[], {"models": "qwen"}, {"models": None}, {"models": [{"name": 5}, "qwen", {"model": "qwen"}]}],
+)
+def test_model_presence_ignores_unexpected_catalog_shapes(monkeypatch: pytest.MonkeyPatch, payload: object) -> None:
+    _serve(monkeypatch, payload)
+
+    assert OllamaClient("http://127.0.0.1:11434", "qwen").has_model() is False

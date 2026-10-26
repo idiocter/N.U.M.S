@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added tests for malformed and well-formed Ollama replies, the request body, HTTP error detail, and exact model-name matching.
 - Added tests for trace size limits, unicode, permission tightening, refused paths, and concurrent appends.
 - Added tests for malformed messages, out-of-order turns, unanswered trailing turns, size limits, and special paths in saved history.
 - Added tests for label validation, split stability across rebuilds, grouped paraphrases, and manifest corruption.
