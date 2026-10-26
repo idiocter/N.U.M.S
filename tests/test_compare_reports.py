@@ -180,3 +180,96 @@ def test_cli_rejects_unreadable_and_invalid_reports(monkeypatch: pytest.MonkeyPa
         with pytest.raises(SystemExit) as excinfo:
             main()
         assert excinfo.value.code == 2
+
+
+DIGEST = "a" * 64
+
+
+def _report(*cases: dict, **extra) -> dict:
+    return {"cases": list(cases), **extra}
+
+
+@pytest.mark.parametrize(
+    ("report", "message"),
+    [
+        (_report(_case("a", "t", True), report_version=2), "unsupported evaluation report version"),
+        (_report(_case("a", "t", True), dataset_digest="XYZ"), "invalid dataset digest"),
+        (_report(_case("a", "t", True), dataset_digest="A" * 64), "invalid dataset digest"),
+        ({"cases": []}, "must contain cases"),
+        ({"cases": "nope"}, "must contain cases"),
+        (_report({"expected_tool": "t"}), "no valid id"),
+        (_report(_case("a", "t", True), _case("a", "t", False)), "duplicate evaluation id: a"),
+        (_report({"id": "a", "tool_correct": "yes", "arguments_correct": True}), "lacks correctness scores"),
+        (_report({**_case("a", "t", True), "tool_correct": False}), "correct arguments with the wrong tool"),
+        (_report({**_case("a", "t", True), "error": "boom"}), "has an error but is scored correct"),
+        (_report(_case("a", "t", True), total=1), "incomplete score summary"),
+        (_report(_case("a", "t", True), total=2, tool_correct=1, arguments_correct=1), "total does not match its cases"),
+        (_report(_case("a", "t", True), total=1, tool_correct=0, arguments_correct=1), "tool_correct does not match"),
+    ],
+)
+def test_malformed_reports_are_rejected(report: dict, message: str) -> None:
+    good = _report(_case("a", "t", True))
+
+    with pytest.raises(ValueError, match=message):
+        compare(good, report)
+
+
+@pytest.mark.parametrize(
+    ("baseline", "candidate", "message"),
+    [
+        (_report(_case("a", "t", True), dataset_digest=DIGEST), _report(_case("a", "t", True)), "digest is missing"),
+        (_report(_case("a", "t", True)), _report(_case("a", "t", True), dataset_digest=DIGEST), "digest is missing"),
+        (
+            _report(_case("a", "t", True), dataset_digest=DIGEST),
+            _report(_case("a", "t", True), dataset_digest="b" * 64),
+            "different evaluation datasets",
+        ),
+        (_report(_case("a", "t", True)), _report(_case("b", "t", True)), "same held-out case ids"),
+        (
+            _report({**_case("a", "t", True), "case_fingerprint": "x"}),
+            _report(_case("a", "t", True)),
+            "fingerprint missing for a",
+        ),
+        (
+            _report({**_case("a", "t", True), "case_fingerprint": "x"}),
+            _report({**_case("a", "t", True), "case_fingerprint": 5}),
+            "fingerprint is invalid for a",
+        ),
+        (
+            _report({**_case("a", "t", True), "case_fingerprint": "x"}),
+            _report({**_case("a", "t", True), "case_fingerprint": "y"}),
+            "held-out input changed for a",
+        ),
+    ],
+)
+def test_reports_must_describe_the_same_held_out_inputs(
+    baseline: dict, candidate: dict, message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        compare(baseline, candidate)
+
+
+def test_new_response_errors_block_a_candidate_even_if_accuracy_rises() -> None:
+    baseline = _report(_case("a", "t", False), _case("b", "t", False))
+    failing = {**_case("a", "t", False), "error": "timeout"}
+    candidate = _report(failing, _case("b", "t", True))
+
+    eligible, reasons = compare(baseline, candidate)
+
+    assert not eligible
+    assert "evaluation response errors increased" in reasons
+    assert "new evaluation response errors: a" in reasons
+
+
+def test_no_improvement_or_choice_regression_is_reported() -> None:
+    same = _report(_case("a", "t", True))
+    assert compare(same, same) == (False, ["full tool and argument accuracy did not improve"])
+
+    baseline = _report(_case("a", "t", True), _case("b", "u", False))
+    candidate = _report(
+        {**_case("a", "t", False), "tool_correct": False},
+        {**_case("b", "u", False), "tool_correct": True},
+    )
+    _, reasons = compare(baseline, candidate)
+    assert "full tool and argument accuracy did not improve" in reasons
+    assert "t accuracy regressed" in reasons

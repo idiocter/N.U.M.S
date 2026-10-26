@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added tests for every evaluation report validation rule and for the reasons a candidate model is held back.
 - Added tests for Trash protection, missing sources, repeated-name numbering, dotfile names, and moving whole directory trees.
 - Added tests for inspection, wait, menu, and key tool validation and for giving wait scripts their full wait plus a safety margin.
 - Added tests that element, toggle, slider, and text tools reject ambiguous or invalid targets and choose append or replace typing correctly.
