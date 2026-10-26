@@ -468,3 +468,112 @@ def test_stop_leaves_an_already_finished_stream_alone() -> None:
     WhisperStream("/unused").stop()
 
     assert stream.process.events == []  # type: ignore[union-attr]
+
+
+@pytest.mark.parametrize(
+    "transcript",
+    ["Hey numnum", "hey num num", "Hey, Num-Num.", "hey nom nom", "HEY NOON NOON", "hey no no", "Hey Newman!", "hey   numb   numb"],
+)
+def test_common_spellings_of_the_wake_phrase_start_a_session(transcript: str) -> None:
+    event = WakePhraseDetector().feed(transcript)
+
+    assert event is not None and event.kind == "wake"
+
+
+@pytest.mark.parametrize(
+    "transcript",
+    ["hey", "hello numnum", "numnum hey", "they numnum", "heynumnum", "", "   ", "[00:00:00.000 --> 00:00:01.000]", ">>"],
+)
+def test_other_speech_and_blank_transcripts_are_ignored_while_asleep(transcript: str) -> None:
+    assert WakePhraseDetector().feed(transcript) is None
+
+
+def test_wake_phrase_with_comma_and_timestamp_keeps_only_the_command() -> None:
+    event = WakePhraseDetector().feed(
+        "[00:00:03.000 --> 00:00:05.000] >> Hey numnum, what's on my calendar today?"
+    )
+
+    assert event is not None
+    assert (event.kind, event.text) == ("command", "what's on my calendar today?")
+
+
+def test_bracketed_noise_is_not_a_command_during_a_session() -> None:
+    detector = WakePhraseDetector()
+    detector.cooldown_seconds = 0
+    detector.feed("Hey numnum")
+
+    assert detector.feed("[BLANK_AUDIO]") is None
+    assert detector.feed("[ Silence ]") is None
+    event = detector.feed("open my calendar")
+    assert event is not None and event.kind == "command"
+
+
+def test_a_command_inside_the_cooldown_is_dropped_then_accepted() -> None:
+    detector = WakePhraseDetector()
+    detector.cooldown_seconds = 60
+    detector.feed("Hey numnum")
+
+    first = detector.feed("open Safari")
+    second = detector.feed("open Notes")
+    detector.last_command_at -= 120
+    third = detector.feed("open Mail")
+
+    assert first is not None and second is None
+    assert third is not None and third.text == "open Mail"
+
+
+def test_stream_requires_the_binary_and_the_model(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr("nums.wake.shutil.which", lambda _: None)
+    with pytest.raises(RuntimeError, match="whisper-stream is missing"):
+        list(WhisperStream(str(tmp_path / "model.bin")).transcripts())
+
+    monkeypatch.setattr("nums.wake.shutil.which", lambda _: "/usr/local/bin/whisper-stream")
+    with pytest.raises(RuntimeError, match="wake model is missing.*--setup-voice"):
+        list(WhisperStream(str(tmp_path / "missing.bin")).transcripts())
+
+
+def test_stream_ends_and_stops_the_process_at_its_deadline(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    model = tmp_path / "model.bin"
+    model.touch()
+    process = _FakeProcess(running=True)
+    monkeypatch.setattr("nums.wake.shutil.which", lambda _: "/usr/local/bin/whisper-stream")
+    monkeypatch.setattr("nums.wake.subprocess.Popen", lambda *args, **kwargs: process)
+    monkeypatch.setattr("nums.wake.time.sleep", lambda _: None)
+
+    assert list(WhisperStream(str(model)).transcripts(timeout_seconds=0.05)) == []
+
+    assert process.events == ["terminate", "wait"]
+
+
+@pytest.mark.parametrize(
+    ("transcript", "expected"),
+    [
+        ("Hey numnum, open Bob's notes.txt", "open Bob's notes.txt"),
+        ("hey numnum open John’s file", "open John’s file"),
+        ("Hey num num, don't close Mail", "don't close Mail"),
+    ],
+)
+def test_wake_command_keeps_the_speakers_apostrophes(transcript: str, expected: str) -> None:
+    event = WakePhraseDetector().feed(transcript)
+
+    assert event is not None and event.kind == "command"
+    assert event.text == expected
+
+
+def test_follow_up_commands_keep_apostrophes_too() -> None:
+    detector = WakePhraseDetector()
+    detector.cooldown_seconds = 0
+    detector.feed("Hey numnum")
+
+    event = detector.feed("what's the weather like in St. John's")
+
+    assert event is not None
+    assert event.text == "what's the weather like in St. John's"
+
+
+def test_wake_phrase_with_its_own_apostrophe_still_leaves_the_command_intact() -> None:
+    event = WakePhraseDetector("hey what's up").feed("Hey what's up, read Dan's report")
+
+    assert event is not None and event.text == "read Dan's report"

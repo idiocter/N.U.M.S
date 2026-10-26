@@ -23,6 +23,21 @@ def _without_apostrophes(text: str) -> str:
     return text.replace("'", "").replace("’", "")
 
 
+def _text_after(original: str, position: int) -> str:
+    """Return `original` after `position` characters, not counting apostrophes.
+
+    Phrases are matched on apostrophe-free text, but the command passed to the
+    agent must keep its apostrophes ("Bob's notes.txt", "what's next").
+    """
+    seen = 0
+    for index, character in enumerate(original):
+        if seen == position:
+            return original[index:]
+        if character not in "'’":
+            seen += 1
+    return ""
+
+
 @dataclass(frozen=True)
 class WakeEvent:
     kind: str
@@ -131,13 +146,13 @@ class WakePhraseDetector:
         if match:
             self.active_session = True
             self.last_activity_at = now
-            command = match.group(1).strip()
+            command = _text_after(cleaned, match.start(1)).strip()
             if command:
                 return self._command_event(command)
             return WakeEvent("wake")
 
         if self.active_session and not normalized.startswith("["):
-            return self._command_event(normalized)
+            return self._command_event(cleaned)
         return None
 
     def _command_event(self, command: str) -> WakeEvent | None:
