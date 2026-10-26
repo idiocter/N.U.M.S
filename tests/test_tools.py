@@ -1823,3 +1823,104 @@ def test_git_errors_are_reported_not_raised(tmp_path: Path) -> None:
 
     assert result["exit_code"] != 0
     assert "not a git repository" in result["output"].lower()
+
+
+def test_search_files_treats_the_query_as_literal_text(tmp_path: Path) -> None:
+    (tmp_path / "a.txt").write_text("abc\na.c\n")
+    tools = MacTools()
+
+    result = json.loads(tools.search_files({"query": "a.c", "path": str(tmp_path)}))
+
+    assert result["exit_code"] == 0
+    assert "a.c" in result["output"] and "abc" not in result["output"].replace("a.c", "")
+
+
+def test_search_files_reports_no_match_without_an_error(tmp_path: Path) -> None:
+    (tmp_path / "a.txt").write_text("hello\n")
+
+    result = json.loads(MacTools().search_files({"query": "absent", "path": str(tmp_path)}))
+
+    assert result["matches"] == 0 and "error" not in result
+
+
+def test_search_files_includes_hidden_files_but_never_dot_git(tmp_path: Path) -> None:
+    (tmp_path / ".env.example").write_text("TOKEN=needle\n")
+    (tmp_path / ".git").mkdir()
+    (tmp_path / ".git" / "config").write_text("needle in git\n")
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "app.py").write_text("needle = 1\n")
+    (tmp_path / "src" / "notes.md").write_text("needle\n")
+    tools = MacTools()
+
+    everything = json.loads(tools.search_files({"query": "needle", "path": str(tmp_path)}))["output"]
+    only_python = json.loads(tools.search_files({"query": "needle", "path": str(tmp_path), "glob": "*.py"}))["output"]
+
+    assert ".env.example" in everything and "app.py" in everything and "notes.md" in everything
+    assert ".git/config" not in everything
+    assert "app.py" in only_python and "notes.md" not in only_python
+
+
+def test_search_files_reports_a_missing_directory(tmp_path: Path) -> None:
+    result = json.loads(MacTools().search_files({"query": "x", "path": str(tmp_path / "missing")}))
+
+    assert result["exit_code"] == 2 and result["error"]
+
+
+@pytest.mark.parametrize("tool", ["find_files", "search_files"])
+def test_blank_globs_are_rejected(tmp_path: Path, tool: str) -> None:
+    args = {"path": str(tmp_path), "glob": "  "}
+    if tool == "search_files":
+        args["query"] = "x"
+
+    with pytest.raises(ValueError, match="glob must not be empty"):
+        getattr(MacTools(), tool)(args)
+
+
+def test_find_files_lists_hidden_files_sorted_and_excludes_dot_git(tmp_path: Path) -> None:
+    for name in ("b.py", "a.py", ".hidden", "pkg/mod.py", ".git/HEAD"):
+        target = tmp_path / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("x")
+
+    result = json.loads(MacTools().find_files({"path": str(tmp_path)}))
+    names = [str(Path(file).relative_to(tmp_path)) for file in result["files"]]
+
+    assert names == [".hidden", "a.py", "b.py", "pkg/mod.py"]
+    assert result["total"] == 4 and result["truncated"] is False
+
+    only_modules = json.loads(MacTools().find_files({"path": str(tmp_path), "glob": "pkg/*.py"}))
+    assert [Path(file).name for file in only_modules["files"]] == ["mod.py"]
+
+
+def test_find_files_offset_must_be_numeric(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="offset must be a nonnegative file position"):
+        MacTools().find_files({"path": str(tmp_path), "offset": "-1"})
+
+
+@pytest.mark.parametrize(
+    ("key", "modifiers", "action"),
+    [
+        ("return", "", "key code 36"),
+        ("RETURN", "", "key code 36"),
+        ("Page_Down", "", "key code 121"),
+        ("left", "command", "key code 123 using {command down}"),
+        ("a", "", "keystroke keyValue"),
+        ("A", "shift", "keystroke keyValue using {shift down}"),
+        ("s", "command, shift", "keystroke keyValue using {command down, shift down}"),
+        ("tab", "Option,Control", "key code 48 using {option down, control down}"),
+    ],
+)
+def test_key_scripts_use_whitelisted_actions(key: str, modifiers: str, action: str) -> None:
+    from nums.mac_ui import key_script
+
+    script = key_script(key, modifiers)
+
+    assert f"            {action}\n" in script
+    assert "item 3 of argv" in script
+
+
+def test_every_named_key_has_a_script() -> None:
+    from nums.mac_ui import KEY_CODES, key_script
+
+    for name, code in KEY_CODES.items():
+        assert f"key code {code}\n" in key_script(name)

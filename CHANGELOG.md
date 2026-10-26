@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added tests for literal search, hidden-file and .git handling, glob filtering, file listing order, and whitelisted key script construction.
 - Added tests for LaunchAgent location, first and repeat installation order, plist permissions, logging, and restart settings.
 - Kept apostrophes in spoken commands so names like "Bob's notes.txt" reach the agent intact, and added tests for wake-phrase spellings, ignored speech, bracketed noise, cooldowns, stream startup errors, and the listening deadline.
 - Added tests for doctor results, voice model preparation, and the conditions under which Ollama is or is never started.
