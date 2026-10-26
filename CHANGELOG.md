@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added tests for Git revision safety, argument bounds, and history, blame, branch, and error output against a real repository.
 - Added tests for file reading, line paging, directory listing order and paging, hashing, and path inspection edge cases.
 - Added tests for malformed and well-formed Ollama replies, the request body, HTTP error detail, and exact model-name matching.
 - Added tests for trace size limits, unicode, permission tightening, refused paths, and concurrent appends.

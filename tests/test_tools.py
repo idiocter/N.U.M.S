@@ -1725,3 +1725,101 @@ def test_path_info_describes_each_kind_of_path(tmp_path: Path) -> None:
     assert json.loads(tools.path_info({"path": str(broken)}))["target"] == str(tmp_path / "gone")
     with pytest.raises(FileNotFoundError):
         tools.path_info({"path": str(tmp_path / "nothing")})
+
+
+def _git(repo: Path, *arguments: str) -> None:
+    subprocess.run([
+        "git", "-C", str(repo), "-c", "user.name=NUMS Test",
+        "-c", "user.email=nums@example.test", "-c", "commit.gpgsign=false", *arguments,
+    ], check=True, capture_output=True)
+
+
+@pytest.fixture
+def repo(tmp_path: Path) -> Path:
+    subprocess.run(["git", "init", "-q", "-b", "main", str(tmp_path)], check=True)
+    (tmp_path / "module.py").write_text("one\ntwo\nthree\n")
+    _git(tmp_path, "add", "module.py")
+    _git(tmp_path, "commit", "-qm", "first commit")
+    (tmp_path / "module.py").write_text("one\nTWO\nthree\n")
+    _git(tmp_path, "commit", "-qam", "second commit")
+    _git(tmp_path, "branch", "feature")
+    return tmp_path
+
+
+@pytest.mark.parametrize(
+    "revision", ["HEAD", "HEAD~1", "main", "v1.0.0", "HEAD@{1}", "feature/x-1", "abc1234", "HEAD^"],
+)
+def test_ordinary_git_revisions_are_accepted(revision: str) -> None:
+    from nums.tools import _validated_git_revision
+
+    assert _validated_git_revision(revision) == revision
+
+
+@pytest.mark.parametrize(
+    "revision", ["", "--output=/tmp/x", "-p", "a..b", "a b", "HEAD;ls", "$(id)", "a`b`", "x\ny", "ref*", "a:b"],
+)
+def test_option_ranges_and_shell_syntax_are_rejected_as_revisions(revision: str) -> None:
+    from nums.tools import _validated_git_revision
+
+    with pytest.raises(ValueError, match="revision must name one Git commit or ref"):
+        _validated_git_revision(revision)
+
+
+@pytest.mark.parametrize(
+    ("tool", "args", "message"),
+    [
+        ("git_log", {"count": "0"}, "count must be between 1 and 100"),
+        ("git_log", {"count": "101"}, "count must be between 1 and 100"),
+        ("git_log", {"count": "ten"}, "count must be between 1 and 100"),
+        ("git_log", {"file": "  "}, "file must not be empty"),
+        ("git_diff", {"file": " "}, "file must not be empty"),
+        ("git_show", {"file": ""}, "file must not be empty"),
+        ("git_show", {"revision": "--help"}, "revision must name one Git commit or ref"),
+        ("git_blame", {"file": " "}, "file must not be empty"),
+        ("git_blame", {"file": "module.py", "start_line": "0"}, "start_line must be a positive line number"),
+        ("git_blame", {"file": "module.py", "count": "201"}, "count must be between 1 and 200"),
+        ("git_blame", {"file": "module.py", "revision": "a..b"}, "revision must name one Git commit or ref"),
+    ],
+)
+def test_git_tools_reject_bad_arguments_before_running_git(
+    monkeypatch: pytest.MonkeyPatch, tool: str, args: dict, message: str
+) -> None:
+    monkeypatch.setattr("nums.tools._run", lambda *a, **k: pytest.fail("ran git"))
+
+    with pytest.raises(ValueError, match=message):
+        getattr(MacTools(), tool)({"repo": "/tmp/unused", **args})
+
+
+def test_git_history_tools_report_real_repository_state(repo: Path) -> None:
+    tools = MacTools("read_only")
+
+    log = json.loads(tools.execute("git_log", {"repo": str(repo), "count": "1"}))
+    assert log["exit_code"] == 0
+    assert "second commit" in log["output"] and "first commit" not in log["output"]
+
+    scoped = json.loads(tools.execute("git_log", {"repo": str(repo), "file": "module.py"}))
+    assert "first commit" in scoped["output"] and "second commit" in scoped["output"]
+
+    show = json.loads(tools.execute("git_show", {"repo": str(repo), "revision": "HEAD~1", "file": "module.py"}))
+    assert "first commit" in show["output"] and "+one" in show["output"]
+
+    branches = json.loads(tools.execute("git_branches", {"repo": str(repo)}))
+    assert "main" in branches["output"] and "feature" in branches["output"]
+
+    blame = json.loads(tools.execute("git_blame", {
+        "repo": str(repo), "file": "module.py", "start_line": "2", "count": "1",
+    }))
+    assert blame["exit_code"] == 0
+    assert "summary second commit" in blame["output"]
+    assert "\tTWO" in blame["output"]
+    assert "\tone" not in blame["output"] and "\tthree" not in blame["output"]
+
+    status = json.loads(tools.execute("git_status", {"repo": str(repo)}))
+    assert status["output"].startswith("## main")
+
+
+def test_git_errors_are_reported_not_raised(tmp_path: Path) -> None:
+    result = json.loads(MacTools("read_only").execute("git_status", {"repo": str(tmp_path)}))
+
+    assert result["exit_code"] != 0
+    assert "not a git repository" in result["output"].lower()
