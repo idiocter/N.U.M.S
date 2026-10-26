@@ -254,3 +254,145 @@ def test_coverage_command_rejects_a_nonpositive_minimum(monkeypatch: pytest.Monk
 
     with pytest.raises(SystemExit, match="must be positive"):
         main()
+
+
+def _row(number: int, **changes: object) -> dict:
+    row = {"id": f"ex-{number:02d}", "user": f"unique request number {number}",
+           "tool": "system_info", "arguments": {}}
+    row.update(changes)
+    return row
+
+
+def _write_rows(path: Path, rows: list[dict]) -> Path:
+    path.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+    return path
+
+
+@pytest.mark.parametrize(
+    ("row", "message"),
+    [
+        (_row(1, id=""), "id must be a nonempty string"),
+        (_row(1, id=7), "id must be a nonempty string"),
+        (_row(1, user="   "), "user must be a nonempty string"),
+        (_row(1, group=""), "group must be a nonempty string"),
+        (_row(1, group=4), "group must be a nonempty string"),
+        (_row(1, tool="missing_tool"), "invalid tool or arguments"),
+        (_row(1, arguments=[]), "invalid tool or arguments"),
+        (_row(1, tool="none", answer=" "), "needs a nonempty answer"),
+        (_row(1, tool="none", arguments={}), "needs a nonempty answer"),
+        (_row(1, tool="read_file", arguments={}), "missing required arguments"),
+        (_row(1, arguments={"unexpected": "x"}), "unexpected arguments"),
+    ],
+)
+def test_invalid_labels_report_their_line(tmp_path: Path, row: dict, message: str) -> None:
+    source = _write_rows(tmp_path / "labels.jsonl", [_row(0), row])
+
+    with pytest.raises(ValueError, match=rf"labels\.jsonl:2: .*{message}"):
+        load_examples(source, minimum=1)
+
+
+def test_duplicate_ids_and_prompts_are_rejected(tmp_path: Path) -> None:
+    duplicate_id = _write_rows(tmp_path / "a.jsonl", [_row(0), _row(1, id="ex-00")])
+    with pytest.raises(ValueError, match="duplicate id: ex-00"):
+        load_examples(duplicate_id, minimum=1)
+
+    duplicate_prompt = _write_rows(
+        tmp_path / "b.jsonl", [_row(0, user="Open  Safari"), _row(1, user="open safari")]
+    )
+    with pytest.raises(ValueError, match="duplicate user prompt in ex-00 and ex-01"):
+        load_examples(duplicate_prompt, minimum=1)
+
+
+def test_minimum_example_count_is_enforced(tmp_path: Path) -> None:
+    source = _write_rows(tmp_path / "few.jsonl", [_row(number) for number in range(3)])
+
+    with pytest.raises(ValueError, match="at least 15 labeled examples"):
+        load_examples(source)
+    assert len(load_examples(source, minimum=3)) == 3
+
+
+def _split_names(destination: Path) -> dict[str, str]:
+    names = {}
+    for name in ("train", "valid", "test"):
+        for line in (destination / f"{name}.jsonl").read_text(encoding="utf-8").splitlines():
+            names[json.loads(line)["id"]] = name
+    return names
+
+
+def test_grouped_paraphrases_stay_in_one_split(tmp_path: Path) -> None:
+    rows = [_row(number) for number in range(20)]
+    for number in (3, 8, 13, 18):
+        rows[number]["group"] = "same-intent"
+    source = _write_rows(tmp_path / "labels.jsonl", rows)
+
+    build(source, tmp_path / "splits")
+
+    names = _split_names(tmp_path / "splits")
+    assert len({names[f"ex-{number:02d}"] for number in (3, 8, 13, 18)}) == 1
+
+
+def test_rebuilding_keeps_assignments_and_new_labels_do_not_move_old_ones(tmp_path: Path) -> None:
+    rows = [_row(number) for number in range(20)]
+    source = _write_rows(tmp_path / "labels.jsonl", rows)
+    destination = tmp_path / "splits"
+    build(source, destination)
+    first = _split_names(destination)
+
+    build(source, destination)
+    assert _split_names(destination) == first
+
+    _write_rows(source, rows + [_row(number) for number in range(20, 40)])
+    build(source, destination)
+    second = _split_names(destination)
+    assert {key: second[key] for key in first} == first
+    assert len(second) == 40
+
+
+def test_editing_an_assigned_label_requires_a_new_id(tmp_path: Path) -> None:
+    rows = [_row(number) for number in range(20)]
+    source = _write_rows(tmp_path / "labels.jsonl", rows)
+    destination = tmp_path / "splits"
+    build(source, destination)
+    before = (destination / "train.jsonl").read_text(encoding="utf-8")
+
+    rows[5]["user"] = "a completely different request"
+    _write_rows(source, rows)
+
+    with pytest.raises(ValueError, match="ex-05 changed after assignment .* use a new id"):
+        build(source, destination)
+    assert (destination / "train.jsonl").read_text(encoding="utf-8") == before
+
+
+@pytest.mark.parametrize(
+    "assignments",
+    [
+        {"ex-00": "staging"},
+        {"ex-00": {"split": "train"}},
+        {"ex-00": {"split": "nowhere", "fingerprint": "x"}},
+        {"ex-00": 5},
+    ],
+)
+def test_invalid_manifest_entries_are_rejected(tmp_path: Path, assignments: dict) -> None:
+    source = _write_rows(tmp_path / "labels.jsonl", [_row(number) for number in range(20)])
+    destination = tmp_path / "splits"
+    destination.mkdir()
+    (destination / "split_manifest.json").write_text(
+        json.dumps({"version": 2, "assignments": assignments})
+    )
+
+    with pytest.raises(ValueError, match="Invalid split manifest"):
+        build(source, destination)
+
+
+def test_a_group_split_across_assignments_is_rejected(tmp_path: Path) -> None:
+    rows = [_row(number) for number in range(20)]
+    rows[0]["group"] = rows[1]["group"] = "intent"
+    source = _write_rows(tmp_path / "labels.jsonl", rows)
+    destination = tmp_path / "splits"
+    destination.mkdir()
+    (destination / "split_manifest.json").write_text(json.dumps({
+        "version": 2, "assignments": {"ex-00": "train", "ex-01": "test"},
+    }))
+
+    with pytest.raises(ValueError, match="Group intent is assigned across multiple splits"):
+        build(source, destination)
