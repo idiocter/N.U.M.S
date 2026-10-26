@@ -192,3 +192,119 @@ def test_save_syncs_the_directory_after_the_atomic_rename(
     ])
 
     assert events == ["fsync", "replace", "fsync"]
+
+
+def _call(name: str = "path_info") -> dict:
+    return {"function": {"name": name, "arguments": {"path": "/tmp"}}}
+
+
+@pytest.mark.parametrize(
+    "messages",
+    [
+        [{"role": "user", "content": 5}],
+        [{"role": "system", "content": "x"}],
+        [{"role": "tool", "content": "x"}],
+        [{"role": "tool", "tool_name": "", "content": "x"}],
+        [{"role": "tool", "tool_name": "path_info", "content": 5}],
+        [{"role": "assistant"}],
+        [{"role": "assistant", "content": 5}],
+        [{"role": "assistant", "content": "", "tool_calls": []}],
+        [{"role": "assistant", "content": "", "tool_calls": "x"}],
+        [{"role": "assistant", "content": "", "tool_calls": [{"function": {"name": ""}}]}],
+        [{"role": "assistant", "content": "", "tool_calls": [{"function": {"name": "t", "arguments": 3}}]}],
+        ["not a message"],
+    ],
+)
+def test_malformed_messages_are_rejected_on_load_and_save(tmp_path: Path, messages: list) -> None:
+    path = tmp_path / "history.json"
+    path.write_text(json.dumps(messages))
+
+    with pytest.raises(ValueError, match="Invalid NUMS history"):
+        HistoryStore(path).load()
+    with pytest.raises(ValueError, match="Invalid NUMS history"):
+        HistoryStore(tmp_path / "other.json").save(messages)
+
+
+@pytest.mark.parametrize(
+    "messages",
+    [
+        [{"role": "assistant", "content": "orphan reply"}],
+        [{"role": "user", "content": "a"}, {"role": "user", "content": "b"}],
+        [
+            {"role": "user", "content": "a"},
+            {"role": "assistant", "content": "", "tool_calls": [_call("path_info")]},
+            {"role": "tool", "tool_name": "other_tool", "content": "{}"},
+            {"role": "assistant", "content": "done"},
+        ],
+        [
+            {"role": "user", "content": "a"},
+            {"role": "assistant", "content": "", "tool_calls": [_call()]},
+            {"role": "assistant", "content": "skipped the tool result"},
+        ],
+    ],
+)
+def test_out_of_order_history_is_rejected(tmp_path: Path, messages: list) -> None:
+    path = tmp_path / "history.json"
+    path.write_text(json.dumps(messages))
+
+    with pytest.raises(ValueError, match="Invalid NUMS history sequence"):
+        HistoryStore(path).load()
+
+
+def test_load_drops_only_the_final_unanswered_turn(tmp_path: Path) -> None:
+    complete = [{"role": "user", "content": "one"}, {"role": "assistant", "content": "first"}]
+    for dangling in (
+        [{"role": "user", "content": "two"}],
+        [
+            {"role": "user", "content": "two"},
+            {"role": "assistant", "content": "", "tool_calls": [_call()]},
+        ],
+        [
+            {"role": "user", "content": "two"},
+            {"role": "assistant", "content": "", "tool_calls": [_call(), _call()]},
+            {"role": "tool", "tool_name": "path_info", "content": "{}"},
+        ],
+    ):
+        path = tmp_path / "history.json"
+        path.write_text(json.dumps(complete + dangling))
+
+        assert HistoryStore(path).load() == complete
+
+
+def test_save_refuses_an_unanswered_turn_and_keeps_the_previous_file(tmp_path: Path) -> None:
+    store = HistoryStore(tmp_path / "history.json")
+    complete = [{"role": "user", "content": "one"}, {"role": "assistant", "content": "first"}]
+    store.save(complete)
+    before = store.path.read_bytes()
+
+    with pytest.raises(ValueError, match="Cannot save incomplete NUMS history"):
+        store.save(complete + [{"role": "user", "content": "two"}])
+
+    assert store.path.read_bytes() == before
+
+
+@pytest.mark.parametrize("content", ["not json", '{"role": "user"}', "\xff\xfe"])
+def test_unreadable_history_content_is_a_clean_error(tmp_path: Path, content: str) -> None:
+    path = tmp_path / "history.json"
+    path.write_bytes(content.encode("latin-1"))
+
+    with pytest.raises(ValueError, match="NUMS history"):
+        HistoryStore(path).load()
+
+
+def test_history_size_limits_and_special_paths(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="max_bytes must be positive"):
+        HistoryStore(tmp_path / "history.json", max_bytes=0)
+
+    big = tmp_path / "big.json"
+    big.write_text(json.dumps([{"role": "user", "content": "x" * 200}]))
+    with pytest.raises(ValueError, match="exceeds the 50-byte limit"):
+        HistoryStore(big, max_bytes=50).load()
+
+    with pytest.raises(ValueError, match="not a regular file"):
+        HistoryStore(tmp_path).load()
+
+    link = tmp_path / "link.json"
+    link.symlink_to(big)
+    with pytest.raises(ValueError, match="not a regular file"):
+        HistoryStore(link).load()

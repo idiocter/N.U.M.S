@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added tests for malformed messages, out-of-order turns, unanswered trailing turns, size limits, and special paths in saved history.
 - Added tests for label validation, split stability across rebuilds, grouped paraphrases, and manifest corruption.
 - Added tests that invalid traces and malformed review rows are rejected without touching review or export files.
 - Added tests for every held-out evaluation case validation rule, including reported line numbers.
