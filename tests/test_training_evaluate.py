@@ -557,3 +557,107 @@ def test_report_path_cannot_overwrite_the_dataset(monkeypatch: pytest.MonkeyPatc
 
     assert excinfo.value.code == 2
     assert data.read_text() == "original labels\n"
+
+
+def _base_case() -> dict:
+    return {
+        "id": "c1",
+        "messages": [
+            {"role": "user", "content": "status"},
+            _assistant_call("system_info", {}),
+        ],
+        "tools": [_tool("system_info")],
+        "expected_tool": "system_info",
+        "expected_arguments": {},
+    }
+
+
+def _mutated(**changes: object) -> dict:
+    case = _base_case()
+    case.update(changes)
+    return case
+
+
+def _nested(path: list, value: object) -> dict:
+    case = _base_case()
+    target = case
+    for key in path[:-1]:
+        target = target[key]
+    target[path[-1]] = value
+    return case
+
+
+INVALID_CASES = [
+    (_mutated(id=""), "id must be a nonempty string"),
+    (_mutated(id=5), "id must be a nonempty string"),
+    (_mutated(messages=[{"role": "user", "content": "x"}]), "prompt and expected reply"),
+    (_mutated(messages=[{"role": "user"}, "oops"]), "every message must be an object"),
+    (_mutated(messages=[{"role": "user"}, {"role": "robot"}]), "recognized role"),
+    (_mutated(messages=[{"role": "assistant"}, {"role": "user"}]), "must be from the assistant"),
+    (_mutated(messages=[{"role": "system"}, _assistant_call("system_info", {})]), "must include a user prompt"),
+    (_nested(["messages", 0, "content"], 5), "content must be a string"),
+    (_nested(["messages", 0, "tool_calls"], "x"), "tool_calls must be a list"),
+    (_mutated(tools="nope"), "tools must be a list"),
+    (_mutated(expected_tool=""), "expected_tool must be a nonempty string"),
+    (_mutated(expected_arguments=[]), "expected_arguments must be an object"),
+    (_mutated(tools=["x"]), "every tool must be a function schema"),
+    (_mutated(tools=[{"type": "function", "function": {"name": "", "parameters": {}}}]), "nonempty function name"),
+    (_mutated(tools=[{"type": "function", "function": {"name": "system_info"}}]), "object parameters schema"),
+    (_mutated(tools=[_tool("system_info"), _tool("system_info")]), "duplicate tool schema: system_info"),
+    (_mutated(expected_tool="other"), "not present in the offered tools"),
+    (
+        _mutated(expected_tool="none", expected_arguments={}),
+        "no-tool label cannot have an expected tool call",
+    ),
+    (
+        _nested(["messages", 1], {"role": "assistant", "tool_calls": []}),
+        "must contain one tool call",
+    ),
+    (
+        _nested(["messages", 1], {"role": "assistant", "tool_calls": [{"id": "x"}]}),
+        "needs a function",
+    ),
+    (
+        _nested(["messages", 1], {"role": "assistant", "tool_calls": [
+            {"function": {"name": "system_info", "arguments": "{broken"}}
+        ]}),
+        "valid JSON",
+    ),
+    (_mutated(expected_arguments={"extra": "1"}), "expected fields do not match"),
+    (_mutated(case_fingerprint="ABC"), "lowercase SHA-256 digest"),
+    (_mutated(case_fingerprint="0" * 64), "does not match the evaluation input"),
+]
+
+
+@pytest.mark.parametrize(("case", "message"), INVALID_CASES)
+def test_invalid_held_out_cases_are_rejected_with_their_line(tmp_path, case: dict, message: str) -> None:
+    data = tmp_path / "cases.jsonl"
+    data.write_text(json.dumps(_base_case()) .replace('"c1"', '"first"') + "\n" + json.dumps(case) + "\n")
+
+    with pytest.raises(ValueError, match=rf"cases\.jsonl:2: .*{message}"):
+        load_cases(data)
+
+
+def test_non_object_duplicate_and_blank_lines_are_handled(tmp_path) -> None:
+    data = tmp_path / "cases.jsonl"
+    data.write_text("\n[1, 2]\n")
+    with pytest.raises(ValueError, match=r":2: case must be a JSON object"):
+        load_cases(data)
+
+    data.write_text(json.dumps(_base_case()) + "\n\n" + json.dumps(_base_case()) + "\n")
+    with pytest.raises(ValueError, match=r":3: duplicate id: c1"):
+        load_cases(data)
+
+    data.write_text("\n" + json.dumps(_base_case()) + "\n\n")
+    assert [case["id"] for case in load_cases(data)] == ["c1"]
+
+
+def test_a_no_tool_expectation_is_accepted(tmp_path) -> None:
+    case = _mutated(
+        messages=[{"role": "user", "content": "hi"}, {"role": "assistant", "content": "Hello."}],
+        expected_tool="none", expected_arguments={},
+    )
+    data = tmp_path / "cases.jsonl"
+    data.write_text(json.dumps(case) + "\n")
+
+    assert load_cases(data)[0]["expected_tool"] == "none"
