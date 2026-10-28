@@ -7,9 +7,10 @@ import shutil
 import subprocess
 import tempfile
 import time
+from collections.abc import Generator
 from dataclasses import dataclass
 from pathlib import Path
-from collections.abc import Generator
+from typing import IO
 
 
 VOICE_MODEL_URL = (
@@ -47,7 +48,7 @@ class WakeEvent:
 class ListenerLock:
     def __init__(self, path: Path | None = None) -> None:
         self.path = path or Path.home() / ".cache" / "nums" / "listener.lock"
-        self.handle = None
+        self.handle: IO[str] | None = None
 
     def __enter__(self) -> "ListenerLock":
         self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
