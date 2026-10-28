@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Corrected type annotations so the package type-checks cleanly, and added a mypy configuration (`uv run --with mypy mypy`).
 - Added tests for literal search, hidden-file and .git handling, glob filtering, file listing order, and whitelisted key script construction.
 - Added tests for LaunchAgent location, first and repeat installation order, plist permissions, logging, and restart settings.
 - Kept apostrophes in spoken commands so names like "Bob's notes.txt" reach the agent intact, and added tests for wake-phrase spellings, ignored speech, bracketed noise, cooldowns, stream startup errors, and the listening deadline.
