@@ -9,7 +9,7 @@ import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator
+from collections.abc import Generator
 
 
 VOICE_MODEL_URL = (
@@ -210,7 +210,7 @@ class WhisperStream:
         self.capture_device = capture_device
         self.process: subprocess.Popen[str] | None = None
 
-    def transcripts(self, timeout_seconds: float | None = None) -> Iterator[str]:
+    def transcripts(self, timeout_seconds: float | None = None) -> Generator[str, None, None]:
         if not shutil.which("whisper-stream"):
             raise RuntimeError("whisper-stream is missing; run `brew install whisper-cpp`")
         if not Path(self.model_path).is_file():
