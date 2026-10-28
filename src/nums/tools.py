@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 from dataclasses import dataclass
 from fnmatch import fnmatchcase
@@ -14,7 +15,7 @@ import subprocess
 import tempfile
 import threading
 from pathlib import Path
-from typing import IO, Any, Callable
+from typing import IO, Any, Callable, cast
 from urllib.parse import urlparse
 
 from .mac_ui import (
@@ -426,7 +427,7 @@ class _BoundedBuffer:
             return bytes(self.head) + bytes(self.tail)
 
 
-def _drain(stream: IO[bytes], buffer: _BoundedBuffer) -> None:
+def _drain(stream: io.BufferedReader, buffer: _BoundedBuffer) -> None:
     try:
         while chunk := stream.read1(65536):
             buffer.feed(chunk)
@@ -440,9 +441,11 @@ def _bounded_run(command: list[str], cwd: str | None = None, timeout: int = 120)
         stderr=subprocess.PIPE, start_new_session=True,
     )
     buffers = (_BoundedBuffer(CAPTURE_KEEP_BYTES), _BoundedBuffer(CAPTURE_KEEP_BYTES))
+    # Both pipes were requested above, so Popen always provides buffered readers.
+    streams = (cast(io.BufferedReader, process.stdout), cast(io.BufferedReader, process.stderr))
     threads = [
         threading.Thread(target=_drain, args=(stream, buffer), daemon=True)
-        for stream, buffer in zip((process.stdout, process.stderr), buffers)
+        for stream, buffer in zip(streams, buffers, strict=True)
     ]
     for thread in threads:
         thread.start()
@@ -472,13 +475,11 @@ def _run(command: list[str], cwd: str | None = None, timeout: int = 120) -> str:
     try:
         result = _bounded_run(command, cwd=cwd, timeout=timeout)
     except subprocess.TimeoutExpired as exc:
-        stdout = exc.stdout or b""
-        stderr = exc.stderr or b""
-        if isinstance(stdout, bytes):
-            stdout = stdout.decode(errors="replace")
-        if isinstance(stderr, bytes):
-            stderr = stderr.decode(errors="replace")
-        output, truncated = _bounded_output((stdout + stderr).strip())
+        partial = [
+            part.decode(errors="replace") if isinstance(part, bytes) else part
+            for part in (exc.stdout or b"", exc.stderr or b"")
+        ]
+        output, truncated = _bounded_output("".join(partial).strip())
         return json.dumps({
             "exit_code": None, "output": output, "truncated": truncated,
             "error": f"Command timed out after {timeout} seconds",
@@ -716,7 +717,7 @@ class MacTools:
             if not args["glob"].strip():
                 raise ValueError("glob must not be empty")
         command.extend(["--", str(root)])
-        result = subprocess.run(command, text=True, capture_output=True, timeout=30)
+        result = subprocess.run(command, text=True, capture_output=True, timeout=30, check=False)
         if result.returncode not in {0, 1}:
             return json.dumps({"error": result.stderr.strip()[-1000:], "exit_code": result.returncode})
         files = result.stdout.splitlines()
@@ -1308,7 +1309,8 @@ class MacTools:
 
     def set_clipboard(self, args: dict[str, Any]) -> str:
         result = subprocess.run(
-            ["pbcopy"], input=args["text"], text=True, capture_output=True, timeout=10
+            ["pbcopy"], input=args["text"], text=True, capture_output=True, timeout=10,
+            check=False,
         )
         if result.returncode != 0:
             return json.dumps({
