@@ -120,6 +120,7 @@ class Agent:
     def run(self, prompt: str) -> str:
         self.trace_error = None
         self.last_run = {"status": "running", "steps": 0, "tool_calls": 0, "tool_errors": 0}
+        reply: str | None
         upcoming = {"role": "user", "content": prompt}
         minimum_context = sum(
             len(json.dumps(message, ensure_ascii=False))
