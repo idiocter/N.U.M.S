@@ -729,3 +729,74 @@ def test_ollama_launch_failure_and_early_exit_are_reported(monkeypatch: pytest.M
     with pytest.raises(SystemExit, match="Ollama did not start. Check .*NUMS-Ollama.log"):
         ensure_ollama_running(Settings())
     assert (tmp_path / "Library" / "Logs").is_dir()
+
+
+def test_invalid_environment_settings_exit_with_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    def invalid() -> Settings:
+        raise ValueError("NUMS_MAX_STEPS must be positive")
+
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums", "--doctor"])
+    monkeypatch.setattr("nums.cli.Settings.from_env", invalid)
+
+    with pytest.raises(SystemExit, match="NUMS_MAX_STEPS must be positive"):
+        main()
+
+
+def test_voice_test_without_speech_exits_with_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums", "--voice-test"])
+    monkeypatch.setattr("nums.cli.Settings.from_env", lambda: Settings())
+    monkeypatch.setattr("nums.cli.voice_test", lambda settings: None)
+
+    with pytest.raises(SystemExit, match="No speech was transcribed"):
+        main()
+
+
+def test_voice_test_prints_the_transcript(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums", "--voice-test"])
+    monkeypatch.setattr("nums.cli.Settings.from_env", lambda: Settings())
+    monkeypatch.setattr("nums.cli.voice_test", lambda settings: "hello there")
+
+    main()
+
+    assert "Transcript: hello there" in capsys.readouterr().out
+
+
+def test_pull_without_the_ollama_command_exits_with_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums", "--pull"])
+    monkeypatch.setattr("nums.cli.Settings.from_env", lambda: Settings())
+    monkeypatch.setattr("nums.cli.ensure_ollama_running", lambda settings: None)
+    monkeypatch.setattr("nums.cli.shutil.which", lambda name: None)
+
+    with pytest.raises(SystemExit, match="ollama command is missing"):
+        main()
+
+
+def test_pull_exits_with_the_ollama_status(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = []
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums", "--pull"])
+    monkeypatch.setattr("nums.cli.Settings.from_env", lambda: Settings(model="qwen:test"))
+    monkeypatch.setattr("nums.cli.ensure_ollama_running", lambda settings: None)
+    monkeypatch.setattr("nums.cli.shutil.which", lambda name: "/bin/ollama")
+    monkeypatch.setattr("nums.cli.subprocess.call", lambda command: calls.append(command) or 7)
+
+    with pytest.raises(SystemExit) as exit_info:
+        main()
+
+    assert exit_info.value.code == 7
+    assert calls == [["/bin/ollama", "pull", "qwen:test"]]
+
+
+def test_setup_voice_reports_success(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    downloads = []
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums", "--setup-voice"])
+    monkeypatch.setattr("nums.cli.Settings.from_env", lambda: Settings(whisper_model="/tmp/m.bin"))
+    monkeypatch.setattr("nums.cli.download_voice_model", downloads.append)
+
+    main()
+
+    assert downloads == ["/tmp/m.bin"]
+    assert "Wake model ready." in capsys.readouterr().out
