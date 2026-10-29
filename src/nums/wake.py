@@ -136,7 +136,7 @@ class WakePhraseDetector:
         if not cleaned or cleaned == self.last_transcript:
             return None
         self.last_transcript = cleaned
-        normalized = cleaned.replace("'", "").replace("’", "")
+        normalized = _without_apostrophes(cleaned)
 
         if self.active_session and self.sleep_pattern.fullmatch(normalized):
             self.active_session = False
