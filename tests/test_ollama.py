@@ -1,3 +1,4 @@
+import http.client
 import io
 import json
 import urllib.error
@@ -287,3 +288,13 @@ def test_model_presence_ignores_unexpected_catalog_shapes(monkeypatch: pytest.Mo
     _serve(monkeypatch, payload)
 
     assert OllamaClient("http://127.0.0.1:11434", "qwen").has_model() is False
+
+
+def test_chat_reports_a_malformed_http_response(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail(*args: object, **kwargs: object) -> None:
+        raise http.client.BadStatusLine("garbage")
+
+    monkeypatch.setattr("nums.ollama.urllib.request.urlopen", fail)
+
+    with pytest.raises(OllamaError, match="truncated or malformed"):
+        OllamaClient("http://127.0.0.1:11434", "qwen").chat([], [])
