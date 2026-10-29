@@ -1924,3 +1924,40 @@ def test_every_named_key_has_a_script() -> None:
 
     for name, code in KEY_CODES.items():
         assert f"key code {code}\n" in key_script(name)
+
+
+def test_path_info_reports_pipes_as_other(tmp_path: Path) -> None:
+    pipe = tmp_path / "pipe"
+    os.mkfifo(pipe)
+
+    assert json.loads(MacTools().path_info({"path": str(pipe)}))["type"] == "other"
+
+
+def test_copy_path_refuses_pipes_and_leaves_no_destination(tmp_path: Path) -> None:
+    pipe = tmp_path / "pipe"
+    os.mkfifo(pipe)
+    destination = tmp_path / "copy"
+
+    result = json.loads(MacTools().execute(
+        "copy_path", {"source": str(pipe), "destination": str(destination)}
+    ))
+
+    assert result["error"] == "ValueError: source must be a file, directory, or symlink"
+    assert not destination.exists()
+
+
+def test_unknown_tool_name_is_reported_not_raised() -> None:
+    result = json.loads(MacTools().execute("format_disk", {}))
+
+    assert result == {"error": "Unknown tool: format_disk"}
+
+
+def test_find_files_reports_search_failure(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(command, 2, "", "rg: bad glob\n")
+
+    monkeypatch.setattr("nums.tools.subprocess.run", fake_run)
+
+    result = json.loads(MacTools().execute("find_files", {"path": str(tmp_path)}))
+
+    assert result == {"error": "rg: bad glob", "exit_code": 2}
