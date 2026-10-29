@@ -661,3 +661,36 @@ def test_a_no_tool_expectation_is_accepted(tmp_path) -> None:
     data.write_text(json.dumps(case) + "\n")
 
     assert load_cases(data)[0]["expected_tool"] == "none"
+
+
+def test_resume_without_a_report_path_is_a_usage_error(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    from training import evaluate as evaluate_module
+
+    monkeypatch.setattr(
+        "sys.argv", ["evaluate", str(tmp_path / "data.jsonl"), "--model", "qwen", "--resume"]
+    )
+
+    with pytest.raises(SystemExit) as excinfo:
+        evaluate_module.main()
+
+    assert excinfo.value.code == 2
+
+
+def test_empty_evaluation_set_exits_without_writing_a_report(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    from training import evaluate as evaluate_module
+
+    report = tmp_path / "report.json"
+    monkeypatch.setattr(
+        "sys.argv",
+        ["evaluate", str(tmp_path / "data.jsonl"), "--model", "qwen", "--json-out", str(report)],
+    )
+    monkeypatch.setattr(evaluate_module, "evaluate", lambda *args, **kwargs: {"total": 0})
+
+    with pytest.raises(SystemExit, match="empty evaluation set"):
+        evaluate_module.main()
+
+    assert not report.exists()
