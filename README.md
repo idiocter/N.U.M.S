@@ -305,7 +305,7 @@ uv run nums --doctor
 uv run nums --self-test
 uv run nums --voice-test
 uv run pytest
-uv run --with mypy mypy
+uv run mypy
 ```
 
 `--self-test` uses a temporary directory and asks the local model for a

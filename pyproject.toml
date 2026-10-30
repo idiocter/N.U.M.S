@@ -7,7 +7,7 @@ requires-python = ">=3.11"
 dependencies = []
 
 [dependency-groups]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "mypy>=1.10"]
 
 [project.scripts]
 nums = "nums.cli:main"
