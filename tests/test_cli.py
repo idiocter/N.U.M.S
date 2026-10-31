@@ -19,10 +19,8 @@ def test_wake_listener_survives_model_disconnect(monkeypatch: pytest.MonkeyPatch
             pass
 
         def transcripts(self):
-            try:
-                yield next(transcripts)
-            except StopIteration:
-                raise KeyboardInterrupt
+            yield from transcripts
+            raise KeyboardInterrupt
 
         def stop(self) -> None:
             pass
@@ -445,10 +443,8 @@ def test_wake_listener_survives_storage_errors(
             pass
 
         def transcripts(self):
-            try:
-                yield next(transcripts)
-            except StopIteration:
-                raise KeyboardInterrupt
+            yield from transcripts
+            raise KeyboardInterrupt
 
         def stop(self) -> None:
             pass
@@ -800,3 +796,121 @@ def test_setup_voice_reports_success(
 
     assert downloads == ["/tmp/m.bin"]
     assert "Wake model ready." in capsys.readouterr().out
+
+
+class _ScriptedStream:
+    """A microphone stream that plays a script, then interrupts the listener."""
+
+    instances: list["_ScriptedStream"] = []
+
+    def __init__(self, script, *args: object) -> None:
+        self.script = script
+        self.stopped = False
+        _ScriptedStream.instances.append(self)
+
+    def transcripts(self):
+        for item in self.script():
+            yield item
+        raise KeyboardInterrupt
+
+    def stop(self) -> None:
+        self.stopped = True
+
+
+def test_speech_heard_while_the_model_works_is_answered_next(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import threading
+
+    thinking = threading.Event()
+    heard_while_thinking = threading.Event()
+    prompts = []
+
+    class SlowAgent:
+        def run(self, prompt: str) -> str:
+            prompts.append(prompt)
+            if len(prompts) == 1:
+                thinking.set()
+                assert heard_while_thinking.wait(5)
+            return f"done {len(prompts)}"
+
+    def script():
+        yield "hey numnum open Safari"
+        assert thinking.wait(5)
+        yield "and then open Notes"
+        heard_while_thinking.set()
+        # Stay open until the second answer finishes, as a real microphone would.
+        deadline = threading.Event()
+        deadline.wait(0.5)
+
+    _ScriptedStream.instances = []
+    spoken = []
+    monkeypatch.setattr("nums.cli.ListenerLock", nullcontext)
+    monkeypatch.setattr("nums.cli.WhisperStream", lambda *a: _ScriptedStream(script, *a))
+    monkeypatch.setattr("nums.cli._say", spoken.append)
+    monkeypatch.setattr("nums.cli.time.sleep", lambda seconds: None)
+
+    wake_mode(SlowAgent(), Settings())  # type: ignore[arg-type]
+
+    assert prompts == ["open Safari", "and then open Notes"]
+    assert spoken == ["done 1", "done 2"]
+
+
+def test_one_microphone_stream_serves_many_commands(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Agent:
+        def run(self, prompt: str) -> str:
+            return prompt
+
+    def script():
+        yield "hey numnum"
+        yield "first request"
+        yield "second request"
+
+    _ScriptedStream.instances = []
+    monkeypatch.setattr("nums.cli.ListenerLock", nullcontext)
+    monkeypatch.setattr("nums.cli.WhisperStream", lambda *a: _ScriptedStream(script, *a))
+    monkeypatch.setattr("nums.cli._say", lambda text: None)
+    monkeypatch.setattr("nums.cli._play_sound", lambda path: None)
+    monkeypatch.setattr("nums.cli.time.sleep", lambda seconds: None)
+
+    wake_mode(Agent(), Settings())  # type: ignore[arg-type]
+
+    assert len(_ScriptedStream.instances) == 1
+    assert _ScriptedStream.instances[0].stopped
+
+
+def test_speech_during_the_spoken_reply_is_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The microphone hears NUMS's own voice while it speaks; that must not become a command."""
+    prompts = []
+
+    class Agent:
+        def run(self, prompt: str) -> str:
+            prompts.append(prompt)
+            return "reply"
+
+    def script():
+        yield "hey numnum"
+        yield "open Safari"
+        while not spoke.is_set():
+            spoke.wait(0.01)
+        yield "echo of the reply"
+
+    import threading
+
+    spoke = threading.Event()
+
+    def say(text: str) -> None:
+        spoke.set()
+        # Give the listener thread time to hear the echo before the reply ends.
+        threading.Event().wait(0.2)
+
+    _ScriptedStream.instances = []
+    monkeypatch.setattr("nums.cli.ListenerLock", nullcontext)
+    monkeypatch.setattr("nums.cli.WhisperStream", lambda *a: _ScriptedStream(script, *a))
+    monkeypatch.setattr("nums.cli._say", say)
+    monkeypatch.setattr("nums.cli._play_sound", lambda path: None)
+    monkeypatch.setattr("nums.cli.time.sleep", lambda seconds: None)
+
+    wake_mode(Agent(), Settings())  # type: ignore[arg-type]
+
+    assert prompts == ["open Safari"]

@@ -7,6 +7,7 @@ import subprocess
 import sys
 import time
 import urllib.request
+from collections import deque
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -17,6 +18,8 @@ from .ollama import OllamaClient, OllamaError
 from .service import install_service, service_plist, uninstall_service
 from .wake import (
     ListenerLock,
+    StreamEnded,
+    TranscriptListener,
     WakePhraseDetector,
     WhisperStream,
     download_voice_model,
@@ -158,47 +161,62 @@ def wake_mode(agent: Agent, settings: Settings) -> None:
             print(LOGO)
             print(f'Listening locally for "{settings.wake_phrase}". Press Ctrl+C to stop.\n')
             while True:
-                stream = WhisperStream(settings.whisper_model, settings.capture_device)
-                transcripts = stream.transcripts()
-                event = None
+                listener = TranscriptListener(
+                    WhisperStream(settings.whisper_model, settings.capture_device)
+                )
+                listener.start()
                 try:
-                    for transcript in transcripts:
-                        event = detector.feed(transcript)
-                        if event is not None:
-                            break
+                    _listen(listener, detector, agent)
+                except StreamEnded:
+                    pass
                 finally:
-                    transcripts.close()
-                    stream.stop()
-
-                if event is None:
-                    time.sleep(1)
-                    continue
-                if event.kind == "wake":
-                    print("NUMS > Online. Keep talking until you send me to sleep.")
-                    _play_sound("/System/Library/Sounds/Glass.aiff")
-                    continue
-                if event.kind == "sleep":
-                    print("NUMS > Going to sleep.\n")
-                    _say("Good night.")
-                    continue
-                print(f"You > {event.text}")
-                try:
-                    response = agent.run(event.text)
-                except (OllamaError, OSError, ValueError) as exc:
-                    # A storage failure must not end the always-on listener.
-                    print(f"NUMS error > {exc}\n")
-                    _say("I could not reach the local model." if isinstance(exc, OllamaError)
-                         else "I hit an internal error.")
-                    detector.command_completed()
-                    continue
-                print(f"NUMS > {response}\n")
-                _say(response)
-                detector.command_completed()
+                    listener.close()
+                time.sleep(1)
     except KeyboardInterrupt:
         print("\nNUMS wake listener stopped.")
     except RuntimeError as exc:
         raise SystemExit(str(exc)) from exc
 
+
+def _listen(listener: TranscriptListener, detector: WakePhraseDetector, agent: Agent) -> None:
+    """Handle speech until the stream ends. The microphone stays open throughout."""
+    # Speech heard while NUMS was still thinking; it is handled before new speech.
+    pending: deque[str] = deque()
+    while True:
+        transcript = pending.popleft() if pending else listener.get()
+        if transcript is None:
+            continue
+        event = detector.feed(transcript)
+        if event is None:
+            continue
+        if event.kind == "wake":
+            print("NUMS > Online. Keep talking until you send me to sleep.")
+            _play_sound("/System/Library/Sounds/Glass.aiff")
+            continue
+        if event.kind == "sleep":
+            print("NUMS > Going to sleep.\n")
+            _say("Good night.")
+            listener.drain()  # the goodbye was picked up by the microphone
+            continue
+        print(f"You > {event.text}")
+        try:
+            response = agent.run(event.text)
+        except (OllamaError, OSError, ValueError) as exc:
+            # A storage failure must not end the always-on listener.
+            print(f"NUMS error > {exc}\n")
+            pending.extend(listener.drain())
+            _say("I could not reach the local model." if isinstance(exc, OllamaError)
+                 else "I hit an internal error.")
+            listener.drain()
+            detector.command_completed()
+            continue
+        # Keep what was said while the model worked, but drop what the
+        # microphone hears while NUMS speaks, which is NUMS itself.
+        pending.extend(listener.drain())
+        print(f"NUMS > {response}\n")
+        _say(response)
+        listener.drain()
+        detector.command_completed()
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="NUMS local macOS assistant")

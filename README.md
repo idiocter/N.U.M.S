@@ -114,6 +114,11 @@ Say “hey numnum” and wait for the chime. NUMS stays online after the first c
 The wake phrase must begin a spoken turn; mentioning it later in a sentence
 does not wake NUMS.
 
+The microphone stays open while NUMS thinks, so a follow-up you say before it
+answers is handled right after. It ignores sound while NUMS is speaking, which
+is its own voice. The model stays loaded in Ollama between requests
+(`NUMS_KEEP_ALIVE`), so only the first request after a long idle is slow.
+
 When you are finished, say **“aight baby girl, let’s sleep.”** NUMS says good night and returns to wake-only mode. The first launch may trigger a macOS Microphone permission prompt for your terminal.
 Say a sleep phrase on its own turn so a request that merely mentions one is
 handled as a request.

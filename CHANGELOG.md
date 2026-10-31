@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Kept the wake-word microphone stream open while NUMS thinks and answers. Speech heard while the model works is handled next, speech picked up during NUMS's own spoken reply is ignored, and the stream is no longer restarted after every command.
 - Kept the model loaded between requests (`NUMS_KEEP_ALIVE`, default 30 minutes) and loaded it at voice start, so answers no longer wait for a cold model load after idle periods.
 - Corrected type annotations so the package type-checks cleanly, and added a mypy configuration (`uv run mypy`).
 - Made mypy a locked dev dependency and added a type-check step to CI.
