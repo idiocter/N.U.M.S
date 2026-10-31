@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import fcntl
 import os
+import queue
 import re
 import shutil
 import subprocess
 import tempfile
+import threading
 import time
 from collections.abc import Generator
 from dataclasses import dataclass
@@ -289,3 +291,65 @@ class WhisperStream:
             except subprocess.TimeoutExpired:
                 self.process.kill()
                 self.process.wait()
+
+
+class StreamEnded(Exception):
+    """The microphone stream finished and has no more transcripts."""
+
+
+class TranscriptListener:
+    """Keep the microphone stream open on a thread while the caller is busy.
+
+    Answering a request can take many seconds. Reading the stream on a thread
+    means speech heard in that time is queued instead of lost.
+    """
+
+    def __init__(self, stream: WhisperStream) -> None:
+        self.stream = stream
+        self._items: queue.Queue[object] = queue.Queue()
+        self._closed = threading.Event()
+        self._thread = threading.Thread(target=self._read, name="nums-listener", daemon=True)
+
+    def start(self) -> None:
+        self._thread.start()
+
+    def _read(self) -> None:
+        try:
+            for transcript in self.stream.transcripts():
+                self._items.put(transcript)
+        except BaseException as exc:  # forwarded so the caller sees the real failure
+            if not self._closed.is_set():
+                self._items.put(exc)
+            return
+        self._items.put(StreamEnded())
+
+    def get(self, timeout: float | None = None) -> str | None:
+        """Return the next transcript, or None when `timeout` passes first."""
+        try:
+            item = self._items.get(timeout=timeout)
+        except queue.Empty:
+            return None
+        if isinstance(item, BaseException):
+            raise item
+        assert isinstance(item, str)
+        return item
+
+    def drain(self) -> list[str]:
+        """Return every transcript heard since the last read, without blocking."""
+        heard: list[str] = []
+        while True:
+            try:
+                item = self._items.get_nowait()
+            except queue.Empty:
+                return heard
+            if isinstance(item, BaseException):
+                # Keep the end or failure for the next `get`.
+                self._items.put(item)
+                return heard
+            assert isinstance(item, str)
+            heard.append(item)
+
+    def close(self) -> None:
+        self._closed.set()
+        self.stream.stop()
+        self._thread.join(timeout=5)

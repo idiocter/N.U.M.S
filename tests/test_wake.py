@@ -577,3 +577,96 @@ def test_wake_phrase_with_its_own_apostrophe_still_leaves_the_command_intact() -
     event = WakePhraseDetector("hey what's up").feed("Hey what's up, read Dan's report")
 
     assert event is not None and event.text == "read Dan's report"
+
+
+def test_listener_queues_speech_heard_while_the_caller_is_busy() -> None:
+    import threading
+
+    from nums.wake import StreamEnded, TranscriptListener
+
+    done = threading.Event()
+
+    class Stream:
+        def transcripts(self):
+            yield "one"
+            yield "two"
+            done.set()
+
+        def stop(self) -> None:
+            pass
+
+    listener = TranscriptListener(Stream())  # type: ignore[arg-type]
+    listener.start()
+    assert done.wait(5)
+    listener._thread.join(5)
+
+    assert listener.drain() == ["one", "two"]
+    with pytest.raises(StreamEnded):
+        listener.get(timeout=1)
+
+
+def test_listener_get_times_out_without_speech() -> None:
+    import threading
+
+    from nums.wake import TranscriptListener
+
+    release = threading.Event()
+
+    class Stream:
+        def transcripts(self):
+            release.wait(5)
+            return
+            yield
+
+        def stop(self) -> None:
+            release.set()
+
+    listener = TranscriptListener(Stream())  # type: ignore[arg-type]
+    listener.start()
+
+    assert listener.get(timeout=0.05) is None
+    listener.close()
+
+
+def test_listener_forwards_stream_failures_after_earlier_speech() -> None:
+    from nums.wake import TranscriptListener
+
+    class Stream:
+        def transcripts(self):
+            yield "hello"
+            raise RuntimeError("whisper-stream stopped with exit code 1")
+
+        def stop(self) -> None:
+            pass
+
+    listener = TranscriptListener(Stream())  # type: ignore[arg-type]
+    listener.start()
+    listener._thread.join(5)
+
+    assert listener.drain() == ["hello"]
+    with pytest.raises(RuntimeError, match="exit code 1"):
+        listener.get()
+
+
+def test_closing_the_listener_stops_the_stream_and_hides_the_shutdown_error() -> None:
+    import threading
+
+    from nums.wake import TranscriptListener
+
+    stopped = threading.Event()
+
+    class Stream:
+        def transcripts(self):
+            stopped.wait(5)
+            raise RuntimeError("whisper-stream stopped with exit code -15")
+            yield
+
+        def stop(self) -> None:
+            stopped.set()
+
+    listener = TranscriptListener(Stream())  # type: ignore[arg-type]
+    listener.start()
+    listener.close()
+
+    assert stopped.is_set()
+    assert listener.drain() == []
