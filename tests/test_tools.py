@@ -156,8 +156,8 @@ def test_path_info_reports_metadata_without_following_symlink(tmp_path: Path) ->
     link = tmp_path / "link.txt"
     link.symlink_to("target.txt")
 
-    file_info = json.loads(MacTools("read_only").execute("path_info", {"path": str(target)}))
-    link_info = json.loads(MacTools("read_only").execute("path_info", {"path": str(link)}))
+    file_info = json.loads(MacTools().execute("path_info", {"path": str(target)}))
+    link_info = json.loads(MacTools().execute("path_info", {"path": str(link)}))
     assert file_info["type"] == "file"
     assert file_info["bytes"] == 5
     assert file_info["permissions"] == "0o640"
@@ -169,7 +169,7 @@ def test_path_info_reports_metadata_without_following_symlink(tmp_path: Path) ->
 def test_hash_file_streams_sha256_in_read_only_mode(tmp_path: Path) -> None:
     path = tmp_path / "payload.bin"
     path.write_bytes(b"abc")
-    result = json.loads(MacTools("read_only").execute("hash_file", {"path": str(path)}))
+    result = json.loads(MacTools().execute("hash_file", {"path": str(path)}))
     assert result == {
         "path": str(path),
         "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
@@ -185,7 +185,7 @@ def test_find_files_recurses_respects_ignores_and_globs(tmp_path: Path) -> None:
     (nested / "main.py").write_text("pass\n")
     (nested / "ignored.py").write_text("pass\n")
     (nested / "notes.txt").write_text("notes\n")
-    tools = MacTools("read_only")
+    tools = MacTools()
 
     result = json.loads(tools.execute("find_files", {
         "path": str(tmp_path), "glob": "*.py",
@@ -250,7 +250,7 @@ def test_read_file_rejects_negative_offset(tmp_path: Path) -> None:
 def test_read_lines_returns_numbered_code_and_next_page(tmp_path: Path) -> None:
     path = tmp_path / "module.py"
     path.write_text("first\nsecond\nthird\n")
-    tools = MacTools("read_only")
+    tools = MacTools()
 
     first = json.loads(tools.execute("read_lines", {
         "path": str(path), "start_line": "2", "count": "1",
@@ -300,32 +300,24 @@ def test_write_replaces_content_and_preserves_permissions(tmp_path: Path) -> Non
 
 def test_append_file_preserves_existing_content_and_supports_unicode(tmp_path: Path) -> None:
     path = tmp_path / "logs" / "notes.txt"
-    first = json.loads(MacTools("standard").execute("append_file", {
+    first = json.loads(MacTools().execute("append_file", {
         "path": str(path), "content": "first\n",
     }))
-    second = json.loads(MacTools("standard").execute("append_file", {
+    second = json.loads(MacTools().execute("append_file", {
         "path": str(path), "content": "café\n",
     }))
     assert first["bytes"] == 6
     assert second["bytes"] == 6
     assert path.read_text() == "first\ncafé\n"
-    blocked = json.loads(MacTools("read_only").execute("append_file", {
-        "path": str(path), "content": "blocked",
-    }))
-    assert blocked["action_mode"] == "read_only"
 
 
-def test_create_directory_is_idempotent_and_standard_mode_safe(tmp_path: Path) -> None:
+def test_create_directory_is_idempotent(tmp_path: Path) -> None:
     path = tmp_path / "parent" / "child"
-    first = json.loads(MacTools("standard").execute("create_directory", {"path": str(path)}))
-    second = json.loads(MacTools("standard").execute("create_directory", {"path": str(path)}))
+    first = json.loads(MacTools().execute("create_directory", {"path": str(path)}))
+    second = json.loads(MacTools().execute("create_directory", {"path": str(path)}))
     assert first == {"directory": str(path), "created": True}
     assert second == {"directory": str(path), "created": False}
     assert path.is_dir()
-    blocked = tmp_path / "blocked"
-    result = json.loads(MacTools("read_only").execute("create_directory", {"path": str(blocked)}))
-    assert result["action_mode"] == "read_only"
-    assert not blocked.exists()
 
 
 def test_copy_path_preserves_files_trees_and_symlinks_without_overwrite(tmp_path: Path) -> None:
@@ -334,7 +326,7 @@ def test_copy_path_preserves_files_trees_and_symlinks_without_overwrite(tmp_path
     (source / "note.txt").write_text("hello")
     (source / "link.txt").symlink_to("note.txt")
     destination = tmp_path / "copies" / "source"
-    result = json.loads(MacTools("standard").execute("copy_path", {
+    result = json.loads(MacTools().execute("copy_path", {
         "source": str(source), "destination": str(destination),
     }))
     assert result["type"] == "directory"
@@ -352,7 +344,7 @@ def test_move_path_renames_without_overwriting(tmp_path: Path) -> None:
     source = tmp_path / "draft.txt"
     source.write_text("draft")
     destination = tmp_path / "archive" / "final.txt"
-    result = json.loads(MacTools("standard").execute("move_path", {
+    result = json.loads(MacTools().execute("move_path", {
         "source": str(source), "destination": str(destination),
     }))
     assert result == {"moved": str(source), "destination": str(destination)}
@@ -370,7 +362,7 @@ def test_set_path_permissions_is_verified_and_refuses_symlinks(tmp_path: Path) -
     path = tmp_path / "script.sh"
     path.write_text("#!/bin/sh\n")
     path.chmod(0o600)
-    result = json.loads(MacTools("standard").execute("set_path_permissions", {
+    result = json.loads(MacTools().execute("set_path_permissions", {
         "path": str(path), "mode": "755",
     }))
     assert result == {"path": str(path), "previous": "0o600", "permissions": "0o755"}
@@ -386,7 +378,7 @@ def test_set_path_permissions_is_verified_and_refuses_symlinks(tmp_path: Path) -
 
 def test_create_symlink_preserves_relative_target_and_refuses_overwrite(tmp_path: Path) -> None:
     link = tmp_path / "nested" / "current"
-    result = json.loads(MacTools("standard").execute("create_symlink", {
+    result = json.loads(MacTools().execute("create_symlink", {
         "target": "../releases/v1", "link": str(link),
     }))
     assert result == {"link": str(link), "target": "../releases/v1"}
@@ -395,12 +387,6 @@ def test_create_symlink_preserves_relative_target_and_refuses_overwrite(tmp_path
     assert "error" in json.loads(MacTools().execute("create_symlink", {
         "target": "elsewhere", "link": str(link),
     }))
-    blocked_link = tmp_path / "blocked"
-    blocked = json.loads(MacTools("read_only").execute("create_symlink", {
-        "target": "target", "link": str(blocked_link),
-    }))
-    assert blocked["action_mode"] == "read_only"
-    assert not blocked_link.exists()
 
 
 def test_failed_replace_keeps_previous_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -423,7 +409,7 @@ def test_replace_in_file_preserves_surrounding_text_permissions_and_newlines(tmp
     path.write_bytes(b"before\r\nvalue = 1\r\nafter\r\n")
     path.chmod(0o640)
 
-    result = json.loads(MacTools("standard").execute("replace_in_file", {
+    result = json.loads(MacTools().execute("replace_in_file", {
         "path": str(path), "old_text": "value = 1", "new_text": "value = 2",
     }))
 
@@ -460,50 +446,28 @@ def test_replace_in_file_rejects_unsafe_matches_without_writing(tmp_path: Path, 
     assert path.read_text() == "same\nsame\n"
 
 
-def test_read_only_mode_blocks_precise_edits(tmp_path: Path) -> None:
-    path = tmp_path / "module.py"
-    path.write_text("before")
-
-    result = json.loads(MacTools("read_only").execute("replace_in_file", {
-        "path": str(path), "old_text": "before", "new_text": "after",
-    }))
-
-    assert result["action_mode"] == "read_only"
-    assert path.read_text() == "before"
 
 
-def test_read_only_mode_blocks_mutating_tools(tmp_path: Path) -> None:
-    target = tmp_path / "blocked.txt"
-
-    result = json.loads(MacTools("read_only").execute(
-        "write_file", {"path": str(target), "content": "no"}
-    ))
-
-    assert result["action_mode"] == "read_only"
-    assert not target.exists()
 
 
-def test_standard_mode_blocks_shell() -> None:
-    result = json.loads(MacTools("standard").execute("shell", {"command": "echo no"}))
-    assert result["action_mode"] == "standard"
 
 
 def test_git_log_is_bounded_read_only_and_path_scoped(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
     args = {"repo": "/project", "count": "12", "file": "src/main.py"}
-    assert MacTools("read_only").execute("git_log", args) == "ok"
+    assert MacTools().execute("git_log", args) == "ok"
     assert "--max-count=12" in commands[0]
     assert commands[0][-2:] == ["--", "src/main.py"]
     for update in ({"count": "0"}, {"count": "101"}, {"file": ""}):
-        assert "error" in json.loads(MacTools("read_only").execute("git_log", {**args, **update}))
+        assert "error" in json.loads(MacTools().execute("git_log", {**args, **update}))
 
 
 def test_git_show_validates_one_revision_and_optional_path(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
     args = {"repo": "/project", "revision": "HEAD~1", "file": "src/main.py"}
-    assert MacTools("read_only").execute("git_show", args) == "ok"
+    assert MacTools().execute("git_show", args) == "ok"
     assert commands[0][-3:] == ["HEAD~1", "--", "src/main.py"]
     for revision in ("--help", "HEAD..main", "HEAD:secret", "bad ref"):
         assert "error" in json.loads(MacTools().execute("git_show", {
@@ -514,7 +478,7 @@ def test_git_show_validates_one_revision_and_optional_path(monkeypatch: pytest.M
 def test_git_branches_is_read_only_and_includes_local_and_remote_refs(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
-    assert MacTools("read_only").execute("git_branches", {"repo": "/project"}) == "ok"
+    assert MacTools().execute("git_branches", {"repo": "/project"}) == "ok"
     assert commands[0][-2:] == ["refs/heads", "refs/remotes"]
     assert any("%(upstream:short)" in argument for argument in commands[0])
 
@@ -523,34 +487,23 @@ def test_git_blame_is_line_bounded_and_revision_validated(monkeypatch: pytest.Mo
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
     args = {"repo": "/project", "file": "src/main.py", "start_line": "10", "count": "25", "revision": "main"}
-    assert MacTools("read_only").execute("git_blame", args) == "ok"
+    assert MacTools().execute("git_blame", args) == "ok"
     assert commands[0][-5:] == ["-L", "10,+25", "main", "--", "src/main.py"]
     for update in ({"start_line": "0"}, {"count": "201"}, {"file": ""}, {"revision": "HEAD..main"}):
         assert "error" in json.loads(MacTools().execute("git_blame", {**args, **update}))
 
 
-def test_app_inspection_is_read_only_but_ui_actions_require_unrestricted() -> None:
-    tools = MacTools("standard")
-    click = json.loads(tools.execute("click_app_element", {
-        "app": "Finder", "window": "Documents", "role": "AXButton", "label": "Back",
-    }))
-    typed = json.loads(tools.execute("type_in_app", {
-        "app": "Finder", "window": "Documents", "text": "hello",
-    }))
-
-    assert click["action_mode"] == "standard"
-    assert typed["action_mode"] == "standard"
 
 
 def test_app_inspection_passes_page_offset(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
 
-    assert MacTools("read_only").execute("inspect_app_ui", {
+    assert MacTools().execute("inspect_app_ui", {
         "app": "Finder", "offset": "120",
     }) == "ok"
     assert commands[0][-3:] == ["Finder", "120", "40"]
-    assert MacTools("read_only").execute("inspect_app_ui", {
+    assert MacTools().execute("inspect_app_ui", {
         "app": "Finder", "offset": "40", "limit": "80",
     }) == "ok"
     assert commands[1][-3:] == ["Finder", "40", "80"]
@@ -572,7 +525,7 @@ def test_app_inspection_reads_interactive_control_values() -> None:
 def test_focused_element_inspection_is_read_only(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "focused")
-    assert MacTools("read_only").execute("inspect_focused_app_element", {"app": "Notes"}) == "focused"
+    assert MacTools().execute("inspect_focused_app_element", {"app": "Notes"}) == "focused"
     assert commands[0][-1] == "Notes"
     assert "error" in json.loads(MacTools().execute("inspect_focused_app_element", {"app": ""}))
 
@@ -580,20 +533,19 @@ def test_focused_element_inspection_is_read_only(monkeypatch: pytest.MonkeyPatch
 def test_list_app_windows_is_read_only(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
-    assert MacTools("read_only").execute("list_app_windows", {"app": "Finder"}) == "ok"
+    assert MacTools().execute("list_app_windows", {"app": "Finder"}) == "ok"
     assert commands[0][-1] == "Finder"
     assert 'attribute "AXMinimized"' in LIST_WINDOWS_SCRIPT
     assert "position of windowRef" in LIST_WINDOWS_SCRIPT
     assert "size of windowRef" in LIST_WINDOWS_SCRIPT
 
 
-def test_activate_app_requires_unrestricted_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_activate_app(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
     assert MacTools().execute("activate_app", {"app": "Safari"}) == "ok"
     assert commands[0][-1] == "Safari"
     assert "error" in json.loads(MacTools().execute("activate_app", {"app": ""}))
-    assert json.loads(MacTools("standard").execute("activate_app", {"app": "Safari"}))["action_mode"] == "standard"
 
 
 def test_wait_for_app_window_is_bounded_and_read_only(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -604,19 +556,19 @@ def test_wait_for_app_window_is_bounded_and_read_only(monkeypatch: pytest.Monkey
     )
     args = {"app": "Preview", "window": "Export", "timeout": "8"}
 
-    assert MacTools("read_only").execute("wait_for_app_window", args) == "ready"
+    assert MacTools().execute("wait_for_app_window", args) == "ready"
     assert calls[0][0][-4:] == ["Preview", "Export", "exists", "8"]
     assert calls[0][1]["timeout"] == 13
-    assert MacTools("read_only").execute("wait_for_app_window", {**args, "state": "absent"}) == "ready"
+    assert MacTools().execute("wait_for_app_window", {**args, "state": "absent"}) == "ready"
 
     for update in ({"timeout": "0"}, {"timeout": "31"}, {"window": ""}, {"state": "closed"}):
-        result = json.loads(MacTools("read_only").execute(
+        result = json.loads(MacTools().execute(
             "wait_for_app_window", {**args, **update},
         ))
         assert "error" in result
 
 
-def test_focus_window_requires_unrestricted_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_focus_window(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
     assert MacTools().execute("focus_app_window", {"app": "Finder", "window": "Documents"}) == "ok"
@@ -625,10 +577,6 @@ def test_focus_window_requires_unrestricted_mode(monkeypatch: pytest.MonkeyPatch
         "app": "Finder", "window": "Documents", "index": "2",
     }) == "ok"
     assert commands[1][-3:] == ["Finder", "Documents", "2"]
-    blocked = json.loads(MacTools("standard").execute("focus_app_window", {
-        "app": "Finder", "window": "Documents",
-    }))
-    assert blocked["action_mode"] == "standard"
 
 
 def test_close_window_targets_exact_title_and_optional_index(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -640,7 +588,6 @@ def test_close_window_targets_exact_title_and_optional_index(monkeypatch: pytest
     assert MacTools().execute("close_app_window", {**args, "index": "2"}) == "ok"
     assert commands[1][-1] == "2"
     assert "error" in json.loads(MacTools().execute("close_app_window", {**args, "index": "0"}))
-    assert json.loads(MacTools("standard").execute("close_app_window", args))["action_mode"] == "standard"
 
 
 def test_set_window_minimized_validates_state_and_index(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -686,7 +633,7 @@ def test_notification_passes_user_text_as_arguments(monkeypatch: pytest.MonkeyPa
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
     message = 'Done " now\nwith details'
-    assert MacTools("standard").execute("notify", {"message": message, "title": "NUMS"}) == "ok"
+    assert MacTools().execute("notify", {"message": message, "title": "NUMS"}) == "ok"
     assert commands[0][-2:] == [message, "NUMS"]
     assert message not in commands[0][2]
 
@@ -694,7 +641,7 @@ def test_notification_passes_user_text_as_arguments(monkeypatch: pytest.MonkeyPa
 def test_menu_inspection_lists_menus_or_named_items(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
-    tools = MacTools("read_only")
+    tools = MacTools()
 
     assert tools.execute("inspect_app_menu", {"app": "Safari"}) == "ok"
     assert tools.execute("inspect_app_menu", {"app": "Safari", "menu": "File"}) == "ok"
@@ -713,23 +660,19 @@ def test_menu_click_passes_exact_names_as_arguments(monkeypatch: pytest.MonkeyPa
         "app": "Safari", "menu": "File", "item": "Email This Page", "submenu": "Share",
     }) == "ok"
     assert commands[0][-4:] == ["Safari", "File", "Email This Page", "Share"]
-    blocked = json.loads(MacTools("standard").execute("click_app_menu_item", {
-        "app": "Safari", "menu": "File", "item": "New Window",
-    }))
-    assert blocked["action_mode"] == "standard"
 
 
 def test_wait_for_menu_item_is_bounded_and_read_only(monkeypatch: pytest.MonkeyPatch) -> None:
     calls = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: calls.append((command, kwargs)) or "ready")
     args = {"app": "Safari", "menu": "File", "item": "Share", "state": "enabled", "timeout": "7"}
-    assert MacTools("read_only").execute("wait_for_app_menu_item", args) == "ready"
+    assert MacTools().execute("wait_for_app_menu_item", args) == "ready"
     assert calls[0][0][-6:] == ["Safari", "File", "Share", "", "enabled", "7"]
     assert calls[0][1]["timeout"] == 12
     for state in ("exists", "disabled", "absent"):
-        assert MacTools("read_only").execute("wait_for_app_menu_item", {**args, "state": state}) == "ready"
+        assert MacTools().execute("wait_for_app_menu_item", {**args, "state": state}) == "ready"
     for update in ({"state": "visible"}, {"timeout": "0"}, {"item": ""}):
-        assert "error" in json.loads(MacTools("read_only").execute(
+        assert "error" in json.loads(MacTools().execute(
             "wait_for_app_menu_item", {**args, **update},
         ))
 
@@ -797,7 +740,6 @@ def test_replace_app_text_requires_an_exact_field(monkeypatch: pytest.MonkeyPatc
     assert MacTools().execute("replace_app_text", {**args, "text": ""}) == "ok"
     assert "error" in json.loads(MacTools().execute("replace_app_text", {**args, "label": ""}))
     assert "error" in json.loads(MacTools().execute("replace_app_text", {**args, "role": "AXButton"}))
-    assert json.loads(MacTools("standard").execute("replace_app_text", args))["action_mode"] == "standard"
 
 
 def test_indexed_click_passes_inspected_index_and_rejects_bad_values(
@@ -828,10 +770,9 @@ def test_show_element_menu_requires_exact_target(monkeypatch: pytest.MonkeyPatch
     assert MacTools().execute("show_app_element_menu", args) == "ok"
     assert commands[0][-5:] == ["Finder", "Documents", "AXRow", "report.pdf", ""]
     assert "error" in json.loads(MacTools().execute("show_app_element_menu", {**args, "label": ""}))
-    assert json.loads(MacTools("standard").execute("show_app_element_menu", args))["action_mode"] == "standard"
 
 
-def test_select_popup_item_uses_exact_target_and_requires_unrestricted_mode(
+def test_select_popup_item_uses_exact_target(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     commands = []
@@ -847,7 +788,6 @@ def test_select_popup_item_uses_exact_target_and_requires_unrestricted_mode(
         "app": "System Settings", "window": "Displays", "index": "9", "item": "60 Hertz",
     }) == "ok"
     assert commands[1][-3:] == ["", "9", "60 Hertz"]
-    assert json.loads(MacTools("standard").execute("select_app_popup_item", args))["action_mode"] == "standard"
 
     for update, message in (
         ({"label": "", "index": ""}, "label or inspected index"),
@@ -869,11 +809,11 @@ def test_wait_for_app_element_is_bounded_and_read_only(monkeypatch: pytest.Monke
         "label": "Clear", "state": "enabled", "timeout": "12",
     }
 
-    assert MacTools("read_only").execute("wait_for_app_element", args) == "ready"
+    assert MacTools().execute("wait_for_app_element", args) == "ready"
     assert calls[0][0][-6:] == ["Safari", "Downloads", "AXButton", "Clear", "enabled", "12"]
     assert calls[0][1]["timeout"] == 17
     for state in ("exists", "disabled", "absent"):
-        assert MacTools("read_only").execute(
+        assert MacTools().execute(
             "wait_for_app_element", {**args, "state": state},
         ) == "ready"
 
@@ -883,13 +823,13 @@ def test_wait_for_app_element_is_bounded_and_read_only(monkeypatch: pytest.Monke
         ({"timeout": "31"}, "timeout must be"),
         ({"label": ""}, "must not be empty"),
     ):
-        result = json.loads(MacTools("read_only").execute(
+        result = json.loads(MacTools().execute(
             "wait_for_app_element", {**args, **update},
         ))
         assert message in result["error"]
 
 
-def test_set_toggle_requires_valid_state_and_unrestricted_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_set_toggle_requires_valid_state(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command, **kwargs: commands.append(command) or "ok")
     args = {"app": "Settings", "window": "Privacy", "role": "AXSwitch", "index": "4", "state": "on"}
@@ -899,7 +839,6 @@ def test_set_toggle_requires_valid_state_and_unrestricted_mode(monkeypatch: pyte
     disclosure = {**args, "role": "AXDisclosureTriangle", "state": "off"}
     assert MacTools().execute("set_app_toggle", disclosure) == "ok"
     assert commands[1][-4:] == ["AXDisclosureTriangle", "", "4", "off"]
-    assert json.loads(MacTools("standard").execute("set_app_toggle", args))["action_mode"] == "standard"
 
 
 def test_select_radio_targets_label_or_index(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -911,7 +850,6 @@ def test_select_radio_targets_label_or_index(monkeypatch: pytest.MonkeyPatch) ->
     assert MacTools().execute("select_app_radio", {"app": "System Settings", "window": "Sound", "index": "6"}) == "ok"
     assert commands[1][-2:] == ["", "6"]
     assert "error" in json.loads(MacTools().execute("select_app_radio", {"app": "System Settings", "window": "Sound"}))
-    assert json.loads(MacTools("standard").execute("select_app_radio", args))["action_mode"] == "standard"
 
 
 def test_adjust_control_validates_direction_role_and_steps(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -922,7 +860,6 @@ def test_adjust_control_validates_direction_role_and_steps(monkeypatch: pytest.M
     assert commands[0][-7:] == ["System Settings", "Sound", "AXSlider", "Output volume", "", "increase", "3"]
     for update in ({"role": "AXButton"}, {"direction": "up"}, {"steps": "0"}, {"steps": "21"}, {"label": ""}):
         assert "error" in json.loads(MacTools().execute("adjust_app_control", {**args, **update}))
-    assert json.loads(MacTools("standard").execute("adjust_app_control", args))["action_mode"] == "standard"
 
 
 def test_press_app_key_rejects_unknown_modifier() -> None:
@@ -991,7 +928,7 @@ def test_clipboard_write_uses_stdin(monkeypatch: pytest.MonkeyPatch) -> None:
         return Result()
 
     monkeypatch.setattr("nums.tools.subprocess.run", fake_run)
-    result = json.loads(MacTools("standard").set_clipboard({"text": "hello"}))
+    result = json.loads(MacTools().set_clipboard({"text": "hello"}))
 
     assert result == {"exit_code": 0, "characters": 5}
     assert calls[0][0] == ["pbcopy"]
@@ -1016,10 +953,10 @@ def test_reminder_passes_values_as_arguments(monkeypatch: pytest.MonkeyPatch) ->
     commands = []
     monkeypatch.setattr("nums.tools._run", lambda command: commands.append(command) or "ok")
 
-    MacTools("standard").create_reminder({"title": 'Call "Sam"', "notes": "At 4"})
+    MacTools().create_reminder({"title": 'Call "Sam"', "notes": "At 4"})
 
     assert commands[0][-2:] == ['Call "Sam"', "At 4"]
-    rejected = json.loads(MacTools("standard").execute("create_reminder", {"title": "  "}))
+    rejected = json.loads(MacTools().execute("create_reminder", {"title": "  "}))
     assert "title must not be empty" in rejected["error"]
     assert len(commands) == 1
 
@@ -1074,7 +1011,7 @@ def test_git_tools_show_changes_in_read_only_mode(tmp_path: Path) -> None:
     ], check=True)
     tracked.write_text("value = 2\n")
     (tmp_path / "new.py").write_text("new = True\n")
-    tools = MacTools("read_only")
+    tools = MacTools()
 
     status = json.loads(tools.execute("git_status", {"repo": str(tmp_path)}))
     diff = json.loads(tools.execute("git_diff", {
@@ -1791,7 +1728,7 @@ def test_git_tools_reject_bad_arguments_before_running_git(
 
 
 def test_git_history_tools_report_real_repository_state(repo: Path) -> None:
-    tools = MacTools("read_only")
+    tools = MacTools()
 
     log = json.loads(tools.execute("git_log", {"repo": str(repo), "count": "1"}))
     assert log["exit_code"] == 0
@@ -1819,7 +1756,7 @@ def test_git_history_tools_report_real_repository_state(repo: Path) -> None:
 
 
 def test_git_errors_are_reported_not_raised(tmp_path: Path) -> None:
-    result = json.loads(MacTools("read_only").execute("git_status", {"repo": str(tmp_path)}))
+    result = json.loads(MacTools().execute("git_status", {"repo": str(tmp_path)}))
 
     assert result["exit_code"] != 0
     assert "not a git repository" in result["output"].lower()

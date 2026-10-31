@@ -6,8 +6,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
 
-from .policy import VALID_MODES
-
 
 def _integer(name: str, default: int, minimum: int) -> int:
     raw = os.getenv(name, str(default))
@@ -26,15 +24,11 @@ class Settings:
     ollama_url: str = "http://127.0.0.1:11434"
     ollama_timeout_seconds: int = 180
     keep_alive: str = "30m"
-    max_steps: int = 8
-    max_tool_calls: int = 16
     history_turns: int = 8
     max_context_chars: int = 60000
     history_file: str | None = None
     trace_file: str | None = None
     trace_max_bytes: int = 10_000_000
-    action_mode: str = "unrestricted"
-    repeat_tool_limit: int = 2
     session_timeout_seconds: int = 300
     sleep_phrases: tuple[str, ...] = ("go to sleep", "good night nums", "aight baby girl lets sleep")
     speak: bool = False
@@ -75,9 +69,6 @@ class Settings:
         speak = os.getenv("NUMS_SPEAK", "0")
         if speak not in {"0", "1"}:
             raise ValueError("NUMS_SPEAK must be 0 or 1")
-        action_mode = os.getenv("NUMS_ACTION_MODE", cls.action_mode).strip().lower()
-        if action_mode not in VALID_MODES:
-            raise ValueError("NUMS_ACTION_MODE must be read_only, standard, or unrestricted")
         sleep_phrases = tuple(
             phrase.strip() for phrase in os.getenv(
                 "NUMS_SLEEP_PHRASES", "|".join(cls.sleep_phrases)
@@ -101,8 +92,6 @@ class Settings:
                 "NUMS_OLLAMA_TIMEOUT", cls.ollama_timeout_seconds, 1
             ),
             keep_alive=keep_alive,
-            max_steps=_integer("NUMS_MAX_STEPS", cls.max_steps, 1),
-            max_tool_calls=_integer("NUMS_MAX_TOOL_CALLS", cls.max_tool_calls, 1),
             history_turns=_integer("NUMS_HISTORY_TURNS", cls.history_turns, 1),
             max_context_chars=_integer("NUMS_MAX_CONTEXT_CHARS", cls.max_context_chars, 1000),
             history_file=os.path.expanduser(os.environ["NUMS_HISTORY_FILE"])
@@ -112,8 +101,6 @@ class Settings:
             trace_max_bytes=_integer(
                 "NUMS_TRACE_MAX_BYTES", cls.trace_max_bytes, 1024
             ),
-            action_mode=action_mode,
-            repeat_tool_limit=_integer("NUMS_REPEAT_TOOL_LIMIT", cls.repeat_tool_limit, 1),
             session_timeout_seconds=_integer(
                 "NUMS_SESSION_TIMEOUT", cls.session_timeout_seconds, 1
             ),

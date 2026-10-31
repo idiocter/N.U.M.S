@@ -12,10 +12,9 @@ from nums.service import LABEL, install_service, service_path, service_plist, un
 
 def test_service_plist_runs_current_environment_and_preserves_settings() -> None:
     data = plistlib.loads(service_plist(Settings(
-        model="qwen:test", action_mode="standard", history_file="/tmp/history.json",
+        model="qwen:test", history_file="/tmp/history.json",
         ollama_timeout_seconds=45,
-        max_steps=5, max_tool_calls=9, history_turns=3, max_context_chars=40000,
-        repeat_tool_limit=1,
+        history_turns=3, max_context_chars=40000,
         sleep_phrases=("sleep nums", "good night"), whisper_model="/tmp/voice.bin",
     )))
 
@@ -24,18 +23,16 @@ def test_service_plist_runs_current_environment_and_preserves_settings() -> None
     assert data["EnvironmentVariables"]["NUMS_MODEL"] == "qwen:test"
     assert data["EnvironmentVariables"]["NUMS_OLLAMA_TIMEOUT"] == "45"
     assert data["EnvironmentVariables"]["NUMS_KEEP_ALIVE"] == "30m"
-    assert data["EnvironmentVariables"]["NUMS_ACTION_MODE"] == "standard"
     assert data["EnvironmentVariables"]["NUMS_HISTORY_FILE"] == "/tmp/history.json"
-    assert data["EnvironmentVariables"]["NUMS_MAX_STEPS"] == "5"
-    assert data["EnvironmentVariables"]["NUMS_MAX_TOOL_CALLS"] == "9"
     assert data["EnvironmentVariables"]["NUMS_HISTORY_TURNS"] == "3"
     assert data["EnvironmentVariables"]["NUMS_MAX_CONTEXT_CHARS"] == "40000"
-    assert data["EnvironmentVariables"]["NUMS_REPEAT_TOOL_LIMIT"] == "1"
     assert data["EnvironmentVariables"]["NUMS_SLEEP_PHRASES"] == "sleep nums|good night"
     assert data["EnvironmentVariables"]["NUMS_WHISPER_MODEL"] == "/tmp/voice.bin"
     assert data["EnvironmentVariables"]["PATH"] == os.environ.get("PATH", os.defpath)
     assert "NUMS_TRACE_FILE" not in data["EnvironmentVariables"]
     assert "NUMS_TRACE_MAX_BYTES" not in data["EnvironmentVariables"]
+    for removed in ("NUMS_ACTION_MODE", "NUMS_MAX_STEPS", "NUMS_MAX_TOOL_CALLS", "NUMS_REPEAT_TOOL_LIMIT"):
+        assert removed not in data["EnvironmentVariables"]
     assert data["KeepAlive"] is True
 
 

@@ -7,13 +7,13 @@ from typing import Any
 from .config import Settings
 from .history import HistoryStore
 from .ollama import OllamaClient, OllamaError
-from .tools import MacTools, available_tool_schemas
+from .tools import TOOL_SCHEMAS, MacTools
 from .trace import TraceStore
 
 
 SYSTEM_PROMPT = """You are NUMS, Bipul's private local macOS assistant.
 Be concise, capable, and honest. Use tools when they provide evidence or complete the task.
-Use only the provided tools. Execute requested actions directly within the selected action mode.
+Use only the provided tools. Execute requested actions directly.
 For coding tasks, identify the project directory, inspect relevant files and Git status, make focused edits,
 run relevant checks when shell is available, and review the resulting diff. Report failed or skipped checks.
 Use path_info when file type, permissions, timestamps, or symlink behavior affects the task.
@@ -65,7 +65,7 @@ class Agent:
             settings.ollama_url, settings.model,
             timeout=settings.ollama_timeout_seconds, keep_alive=settings.keep_alive,
         )
-        self.tools = MacTools(settings.action_mode)
+        self.tools = MacTools()
         self.history_store = (
             HistoryStore(Path(settings.history_file), max_bytes=settings.max_context_chars * 4)
             if settings.history_file else None
@@ -139,17 +139,11 @@ class Agent:
         history_length = len(self.messages)
         self.messages.append(upcoming)
         trace_calls: list[dict[str, Any]] = []
-        last_signature: str | None = None
-        last_result: str | None = None
-        unchanged_count = 0
-        outcome_counts: dict[str, int] = {}
         executed_calls = 0
         try:
-            for step in range(1, self.settings.max_steps + 1):
-                self.last_run["steps"] = step
-                response = self.client.chat(
-                    self.messages, available_tool_schemas(self.settings.action_mode)
-                )
+            while True:
+                self.last_run["steps"] += 1
+                response = self.client.chat(self.messages, TOOL_SCHEMAS)
                 raw_message = response.get("message", {})
                 # Keep only fields NUMS understands; extras such as "thinking"
                 # would otherwise bloat the context and the saved history.
@@ -166,15 +160,7 @@ class Agent:
                     self._save_history()
                     self._trace(prompt, trace_calls, reply)
                     return reply
-                if len(calls) > self.settings.max_tool_calls - self.last_run["tool_calls"]:
-                    self.messages.pop()
-                    self.last_run["status"] = "tool_limit"
-                    reply = "I stopped because this request exceeded the tool-call limit. Try a smaller request."
-                    self.messages.append({"role": "assistant", "content": reply})
-                    self._save_history()
-                    self._trace(prompt, trace_calls, reply, "tool-call limit")
-                    return reply
-                for index, call in enumerate(calls):
+                for call in calls:
                     function = call.get("function", {})
                     name = function.get("name", "")
                     args = function.get("arguments", {})
@@ -185,47 +171,8 @@ class Agent:
                             pass
                     trace_calls.append({"tool": name, "arguments": args})
                     self.last_run["tool_calls"] += 1
-                    signature = json.dumps([name, args], sort_keys=True, default=str)
-                    if signature == last_signature and unchanged_count >= self.settings.repeat_tool_limit:
-                        result = json.dumps({
-                            "error": "Repeated tool call stopped because it made no observable progress",
-                            "tool": name,
-                        })
-                        self.messages.append({"role": "tool", "tool_name": name, "content": result})
-                        self.last_run["tool_errors"] += 1
-                        for skipped in calls[index + 1:]:
-                            skipped_function = skipped["function"]
-                            skipped_name = skipped_function["name"]
-                            trace_calls.append({
-                                "tool": skipped_name,
-                                "arguments": skipped_function["arguments"],
-                            })
-                            self.last_run["tool_calls"] += 1
-                            self.last_run["tool_errors"] += 1
-                            self.messages.append({
-                                "role": "tool", "tool_name": skipped_name,
-                                "content": json.dumps({"error": "Skipped after a repeated tool call"}),
-                            })
-                        self.last_run["status"] = "no_progress"
-                        reply = f"I stopped after repeating the same {name} action without progress."
-                        self.messages.append({"role": "assistant", "content": reply})
-                        self._save_history()
-                        self._trace(prompt, trace_calls, reply, "repeated tool call")
-                        return reply
                     result = self.tools.execute(name, args)
                     executed_calls += 1
-                    was_consecutive = signature == last_signature
-                    if signature == last_signature and result == last_result:
-                        unchanged_count += 1
-                    else:
-                        unchanged_count = 1
-                    last_signature, last_result = signature, result
-                    outcome_signature = json.dumps(
-                        [name, args, result], sort_keys=True, default=str
-                    )
-                    outcome_counts[outcome_signature] = outcome_counts.get(
-                        outcome_signature, 0
-                    ) + 1
                     try:
                         parsed_result = json.loads(result)
                         if isinstance(parsed_result, dict) and "error" in parsed_result:
@@ -233,34 +180,6 @@ class Agent:
                     except (json.JSONDecodeError, TypeError):
                         pass
                     self.messages.append({"role": "tool", "tool_name": name, "content": result})
-                    if (
-                        not was_consecutive
-                        and outcome_counts[outcome_signature] > self.settings.repeat_tool_limit
-                    ):
-                        for skipped in calls[index + 1:]:
-                            skipped_function = skipped["function"]
-                            skipped_name = skipped_function["name"]
-                            trace_calls.append({
-                                "tool": skipped_name,
-                                "arguments": skipped_function["arguments"],
-                            })
-                            self.last_run["tool_calls"] += 1
-                            self.last_run["tool_errors"] += 1
-                            self.messages.append({
-                                "role": "tool", "tool_name": skipped_name,
-                                "content": json.dumps({
-                                    "error": "Skipped after a repeated tool-call cycle"
-                                }),
-                            })
-                        self.last_run["status"] = "no_progress"
-                        reply = (
-                            f"I stopped after {name} repeated the same result "
-                            "within a tool-call cycle."
-                        )
-                        self.messages.append({"role": "assistant", "content": reply})
-                        self._save_history()
-                        self._trace(prompt, trace_calls, reply, "repeated tool-call cycle")
-                        return reply
         except KeyboardInterrupt:
             # Drop the partial turn so history never holds an unanswered tool call.
             self.last_run["status"] = "interrupted"
@@ -285,9 +204,3 @@ class Agent:
             if error is not None:
                 raise error from exc
             raise
-        self.last_run["status"] = "step_limit"
-        reply = "I reached the tool-step limit. Try splitting the task into a smaller request."
-        self.messages.append({"role": "assistant", "content": reply})
-        self._save_history()
-        self._trace(prompt, trace_calls, reply)
-        return reply

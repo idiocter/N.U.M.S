@@ -27,7 +27,6 @@ from .mac_ui import (
     SHOW_ELEMENT_MENU_SCRIPT, WAIT_ELEMENT_SCRIPT, WAIT_MENU_ITEM_SCRIPT, WAIT_WINDOW_SCRIPT,
     key_script,
 )
-from .policy import tool_allowed
 
 
 def _schema(name: str, description: str, properties: dict[str, Any], required: list[str]) -> dict[str, Any]:
@@ -315,13 +314,6 @@ TOOL_SCHEMAS = [
 ]
 
 
-def available_tool_schemas(action_mode: str) -> list[dict[str, Any]]:
-    return [
-        schema for schema in TOOL_SCHEMAS
-        if tool_allowed(action_mode, schema["function"]["name"])
-    ]
-
-
 def validate_tool_arguments(name: str, args: Any) -> str | None:
     if not isinstance(args, dict):
         return f"{name} arguments must be a JSON object"
@@ -519,9 +511,6 @@ def _with_ui_permission_hint(result: str) -> str:
 
 
 class MacTools:
-    def __init__(self, action_mode: str = "unrestricted") -> None:
-        self.action_mode = action_mode
-
     def execute(self, name: str, args: dict[str, Any]) -> str:
         handlers: dict[str, Callable[[dict[str, Any]], str]] = {
             "read_file": self.read_file,
@@ -584,11 +573,6 @@ class MacTools:
         }
         if name not in handlers:
             return json.dumps({"error": f"Unknown tool: {name}"})
-        if not tool_allowed(self.action_mode, name):
-            return json.dumps({
-                "error": f"Tool {name} is blocked in {self.action_mode} mode",
-                "action_mode": self.action_mode,
-            })
         validation_error = validate_tool_arguments(name, args)
         if validation_error:
             return json.dumps({"error": validation_error})

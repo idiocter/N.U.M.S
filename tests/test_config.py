@@ -7,10 +7,8 @@ from nums.config import Settings
 @pytest.mark.parametrize(
     ("name", "value", "message"),
     [
-        ("NUMS_MAX_STEPS", "0", "at least 1"),
-        ("NUMS_MAX_TOOL_CALLS", "0", "at least 1"),
         ("NUMS_OLLAMA_TIMEOUT", "0", "at least 1"),
-        ("NUMS_MAX_STEPS", "many", "integer"),
+        ("NUMS_HISTORY_TURNS", "many", "integer"),
         ("NUMS_KEEP_ALIVE", "soon", "NUMS_KEEP_ALIVE must be"),
         ("NUMS_KEEP_ALIVE", "-5", "NUMS_KEEP_ALIVE must be"),
         ("NUMS_HISTORY_TURNS", "0", "at least 1"),
@@ -24,8 +22,6 @@ from nums.config import Settings
         ("NUMS_OLLAMA_URL", "http://user:secret@localhost:11434", "host and optional port"),
         ("NUMS_WAKE_PHRASE", " ", "cannot be empty"),
         ("NUMS_SPEAK", "maybe", "0 or 1"),
-        ("NUMS_ACTION_MODE", "danger", "read_only, standard, or unrestricted"),
-        ("NUMS_REPEAT_TOOL_LIMIT", "0", "at least 1"),
         ("NUMS_SESSION_TIMEOUT", "0", "at least 1"),
         ("NUMS_SLEEP_PHRASES", "|||", "at least one phrase"),
     ],
@@ -114,11 +110,9 @@ def test_valid_ollama_urls_are_normalized(monkeypatch: pytest.MonkeyPatch, raw: 
         ("NUMS_WAKE_PHRASE", "", "NUMS_WAKE_PHRASE cannot be empty"),
         ("NUMS_SPEAK", "yes", "NUMS_SPEAK must be 0 or 1"),
         ("NUMS_SPEAK", "true", "NUMS_SPEAK must be 0 or 1"),
-        ("NUMS_ACTION_MODE", "root", "must be read_only, standard, or unrestricted"),
         ("NUMS_SLEEP_PHRASES", " | |", "must include at least one phrase"),
         ("NUMS_CAPTURE_DEVICE", "-2", "at least -1"),
         ("NUMS_SESSION_TIMEOUT", "0", "at least 1"),
-        ("NUMS_REPEAT_TOOL_LIMIT", "0", "at least 1"),
     ],
 )
 def test_invalid_values_name_the_variable(
@@ -134,7 +128,6 @@ def test_valid_values_are_trimmed_normalized_and_expanded(monkeypatch: pytest.Mo
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("NUMS_MODEL", "  qwen:test  ")
     monkeypatch.setenv("NUMS_WAKE_PHRASE", "  Hey Buddy  ")
-    monkeypatch.setenv("NUMS_ACTION_MODE", " Read_Only ")
     monkeypatch.setenv("NUMS_SPEAK", "1")
     monkeypatch.setenv("NUMS_SLEEP_PHRASES", " night | stop listening |")
     monkeypatch.setenv("NUMS_HISTORY_FILE", "~/nums/history.json")
@@ -146,7 +139,6 @@ def test_valid_values_are_trimmed_normalized_and_expanded(monkeypatch: pytest.Mo
 
     assert settings.model == "qwen:test"
     assert settings.wake_phrase == "Hey Buddy"
-    assert settings.action_mode == "read_only"
     assert settings.speak is True
     assert settings.sleep_phrases == ("night", "stop listening")
     assert settings.history_file == str(tmp_path / "nums" / "history.json")

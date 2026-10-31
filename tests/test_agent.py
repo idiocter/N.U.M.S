@@ -182,88 +182,12 @@ def test_context_budget_discards_old_complete_turns() -> None:
     assert client.seen[-1] == ["second", "third"]
 
 
-def test_repeated_tool_loop_stops_before_another_execution() -> None:
-    class LoopingClient:
-        def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
-            return {"message": {"role": "assistant", "content": "", "tool_calls": [
-                {"function": {"name": "system_info", "arguments": {}}}
-            ]}}
-
-    tools = RecordingTools()
-    agent = Agent(Settings(max_steps=8, repeat_tool_limit=2))
-    agent.client = LoopingClient()  # type: ignore[assignment]
-    agent.tools = tools  # type: ignore[assignment]
-
-    response = agent.run("loop")
-
-    assert "repeating" in response
-    assert len(tools.calls) == 2
-    assert agent.last_run == {
-        "status": "no_progress", "steps": 3, "tool_calls": 3, "tool_errors": 1
-    }
-    assert agent.messages[-1] == {"role": "assistant", "content": response}
 
 
-def test_no_progress_accounts_for_remaining_calls_in_batch() -> None:
-    class BatchLoopClient:
-        def __init__(self) -> None:
-            self.calls = 0
-
-        def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
-            self.calls += 1
-            repeated = {"function": {"name": "system_info", "arguments": {}}}
-            extra = {"function": {"name": "read_file", "arguments": {"path": "/tmp/unused"}}}
-            return {"message": {"role": "assistant", "tool_calls": [
-                repeated, extra
-            ] if self.calls == 3 else [repeated]}}
-
-    agent = Agent(Settings(repeat_tool_limit=2))
-    agent.client = BatchLoopClient()  # type: ignore[assignment]
-    tools = RecordingTools()
-    agent.tools = tools  # type: ignore[assignment]
-
-    agent.run("loop")
-
-    assert tools.calls == [("system_info", {}), ("system_info", {})]
-    assert [item["role"] for item in agent.messages[-4:]] == [
-        "assistant", "tool", "tool", "assistant"
-    ]
-    assert agent.messages[-2]["tool_name"] == "read_file"
-    assert "Skipped" in agent.messages[-2]["content"]
 
 
-def test_step_limit_saves_a_complete_assistant_turn(tmp_path) -> None:
-    history = tmp_path / "history.json"
-    agent = Agent(Settings(max_steps=1, history_file=str(history)))
-    agent.client = FakeClient()  # type: ignore[assignment]
-    agent.tools = RecordingTools()  # type: ignore[assignment]
-
-    response = agent.run("write a file")
-
-    assert agent.last_run["status"] == "step_limit"
-    assert agent.messages[-1] == {"role": "assistant", "content": response}
-    assert Agent(Settings(history_file=str(history))).messages[-1] == agent.messages[-1]
 
 
-def test_oversized_tool_batch_executes_no_actions() -> None:
-    class BatchClient:
-        def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
-            return {"message": {"role": "assistant", "tool_calls": [
-                {"function": {"name": "write_file", "arguments": {"path": "/tmp/a", "content": "x"}}},
-                {"function": {"name": "write_file", "arguments": {"path": "/tmp/b", "content": "y"}}},
-            ]}}
-
-    agent = Agent(Settings(max_tool_calls=1))
-    agent.client = BatchClient()  # type: ignore[assignment]
-    tools = RecordingTools()
-    agent.tools = tools  # type: ignore[assignment]
-
-    reply = agent.run("write two files")
-
-    assert "tool-call limit" in reply
-    assert tools.calls == []
-    assert agent.last_run["status"] == "tool_limit"
-    assert agent.messages[-1] == {"role": "assistant", "content": reply}
 
 
 def test_repeated_tool_call_can_continue_when_results_change() -> None:
@@ -287,7 +211,7 @@ def test_repeated_tool_call_can_continue_when_results_change() -> None:
             self.calls += 1
             return f"status {self.calls}"
 
-    agent = Agent(Settings(max_steps=5, repeat_tool_limit=2))
+    agent = Agent(Settings())
     agent.client = ChangingClient()  # type: ignore[assignment]
     tools = ChangingTools()
     agent.tools = tools  # type: ignore[assignment]
@@ -297,30 +221,6 @@ def test_repeated_tool_call_can_continue_when_results_change() -> None:
     assert agent.last_run["status"] == "completed"
 
 
-def test_alternating_tool_loop_stops_when_outcomes_repeat() -> None:
-    class AlternatingClient:
-        def __init__(self) -> None:
-            self.calls = 0
-
-        def chat(self, messages, tools):
-            name = "system_info" if self.calls % 2 == 0 else "read_file"
-            arguments = {} if name == "system_info" else {"path": "/tmp/status"}
-            self.calls += 1
-            return {"message": {"role": "assistant", "tool_calls": [
-                {"function": {"name": name, "arguments": arguments}}
-            ]}}
-
-    agent = Agent(Settings(max_steps=8, repeat_tool_limit=2))
-    agent.client = AlternatingClient()  # type: ignore[assignment]
-    tools = RecordingTools()
-    agent.tools = tools  # type: ignore[assignment]
-
-    reply = agent.run("alternate forever")
-
-    assert "tool-call cycle" in reply
-    assert len(tools.calls) == 5
-    assert agent.last_run["status"] == "no_progress"
-    assert agent.last_run["steps"] == 5
 
 
 def test_run_report_counts_tool_errors() -> None:
@@ -338,19 +238,6 @@ def test_run_report_counts_tool_errors() -> None:
     }
 
 
-def test_model_only_sees_tools_allowed_by_action_mode() -> None:
-    class InspectingClient:
-        def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
-            names = {tool["function"]["name"] for tool in tools}
-            assert "read_file" in names
-            assert "shell" not in names
-            assert "write_file" not in names
-            assert "unrestricted" not in messages[0]["content"]
-            return {"message": {"role": "assistant", "content": "ok"}}
-
-    agent = Agent(Settings(action_mode="read_only"))
-    agent.client = InspectingClient()  # type: ignore[assignment]
-    assert agent.run("read a file") == "ok"
 
 
 def test_invalid_json_tool_arguments_are_reported_to_model() -> None:
@@ -430,32 +317,64 @@ def test_agent_starts_when_the_working_directory_is_gone(monkeypatch: pytest.Mon
     assert 'Current working directory: "unavailable"' in agent.system_message["content"]
 
 
-def test_alternating_identical_tool_calls_stop_as_a_cycle(tmp_path) -> None:
-    first, second = tmp_path / "a.txt", tmp_path / "b.txt"
-    first.write_text("one")
-    second.write_text("two")
+def test_identical_tool_calls_are_not_cut_off() -> None:
+    class PersistentClient:
+        def __init__(self) -> None:
+            self.calls = 0
 
-    def call(path: object) -> dict[str, Any]:
-        return {"function": {"name": "path_info", "arguments": {"path": str(path)}}}
-
-    class CyclingClient:
         def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
-            return {"message": {
-                "role": "assistant", "content": "",
-                "tool_calls": [call(first), call(second)] * 3,
-            }}
+            self.calls += 1
+            if self.calls <= 25:
+                return {"message": {"role": "assistant", "tool_calls": [
+                    {"function": {"name": "system_info", "arguments": {}}}
+                ]}}
+            return {"message": {"role": "assistant", "content": "finished"}}
 
-    agent = Agent(Settings(repeat_tool_limit=2))
-    agent.client = CyclingClient()  # type: ignore[assignment]
+    agent = Agent(Settings())
+    agent.client = PersistentClient()  # type: ignore[assignment]
+    tools = RecordingTools()
+    agent.tools = tools  # type: ignore[assignment]
 
-    reply = agent.run("inspect both files")
+    assert agent.run("keep checking") == "finished"
+    assert len(tools.calls) == 25
+    assert agent.last_run == {
+        "status": "completed", "steps": 26, "tool_calls": 25, "tool_errors": 0
+    }
 
-    assert "repeated the same result" in reply
-    assert agent.last_run["status"] == "no_progress"
-    skipped = [
-        message for message in agent.messages
-        if message.get("role") == "tool" and "repeated tool-call cycle" in message["content"]
-    ]
-    assert len(skipped) == 1  # the call after the third identical result
-    answered = [message for message in agent.messages if message.get("role") == "tool"]
-    assert len(answered) == 6
+
+def test_a_large_batch_of_tool_calls_all_run() -> None:
+    class BatchClient:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
+            self.calls += 1
+            if self.calls == 1:
+                return {"message": {"role": "assistant", "tool_calls": [
+                    {"function": {"name": "write_file", "arguments": {"path": f"/tmp/{n}", "content": "x"}}}
+                    for n in range(40)
+                ]}}
+            return {"message": {"role": "assistant", "content": "wrote them"}}
+
+    agent = Agent(Settings())
+    agent.client = BatchClient()  # type: ignore[assignment]
+    tools = RecordingTools()
+    agent.tools = tools  # type: ignore[assignment]
+
+    assert agent.run("write many") == "wrote them"
+    assert len(tools.calls) == 40
+
+
+def test_the_model_is_offered_every_tool() -> None:
+    from nums.tools import TOOL_SCHEMAS
+
+    class InspectingClient:
+        def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
+            assert tools == TOOL_SCHEMAS
+            return {"message": {"role": "assistant", "content": "ok"}}
+
+    agent = Agent(Settings())
+    agent.client = InspectingClient()  # type: ignore[assignment]
+
+    assert agent.run("anything") == "ok"
+

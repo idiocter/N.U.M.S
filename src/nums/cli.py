@@ -342,7 +342,7 @@ def main() -> None:
             storage = settings.history_file or "memory only"
             run = agent.last_run
             print(
-                f"Model: {settings.model} | Mode: {settings.action_mode} | History: {storage} | "
+                f"Model: {settings.model} | History: {storage} | "
                 f"Messages: {len(agent.messages) - 1}\n"
                 f"Last run: {run['status']} | Steps: {run['steps']} | "
                 f"Tools: {run['tool_calls']} | Tool errors: {run['tool_errors']}\n"

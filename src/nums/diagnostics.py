@@ -35,7 +35,7 @@ def probe_mac_ui() -> tuple[bool, str | None]:
     """Check that this process can query System Events without changing app state."""
     if platform.system() != "Darwin":
         return False, "Mac app control requires macOS"
-    result = json.loads(MacTools("read_only").execute("list_running_apps", {}))
+    result = json.loads(MacTools().execute("list_running_apps", {}))
     if result.get("exit_code") == 0:
         return True, None
     return False, result.get("hint") or result.get("output") or result.get("error") or "System Events did not respond"
@@ -44,7 +44,7 @@ def probe_mac_ui() -> tuple[bool, str | None]:
 def self_test(settings: Settings) -> tuple[bool, list[str]]:
     results = []
     ok = True
-    tools = MacTools("unrestricted")
+    tools = MacTools()
     with tempfile.TemporaryDirectory(prefix="nums-self-test-") as directory:
         path = Path(directory) / "probe.txt"
         write = json.loads(tools.write_file({"path": str(path), "content": "NUMS probe"}))

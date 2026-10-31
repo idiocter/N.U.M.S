@@ -561,14 +561,14 @@ def test_interactive_help_status_and_reset_commands(monkeypatch: pytest.MonkeyPa
             pytest.fail("commands must not reach the model")
 
     monkeypatch.setattr("nums.cli.sys.argv", ["nums"])
-    _patch_startup(monkeypatch, Settings(model="qwen:test", action_mode="standard"), FakeAgent)
+    _patch_startup(monkeypatch, Settings(model="qwen:test"), FakeAgent)
     monkeypatch.setattr("builtins.input", lambda _: next(prompts))
 
     main()
 
     output = capsys.readouterr().out
     assert "/reset — clear conversation" in output
-    assert "Model: qwen:test | Mode: standard | History: memory only | Messages: 2" in output
+    assert "Model: qwen:test | History: memory only | Messages: 2" in output
     assert "Last run: completed | Steps: 2 | Tools: 1 | Tool errors: 0" in output
     assert "Trace error: trace limit reached" in output
     assert "Conversation cleared." in output
@@ -729,12 +729,12 @@ def test_ollama_launch_failure_and_early_exit_are_reported(monkeypatch: pytest.M
 
 def test_invalid_environment_settings_exit_with_message(monkeypatch: pytest.MonkeyPatch) -> None:
     def invalid() -> Settings:
-        raise ValueError("NUMS_MAX_STEPS must be positive")
+        raise ValueError("NUMS_HISTORY_TURNS must be positive")
 
     monkeypatch.setattr("nums.cli.sys.argv", ["nums", "--doctor"])
     monkeypatch.setattr("nums.cli.Settings.from_env", invalid)
 
-    with pytest.raises(SystemExit, match="NUMS_MAX_STEPS must be positive"):
+    with pytest.raises(SystemExit, match="NUMS_HISTORY_TURNS must be positive"):
         main()
 
 

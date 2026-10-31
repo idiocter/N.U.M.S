@@ -55,12 +55,9 @@ When loading an older history file, NUMS skips an unfinished final turn so a
 disconnected tool call does not affect the next request.
 If the model disconnects after a tool has run, NUMS records the partial work
 and reports that the final result could not be confirmed.
-`NUMS_REPEAT_TOOL_LIMIT` controls how many identical tool calls a request may
-make before NUMS stops the no-progress loop (default: 2). The same bound also
-stops alternating tool-call cycles when an action keeps producing an identical
-result.
-`NUMS_MAX_TOOL_CALLS` caps the total proposed tool actions in one request
-(default: 16), including batches returned in one model response.
+NUMS puts no cap on model round trips or tool calls in one request, and it does
+not stop repeated identical calls. A request runs until the model gives a final
+answer, so press Ctrl+C to stop one that is looping.
 
 In the interactive terminal, `/status` shows the current model and history
 location plus the last run's steps, tool calls, and errors. `/reset` clears the
@@ -177,13 +174,10 @@ background processes it started. `git_status` shows changed and untracked files;
 `git_diff` shows tracked changes against `HEAD`; `git_log` shows bounded recent
 history for a repository or one path; `git_show` inspects one validated revision
 and its patch; `git_branches` lists local and remote tips with upstreams;
-`git_blame` provides bounded line attribution. In the default `unrestricted`
-mode NUMS can run project checks through `shell`. In `standard` mode it can
-inspect and edit files but cannot run shell checks; `read_only` can inspect
-the project and Git state without editing. Its coding instructions call for
+`git_blame` provides bounded line attribution. NUMS can run project checks
+through `shell`. Its coding instructions call for
 reporting which checks ran and which were skipped.
-`create_directory` creates missing parent directories idempotently and is
-available with the other file-editing tools in `standard` mode.
+`create_directory` creates missing parent directories idempotently.
 `append_file` adds exact UTF-8 content with an explicit disk flush while
 preserving all existing file content.
 `copy_path` copies files, directory trees, or symlinks while refusing existing
@@ -249,11 +243,7 @@ Windows that expose the macOS full-screen attribute can enter or leave full scre
 Window movement accepts bounded coordinates, including negative coordinates for secondary displays, and verifies the final position.
 Window resizing accepts bounded width and height values and verifies the final dimensions.
 
-`list_running_apps`, `list_app_windows`, `wait_for_app_window`, `inspect_app_ui`,
-`inspect_focused_app_element`, `wait_for_app_element`,
-and `inspect_app_menu` are available in read-only mode.
-Clicking, typing, and key presses require the default `unrestricted` mode.
-Popup selection also requires `unrestricted` mode and rejects ambiguous,
+Popup selection rejects ambiguous,
 missing, or disabled controls and options.
 macOS must allow the process running NUMS to control System Events and use
 Accessibility. These tools use the app's accessibility information; controls
@@ -272,10 +262,7 @@ macOS permissions remain the outer security boundary. NUMS cannot and should not
 
 NUMS applies no application-level action policy or approval step. Its effective access is the access granted to the Terminal process that launches it. macOS privacy permissions remain the operating-system boundary.
 
-You can reduce that access with `NUMS_ACTION_MODE=standard` (blocks shell,
-AppleScript, UI actions, and Trash) or `NUMS_ACTION_MODE=read_only` (inspection
-and information tools only). The default remains `unrestricted` for
-compatibility with existing NUMS behavior.
+There is no setting that limits which tools NUMS may use.
 
 ## Configuration
 
@@ -288,10 +275,6 @@ with a message naming the variable.
 | `NUMS_OLLAMA_URL` | `http://127.0.0.1:11434` | Ollama host and optional port, with no path |
 | `NUMS_OLLAMA_TIMEOUT` | `180` | Seconds to wait for one model response |
 | `NUMS_KEEP_ALIVE` | `30m` | How long Ollama keeps the model loaded between requests (`-1` keeps it loaded) |
-| `NUMS_ACTION_MODE` | `unrestricted` | `read_only`, `standard`, or `unrestricted` tool access |
-| `NUMS_MAX_STEPS` | `8` | Model round trips allowed per request |
-| `NUMS_MAX_TOOL_CALLS` | `16` | Tool actions allowed per request |
-| `NUMS_REPEAT_TOOL_LIMIT` | `2` | Identical results tolerated before a request stops |
 | `NUMS_HISTORY_FILE` | unset | Opt-in file that keeps conversation history |
 | `NUMS_HISTORY_TURNS` | `8` | Recent turns sent to the model |
 | `NUMS_MAX_CONTEXT_CHARS` | `60000` | Context budget; must fit the system prompt |
