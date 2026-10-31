@@ -11,6 +11,8 @@ from nums.config import Settings
         ("NUMS_MAX_TOOL_CALLS", "0", "at least 1"),
         ("NUMS_OLLAMA_TIMEOUT", "0", "at least 1"),
         ("NUMS_MAX_STEPS", "many", "integer"),
+        ("NUMS_KEEP_ALIVE", "soon", "NUMS_KEEP_ALIVE must be"),
+        ("NUMS_KEEP_ALIVE", "-5", "NUMS_KEEP_ALIVE must be"),
         ("NUMS_HISTORY_TURNS", "0", "at least 1"),
         ("NUMS_MAX_CONTEXT_CHARS", "999", "at least 1000"),
         ("NUMS_TRACE_MAX_BYTES", "1023", "at least 1024"),
@@ -161,3 +163,14 @@ def test_unset_environment_yields_the_documented_defaults(monkeypatch: pytest.Mo
 
     assert settings.history_file is None and settings.trace_file is None
     assert settings == Settings(whisper_model=settings.whisper_model)
+
+
+@pytest.mark.parametrize("value", ["30m", "90", "2h", "-1", "0"])
+def test_keep_alive_accepts_ollama_durations(monkeypatch: pytest.MonkeyPatch, value: str) -> None:
+    monkeypatch.setenv("NUMS_KEEP_ALIVE", value)
+
+    assert Settings.from_env().keep_alive == value
+
+
+def test_models_stay_loaded_for_half_an_hour_by_default() -> None:
+    assert Settings().keep_alive == "30m"

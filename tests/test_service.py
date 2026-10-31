@@ -23,6 +23,7 @@ def test_service_plist_runs_current_environment_and_preserves_settings() -> None
     assert data["ProgramArguments"] == [sys.executable, "-m", "nums.cli", "--wake"]
     assert data["EnvironmentVariables"]["NUMS_MODEL"] == "qwen:test"
     assert data["EnvironmentVariables"]["NUMS_OLLAMA_TIMEOUT"] == "45"
+    assert data["EnvironmentVariables"]["NUMS_KEEP_ALIVE"] == "30m"
     assert data["EnvironmentVariables"]["NUMS_ACTION_MODE"] == "standard"
     assert data["EnvironmentVariables"]["NUMS_HISTORY_FILE"] == "/tmp/history.json"
     assert data["EnvironmentVariables"]["NUMS_MAX_STEPS"] == "5"

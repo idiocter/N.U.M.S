@@ -282,6 +282,7 @@ with a message naming the variable.
 | `NUMS_MODEL` | `qwen2.5:1.5b-instruct` | Ollama model name |
 | `NUMS_OLLAMA_URL` | `http://127.0.0.1:11434` | Ollama host and optional port, with no path |
 | `NUMS_OLLAMA_TIMEOUT` | `180` | Seconds to wait for one model response |
+| `NUMS_KEEP_ALIVE` | `30m` | How long Ollama keeps the model loaded between requests (`-1` keeps it loaded) |
 | `NUMS_ACTION_MODE` | `unrestricted` | `read_only`, `standard`, or `unrestricted` tool access |
 | `NUMS_MAX_STEPS` | `8` | Model round trips allowed per request |
 | `NUMS_MAX_TOOL_CALLS` | `16` | Tool actions allowed per request |

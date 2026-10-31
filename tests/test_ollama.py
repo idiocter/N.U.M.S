@@ -298,3 +298,33 @@ def test_chat_reports_a_malformed_http_response(monkeypatch: pytest.MonkeyPatch)
 
     with pytest.raises(OllamaError, match="truncated or malformed"):
         OllamaClient("http://127.0.0.1:11434", "qwen").chat([], [])
+
+
+@pytest.mark.parametrize(
+    ("configured", "sent"), [("30m", "30m"), ("-1", -1), ("300", 300)]
+)
+def test_chat_asks_ollama_to_keep_the_model_loaded(
+    monkeypatch: pytest.MonkeyPatch, configured: str, sent: object
+) -> None:
+    seen = []
+    _serve(monkeypatch, {"message": {"role": "assistant", "content": "ok"}}, seen)
+
+    OllamaClient("http://127.0.0.1:11434", "qwen", keep_alive=configured).chat([], [])
+
+    assert json.loads(seen[0].data)["keep_alive"] == sent
+
+
+def test_chat_leaves_keep_alive_to_ollama_when_unset(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen = []
+    _serve(monkeypatch, {"message": {"role": "assistant", "content": "ok"}}, seen)
+
+    OllamaClient("http://127.0.0.1:11434", "qwen").chat([], [])
+
+    assert "keep_alive" not in json.loads(seen[0].data)
+
+
+def test_agent_clients_use_the_configured_keep_alive() -> None:
+    from nums.agent import Agent
+    from nums.config import Settings
+
+    assert Agent(Settings(keep_alive="2h")).client.keep_alive == "2h"

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Kept the model loaded between requests (`NUMS_KEEP_ALIVE`, default 30 minutes) and loaded it at voice start, so answers no longer wait for a cold model load after idle periods.
 - Corrected type annotations so the package type-checks cleanly, and added a mypy configuration (`uv run mypy`).
 - Made mypy a locked dev dependency and added a type-check step to CI.
 - Added tests for literal search, hidden-file and .git handling, glob filtering, file listing order, and whitelisted key script construction.

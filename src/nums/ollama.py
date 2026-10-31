@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import re
 import urllib.error
 import urllib.request
 from typing import Any
@@ -24,15 +25,25 @@ def _bounded_json(response: Any, max_bytes: int) -> Any:
 
 
 class OllamaClient:
-    def __init__(self, base_url: str, model: str, timeout: int = 180) -> None:
+    def __init__(
+        self, base_url: str, model: str, timeout: int = 180, keep_alive: str | None = None
+    ) -> None:
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.timeout = timeout
+        self.keep_alive = keep_alive
 
     def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
-        payload = json.dumps(
-            {"model": self.model, "messages": messages, "tools": tools, "stream": False}
-        ).encode()
+        body: dict[str, Any] = {
+            "model": self.model, "messages": messages, "tools": tools, "stream": False,
+        }
+        if self.keep_alive is not None:
+            # Without this Ollama unloads the model after five idle minutes, and
+            # the next spoken request pays the full model load time again.
+            body["keep_alive"] = (
+                int(self.keep_alive) if re.fullmatch(r"-?\d+", self.keep_alive) else self.keep_alive
+            )
+        payload = json.dumps(body).encode()
         request = urllib.request.Request(
             f"{self.base_url}/api/chat",
             data=payload,

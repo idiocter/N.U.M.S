@@ -24,6 +24,7 @@ def test_documented_defaults_match_the_code() -> None:
         "NUMS_MODEL": defaults.model,
         "NUMS_OLLAMA_URL": defaults.ollama_url,
         "NUMS_OLLAMA_TIMEOUT": str(defaults.ollama_timeout_seconds),
+        "NUMS_KEEP_ALIVE": defaults.keep_alive,
         "NUMS_ACTION_MODE": defaults.action_mode,
         "NUMS_MAX_STEPS": str(defaults.max_steps),
         "NUMS_MAX_TOOL_CALLS": str(defaults.max_tool_calls),

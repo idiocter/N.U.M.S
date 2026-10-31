@@ -62,7 +62,8 @@ class Agent:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self.client = OllamaClient(
-            settings.ollama_url, settings.model, timeout=settings.ollama_timeout_seconds
+            settings.ollama_url, settings.model,
+            timeout=settings.ollama_timeout_seconds, keep_alive=settings.keep_alive,
         )
         self.tools = MacTools(settings.action_mode)
         self.history_store = (

@@ -132,8 +132,10 @@ def ensure_ollama_running(settings: Settings) -> None:
 
 def verify_voice_model(settings: Settings) -> None:
     try:
+        # This also loads the model now, so the first spoken request is not slow.
         OllamaClient(
-            settings.ollama_url, settings.model, timeout=settings.ollama_timeout_seconds
+            settings.ollama_url, settings.model,
+            timeout=settings.ollama_timeout_seconds, keep_alive=settings.keep_alive,
         ).chat([{"role": "user", "content": "Reply with ready."}], [])
     except OllamaError as exc:
         raise SystemExit(f"The local model is not ready for voice mode: {exc}") from exc

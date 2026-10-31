@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
@@ -24,6 +25,7 @@ class Settings:
     model: str = "qwen2.5:1.5b-instruct"
     ollama_url: str = "http://127.0.0.1:11434"
     ollama_timeout_seconds: int = 180
+    keep_alive: str = "30m"
     max_steps: int = 8
     max_tool_calls: int = 16
     history_turns: int = 8
@@ -63,6 +65,11 @@ class Settings:
             or parsed_url.fragment
         ):
             raise ValueError("NUMS_OLLAMA_URL must be an HTTP URL with only a host and optional port")
+        keep_alive = os.getenv("NUMS_KEEP_ALIVE", cls.keep_alive).strip()
+        if not re.fullmatch(r"-1|\d+[smh]?", keep_alive):
+            raise ValueError(
+                "NUMS_KEEP_ALIVE must be -1, a number of seconds, or a duration like 30m"
+            )
         if not phrase:
             raise ValueError("NUMS_WAKE_PHRASE cannot be empty")
         speak = os.getenv("NUMS_SPEAK", "0")
@@ -93,6 +100,7 @@ class Settings:
             ollama_timeout_seconds=_integer(
                 "NUMS_OLLAMA_TIMEOUT", cls.ollama_timeout_seconds, 1
             ),
+            keep_alive=keep_alive,
             max_steps=_integer("NUMS_MAX_STEPS", cls.max_steps, 1),
             max_tool_calls=_integer("NUMS_MAX_TOOL_CALLS", cls.max_tool_calls, 1),
             history_turns=_integer("NUMS_HISTORY_TURNS", cls.history_turns, 1),

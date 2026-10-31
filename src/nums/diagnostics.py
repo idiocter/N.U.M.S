@@ -18,7 +18,8 @@ def probe_model_tool_call(settings: Settings) -> tuple[bool, str | None]:
     system_schema = [item for item in TOOL_SCHEMAS if item["function"]["name"] == "system_info"]
     try:
         response = OllamaClient(
-            settings.ollama_url, settings.model, timeout=settings.ollama_timeout_seconds
+            settings.ollama_url, settings.model,
+            timeout=settings.ollama_timeout_seconds, keep_alive=settings.keep_alive,
         ).chat(
             [{"role": "user", "content": "Use the system_info tool now."}], system_schema
         )
