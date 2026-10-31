@@ -378,3 +378,10 @@ def test_the_model_is_offered_every_tool() -> None:
 
     assert agent.run("anything") == "ok"
 
+
+
+def test_system_prompt_sets_a_casual_friendly_tone() -> None:
+    from nums.agent import SYSTEM_PROMPT
+
+    assert "close friend" in SYSTEM_PROMPT
+    assert "selected action mode" not in SYSTEM_PROMPT
