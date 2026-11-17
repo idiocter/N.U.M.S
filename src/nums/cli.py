@@ -349,6 +349,8 @@ def main() -> None:
             )
             if agent.trace_error:
                 print(f"Trace error: {agent.trace_error}\n")
+            if getattr(agent, "history_error", None):
+                print(f"History error: {agent.history_error}\n")
             continue
         if prompt == "/reset":
             agent.reset()

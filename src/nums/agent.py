@@ -86,10 +86,15 @@ class Agent:
             "status": "idle", "steps": 0, "tool_calls": 0, "tool_errors": 0
         }
         self.trace_error: str | None = None
+        self.history_error: str | None = None
 
     def _save_history(self) -> None:
+        self.history_error = None
         if self.history_store:
-            self.history_store.save(self.messages[1:])
+            try:
+                self.history_store.save(self.messages[1:])
+            except (OSError, ValueError) as exc:
+                self.history_error = str(exc)
 
     def _trace(self, prompt: str, calls: list[dict[str, Any]], reply: str | None, error: str | None = None) -> None:
         if self.trace_store:

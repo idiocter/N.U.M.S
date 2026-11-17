@@ -413,3 +413,14 @@ def test_null_content_tool_turn_can_be_saved(tmp_path) -> None:
     assert Agent(agent.settings).messages[-1]["content"] == "done"
 
 
+def test_history_failure_preserves_completed_response(tmp_path, monkeypatch) -> None:
+    agent = Agent(Settings(history_file=str(tmp_path / "history.json")))
+    agent.client = EmptyClient()
+    def fail(messages):
+        raise OSError("disk full")
+    monkeypatch.setattr(agent.history_store, "save", fail)
+    assert agent.run("hi") == "I couldn't produce a response."
+    assert agent.history_error == "disk full"
+    assert agent.last_run["status"] == "completed"
+
+
