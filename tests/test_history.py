@@ -308,3 +308,15 @@ def test_history_size_limits_and_special_paths(tmp_path: Path) -> None:
     link.symlink_to(big)
     with pytest.raises(ValueError, match="not a regular file"):
         HistoryStore(link).load()
+def test_save_drops_old_complete_turns_to_remain_loadable(tmp_path) -> None:
+    path = tmp_path / "history.json"
+    old = [{"role": "user", "content": "x" * 200},
+           {"role": "assistant", "content": "old"}]
+    recent = [{"role": "user", "content": "hi"},
+              {"role": "assistant", "content": "hello"}]
+    store = HistoryStore(path, max_bytes=200)
+    store.save(old + recent)
+    assert store.load() == recent
+    assert path.stat().st_size <= 200
+
+

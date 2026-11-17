@@ -125,6 +125,18 @@ class HistoryStore:
             raise ValueError(f"Invalid NUMS history at {self.path}")
         if _complete_history(messages, self.path) != messages:
             raise ValueError(f"Cannot save incomplete NUMS history at {self.path}")
+        data = json.dumps(messages, ensure_ascii=False).encode("utf-8")
+        while len(data) > self.max_bytes:
+            next_turn = next(
+                (index for index in range(1, len(messages))
+                 if messages[index]["role"] == "user"), None,
+            )
+            if next_turn is None:
+                raise ValueError(
+                    f"Latest NUMS history turn exceeds the {self.max_bytes}-byte limit"
+                )
+            messages = messages[next_turn:]
+            data = json.dumps(messages, ensure_ascii=False).encode("utf-8")
         self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         temporary = None
         try:
@@ -133,7 +145,7 @@ class HistoryStore:
                 prefix=f".{self.path.name}.", delete=False,
             ) as handle:
                 temporary = Path(handle.name)
-                json.dump(messages, handle, ensure_ascii=False)
+                handle.write(data.decode("utf-8"))
                 handle.flush()
                 os.fsync(handle.fileno())
             os.replace(temporary, self.path)
