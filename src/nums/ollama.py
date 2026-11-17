@@ -64,6 +64,8 @@ class OllamaClient:
             raise OllamaError("Ollama returned a truncated or malformed response") from exc
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
             raise OllamaError("Ollama returned an invalid JSON response") from exc
+        if isinstance(result, dict) and result.get("error"):
+            raise OllamaError(f"Ollama reported an error: {str(result['error'])[:1000]}")
         if not isinstance(result, dict) or not isinstance(result.get("message"), dict):
             raise OllamaError("Ollama returned a response without an assistant message")
         message = result["message"]

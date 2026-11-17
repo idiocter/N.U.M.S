@@ -328,3 +328,12 @@ def test_agent_clients_use_the_configured_keep_alive() -> None:
     from nums.config import Settings
 
     assert Agent(Settings(keep_alive="2h")).client.keep_alive == "2h"
+def test_chat_surfaces_error_in_success_http_response(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "nums.ollama.urllib.request.urlopen",
+        lambda *args, **kwargs: io.BytesIO(b'{"error":"model requires more memory"}'),
+    )
+    with pytest.raises(OllamaError, match="model requires more memory"):
+        OllamaClient("http://localhost:11434", "qwen").chat([], [])
+
+
