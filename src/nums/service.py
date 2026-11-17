@@ -70,6 +70,7 @@ def _write_plist(path: Path, data: bytes) -> None:
 
 def install_service(settings: Settings) -> Path:
     path = service_path()
+    (Path.home() / "Library" / "Logs").mkdir(parents=True, exist_ok=True)
     previous = path.read_bytes() if path.exists() else None
     _write_plist(path, service_plist(settings))
     domain = f"gui/{os.getuid()}"

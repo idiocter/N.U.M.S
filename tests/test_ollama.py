@@ -335,5 +335,3 @@ def test_chat_surfaces_error_in_success_http_response(monkeypatch) -> None:
     )
     with pytest.raises(OllamaError, match="model requires more memory"):
         OllamaClient("http://localhost:11434", "qwen").chat([], [])
-
-

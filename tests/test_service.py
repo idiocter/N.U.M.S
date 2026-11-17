@@ -176,3 +176,11 @@ def test_plist_logs_to_the_users_library_and_restarts_on_exit(monkeypatch: pytes
     assert data["RunAtLoad"] is True and data["KeepAlive"] is True
     assert data["ThrottleInterval"] == 10
     assert "NUMS_HISTORY_FILE" not in data["EnvironmentVariables"]
+
+
+def test_install_creates_log_directory_before_bootstrap(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr("nums.service.Path.home", lambda: tmp_path)
+    def bootstrap(command, **kwargs):
+        assert (tmp_path / "Library" / "Logs").is_dir()
+    monkeypatch.setattr("nums.service.subprocess.run", bootstrap)
+    install_service(Settings())

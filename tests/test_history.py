@@ -318,5 +318,3 @@ def test_save_drops_old_complete_turns_to_remain_loadable(tmp_path) -> None:
     store.save(old + recent)
     assert store.load() == recent
     assert path.stat().st_size <= 200
-
-

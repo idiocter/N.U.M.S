@@ -422,5 +422,3 @@ def test_history_failure_preserves_completed_response(tmp_path, monkeypatch) -> 
     assert agent.run("hi") == "I couldn't produce a response."
     assert agent.history_error == "disk full"
     assert agent.last_run["status"] == "completed"
-
-
