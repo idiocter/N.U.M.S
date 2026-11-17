@@ -397,3 +397,19 @@ def test_empty_tool_call_list_can_be_saved(tmp_path) -> None:
     assert Agent(agent.settings).messages[-1]["content"] == "hello"
 
 
+def test_null_content_tool_turn_can_be_saved(tmp_path) -> None:
+    class Client:
+        def chat(self, messages, tools):
+            if messages[-1]["role"] == "user":
+                return {"message": {"role": "assistant", "content": None, "tool_calls": [
+                    {"function": {"name": "system_info", "arguments": {}}}
+                ]}}
+            return {"message": {"role": "assistant", "content": "done"}}
+
+    agent = Agent(Settings(history_file=str(tmp_path / "history.json")))
+    agent.client = Client()
+    agent.tools = RecordingTools()
+    assert agent.run("status") == "done"
+    assert Agent(agent.settings).messages[-1]["content"] == "done"
+
+

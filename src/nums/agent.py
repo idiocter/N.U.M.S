@@ -155,6 +155,8 @@ class Agent:
                 }
                 self.messages.append(message)
                 calls = message.get("tool_calls") or []
+                if message.get("content") is None:
+                    message.pop("content", None)
                 if not calls:
                     message.pop("tool_calls", None)
                     self.last_run["status"] = "completed"
