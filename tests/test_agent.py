@@ -385,3 +385,15 @@ def test_system_prompt_sets_a_casual_friendly_tone() -> None:
 
     assert "close friend" in SYSTEM_PROMPT
     assert "selected action mode" not in SYSTEM_PROMPT
+def test_empty_tool_call_list_can_be_saved(tmp_path) -> None:
+    class Client:
+        def chat(self, messages, tools):
+            return {"message": {"role": "assistant", "content": "hello", "tool_calls": []}}
+
+    agent = Agent(Settings(history_file=str(tmp_path / "history.json")))
+    agent.client = Client()
+    assert agent.run("hi") == "hello"
+    assert "tool_calls" not in agent.messages[-1]
+    assert Agent(agent.settings).messages[-1]["content"] == "hello"
+
+

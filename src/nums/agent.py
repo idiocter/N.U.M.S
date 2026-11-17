@@ -156,6 +156,7 @@ class Agent:
                 self.messages.append(message)
                 calls = message.get("tool_calls") or []
                 if not calls:
+                    message.pop("tool_calls", None)
                     self.last_run["status"] = "completed"
                     reply = message.get("content") or "I couldn't produce a response."
                     message["content"] = reply
