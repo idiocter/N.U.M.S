@@ -46,10 +46,19 @@ class TraceStore:
                     f"NUMS trace reached the {self.max_bytes}-byte limit"
                 )
             os.fchmod(fd, 0o600)
+            original_size = os.fstat(fd).st_size
             remaining = memoryview(data)
-            while remaining:
-                remaining = remaining[os.write(fd, remaining):]
-            os.fsync(fd)
+            try:
+                while remaining:
+                    written = os.write(fd, remaining)
+                    if written <= 0:
+                        raise OSError("Trace write made no progress")
+                    remaining = remaining[written:]
+                os.fsync(fd)
+            except OSError:
+                os.ftruncate(fd, original_size)
+                os.fsync(fd)
+                raise
         finally:
             fcntl.flock(fd, fcntl.LOCK_UN)
             os.close(fd)

@@ -150,6 +150,37 @@ def test_symlinked_and_directory_trace_paths_are_refused(tmp_path) -> None:
     assert real.read_text() == ""
 
 
+@pytest.mark.parametrize("failure", ["zero", "disk_full"])
+def test_partial_trace_write_rolls_back_record(tmp_path, monkeypatch, failure) -> None:
+    import os
+
+    path = tmp_path / "trace.jsonl"
+    store = TraceStore(path)
+    store.append("first", [], "done")
+    original = path.read_bytes()
+    real_write = os.write
+    calls = 0
+
+    def partial_write(fd, data):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return real_write(fd, data[:5])
+        if failure == "zero":
+            return 0
+        raise OSError("disk full")
+
+    with monkeypatch.context() as patch:
+        patch.setattr("nums.trace.os.write", partial_write)
+        with pytest.raises(OSError):
+            store.append("second", [], "done")
+    assert path.read_bytes() == original
+    store.append("third", [], "done")
+    assert [json.loads(line)["prompt"] for line in path.read_text().splitlines()] == [
+        "first", "third"
+    ]
+
+
 def test_concurrent_appends_never_interleave(tmp_path) -> None:
     import threading
 

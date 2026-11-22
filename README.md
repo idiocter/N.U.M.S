@@ -1,5 +1,10 @@
 # NUMS
 
+Blank requests are rejected before contacting the model, and whitespace-only
+model replies use a spoken fallback. Reset reports when saved history could
+not be cleared. Failed trace writes roll back the incomplete record while
+holding the file lock so later review can still read the log.
+
 Recent reliability updates normalize empty tool lists and nullable model replies
 before saving conversations. History saves retain complete recent turns within
 the reload budget; storage failures preserve the response and appear in
