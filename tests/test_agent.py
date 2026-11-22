@@ -396,6 +396,17 @@ def test_blank_request_preserves_conversation(prompt) -> None:
     assert agent.last_run["status"] == "idle"
 
 
+def test_whitespace_reply_uses_fallback_and_saves_it(tmp_path) -> None:
+    class Client:
+        def chat(self, messages, tools):
+            return {"message": {"role": "assistant", "content": " \n\t"}}
+
+    agent = Agent(Settings(history_file=str(tmp_path / "history.json")))
+    agent.client = Client()
+    assert agent.run("hello") == "I couldn't produce a response."
+    assert Agent(agent.settings).messages[-1]["content"] == "I couldn't produce a response."
+
+
 def test_empty_tool_call_list_can_be_saved(tmp_path) -> None:
     class Client:
         def chat(self, messages, tools):

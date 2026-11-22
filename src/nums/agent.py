@@ -167,7 +167,8 @@ class Agent:
                 if not calls:
                     message.pop("tool_calls", None)
                     self.last_run["status"] = "completed"
-                    reply = message.get("content") or "I couldn't produce a response."
+                    content = message.get("content")
+                    reply = content if content and content.strip() else "I couldn't produce a response."
                     message["content"] = reply
                     self._save_history()
                     self._trace(prompt, trace_calls, reply)
