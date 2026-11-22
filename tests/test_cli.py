@@ -542,6 +542,24 @@ def _patch_startup(monkeypatch: pytest.MonkeyPatch, settings: Settings, agent_cl
     monkeypatch.setattr("nums.cli.verify_text_model", lambda settings: None)
 
 
+def test_reset_reports_failed_disk_clear(monkeypatch, capsys) -> None:
+    class FakeAgent:
+        history_error = None
+
+        def __init__(self, settings):
+            pass
+
+        def reset(self):
+            self.history_error = "disk full"
+
+    prompts = iter(["/reset", "/quit"])
+    monkeypatch.setattr("nums.cli.sys.argv", ["nums"])
+    _patch_startup(monkeypatch, Settings(), FakeAgent)
+    monkeypatch.setattr("builtins.input", lambda _: next(prompts))
+    main()
+    assert "saved history could not be cleared: disk full" in capsys.readouterr().out
+
+
 def test_interactive_help_status_and_reset_commands(monkeypatch: pytest.MonkeyPatch, capsys) -> None:
     prompts = iter(["/help", "/status", "/reset", "/quit", "never reached"])
     resets = []

@@ -354,7 +354,13 @@ def main() -> None:
             continue
         if prompt == "/reset":
             agent.reset()
-            print("Conversation cleared.\n")
+            if getattr(agent, "history_error", None):
+                print(
+                    "Conversation cleared in memory, but saved history could not be cleared: "
+                    f"{agent.history_error}\n"
+                )
+            else:
+                print("Conversation cleared.\n")
             continue
         if re.fullmatch(r"/[A-Za-z][A-Za-z-]*", prompt):
             print(f"Unknown command {prompt}. Type /help for commands.\n")
