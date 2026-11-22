@@ -126,6 +126,8 @@ class Agent:
             self.messages = self.messages[:1] + self.messages[next_turn:]
 
     def run(self, prompt: str) -> str:
+        if not isinstance(prompt, str) or not prompt.strip():
+            raise ValueError("The request must contain nonempty text")
         self.trace_error = None
         self.last_run = {"status": "running", "steps": 0, "tool_calls": 0, "tool_errors": 0}
         reply: str | None

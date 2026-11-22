@@ -385,6 +385,17 @@ def test_system_prompt_sets_a_casual_friendly_tone() -> None:
 
     assert "close friend" in SYSTEM_PROMPT
     assert "selected action mode" not in SYSTEM_PROMPT
+@pytest.mark.parametrize("prompt", ["", "  ", "\n\t"])
+def test_blank_request_preserves_conversation(prompt) -> None:
+    agent = Agent(Settings())
+    agent.client = EmptyClient()
+    before = list(agent.messages)
+    with pytest.raises(ValueError, match="nonempty text"):
+        agent.run(prompt)
+    assert agent.messages == before
+    assert agent.last_run["status"] == "idle"
+
+
 def test_empty_tool_call_list_can_be_saved(tmp_path) -> None:
     class Client:
         def chat(self, messages, tools):
