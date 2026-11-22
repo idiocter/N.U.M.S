@@ -54,7 +54,12 @@ class OllamaClient:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
                 result = _bounded_json(response, CHAT_RESPONSE_MAX_BYTES)
         except urllib.error.HTTPError as exc:
-            detail = exc.read(ERROR_DETAIL_MAX_BYTES).decode(errors="replace")[:1000]
+            try:
+                detail = exc.read(ERROR_DETAIL_MAX_BYTES).decode(errors="replace")[:1000]
+            except (OSError, http.client.HTTPException):
+                detail = "error response body could not be read"
+            finally:
+                exc.close()
             raise OllamaError(f"Ollama returned HTTP {exc.code}: {detail}") from exc
         except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as exc:
             raise OllamaError(

@@ -8,6 +8,21 @@ import pytest
 from nums.ollama import OllamaClient, OllamaError
 
 
+def test_http_error_with_unreadable_body_still_reports_status(monkeypatch) -> None:
+    class BrokenBody(io.BytesIO):
+        def read(self, *args):
+            raise OSError("socket closed")
+
+    body = BrokenBody()
+    def fail(*args, **kwargs):
+        raise urllib.error.HTTPError("http://localhost/api/chat", 503, "busy", {}, body)
+
+    monkeypatch.setattr("nums.ollama.urllib.request.urlopen", fail)
+    with pytest.raises(OllamaError, match="HTTP 503: error response body could not be read"):
+        OllamaClient("http://localhost:11434", "qwen").chat([], [])
+    assert body.closed
+
+
 def test_chat_rejects_missing_message(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("nums.ollama.urllib.request.urlopen", lambda *args, **kwargs: io.BytesIO(b"{}"))
 
